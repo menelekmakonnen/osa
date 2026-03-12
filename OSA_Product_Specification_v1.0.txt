@@ -1,0 +1,1088 @@
+﻿
+
+
+OSA
+Old Students Platform
+osa.icuni.org
+
+Product Specification  ·  Version 1.0  ·  March 2026
+
+Product Name
+OSA — Old Students Platform
+Product Owner
+Menelek Makonnen / ICUNI Labs
+Company
+ICUNI Group — ICUNI Labs Division
+URL (Short-Term)
+osa.icuni.org
+Version
+1.0 — Initial Product Spec
+Date
+March 2026
+Status
+Approved for Development
+Classification
+Confidential — Internal Use
+
+This document is the authoritative product specification for OSA. It defines what is being built, why, who it serves, how each feature works, the data model, the technical architecture, and the business model. The developer should not need any other document to begin implementation.
+
+1.  Product Overview
+
+1.1  What Is OSA?
+OSA (Old Students Platform) is a multi-school alumni management web application. It gives old students associations — regardless of what their specific association is named — a shared digital home built around four core activities: publishing a monthly newsletter, raising funds for emergencies and school development, hosting and RSVPing to virtual events and meetups, and maintaining a private-but-searchable directory of members.
+
+OSA is not a social network. There is no chat, no feed, no likes, and no public-facing profiles. It is a structured, purposeful platform for the specific workflows of an alumni community: communicate, contribute, convene, and connect — on the members' own terms.
+
+1.2  Why OSA Exists
+Ghanaian secondary school alumni associations — and many across anglophone West Africa — are some of the most tightly-bonded communities in the world. AMOSA at Aggrey Memorial, AOSA at Achimota, PREOBA at Prempeh, WEGOSA at Wesley Girls — these groups produce doctors, lawyers, diplomats, and engineers who remain fiercely loyal to their schools and year groups for life. Yet they have no purpose-built digital infrastructure. WhatsApp groups fragment, email threads get lost, fundraisers run through personal accounts, and institutional memory disappears.
+
+OSA solves this. It gives every school, every year group, and every individual member a structured, dignified, and permanent digital space — while generating a recurring revenue stream for ICUNI Labs.
+
+1.3  Business Context — ICUNI Labs
+OSA is a product of ICUNI Labs, the digital products division of ICUNI Group based in Accra, Ghana. ICUNI Labs builds, hosts, and maintains the platform. Schools and their alumni associations license access to the platform as subscribers. ICUNI Labs holds Super Admin credentials across all schools and provides technical support, updates, and custom development.
+
+The platform also serves as a direct marketing channel for ICUNI Group. Every old student who joins OSA is exposed to ICUNI Labs branding and, by extension, to ICUNI Starterclass, ICUNI Studios, ICUNI Consult, and ICUNI Connect. The product owner (Menelek Makonnen) is personally present on the platform as a member of the Class of 2012 at Aggrey Memorial — the first school on the platform.
+
+1.4  Core Product Principles
+No chat. Communication happens through the newsletter and event systems only. This is by design — it keeps the platform purposeful and signal-to-noise high.
+Privacy by default. Every user controls exactly who sees each piece of their contact information. Privacy decisions are enforced server-side.
+School isolation. Each school's data is completely separate. A member of one school cannot access another school's members, posts, or campaigns unless they are a platform-level executive or IT staff.
+Year group as identity. Every user's primary identity on the platform is their year group, house, final class, and cheque colour. These are fixed at registration and cannot be changed by the user.
+Governed, not ungoverned. Every school and every year group has a defined executive structure. The newsletter is editor-reviewed. Campaigns and events are admin-created. The platform has clear authority at every level.
+Built to scale. The architecture supports an unlimited number of schools and year groups. Adding a new school requires one spreadsheet, one Apps Script deployment, and one config row.
+
+2.  Users, Roles &amp; Permissions
+
+2.1  User Types
+Every person on the platform is a registered user. All users belong to exactly one school and one year group. The platform has three tiers of authority:
+
+Member — a regular old student. Can submit posts, RSVP to events, donate, manage their own profile, and view the directory according to privacy settings.
+Admin — a Year Group executive or Platform executive. Has additional capabilities within their scope (their year group or the whole platform).
+Super Admin — ICUNI Labs IT department only. Has unrestricted access to all schools, all data, all settings, and all users.
+
+2.2  Role Hierarchy
+
+Role
+Access Level
+Description
+Member
+Standard
+Default role. Every registered user starts here. Full access to their school and year group's content.
+YG Organiser
+YG Admin
+Year Group executive — fourth in command. Can create events for their year group. Assists with logistics.
+YG Gen. Secretary
+YG Admin
+Year Group executive — third in command. Manages member records and correspondence.
+YG Vice President
+YG Admin
+Year Group executive — second in command. Can review and approve newsletter posts.
+YG President
+YG Admin
+Year Group executive — first in command. Full authority over their year group. Approves posts, dispatches newsletter, creates events and campaigns.
+Platform Organiser
+Platform Admin
+Platform-level executive — fourth in command. Cross-school event coordination.
+Platform Gen. Sec.
+Platform Admin
+Platform-level executive — third in command. Cross-school communications.
+Platform VP
+Platform Admin
+Platform-level executive — second in command. Oversight across all schools.
+Platform President
+Platform Admin
+Platform-level executive — first in command. Full Admin access across all schools. Does not override Super Admin.
+IT Department
+Super Admin
+ICUNI Labs staff only. Unrestricted access to all data, all schools, all configurations. Can assign and revoke any role. The only users who can add or remove schools.
+
+2.3  Permission Matrix
+
+Action
+Member
+YG Exec
+Platform Exec
+IT (Super Admin)
+Scope
+Submit a newsletter post
+✓
+✓
+✓
+✓
+Own YG
+Approve / reject posts
+–
+✓
+✓
+✓
+Own YG
+Dispatch newsletter email
+–
+✓
+✓
+✓
+Own YG
+Create a fundraising campaign
+–
+✓
+✓
+✓
+School / YG
+Donate to a campaign
+✓
+✓
+✓
+✓
+Any visible
+Create an event
+–
+✓
+✓
+✓
+YG / School / Platform
+RSVP to an event
+✓
+✓
+✓
+✓
+Any visible
+View members directory
+✓
+✓
+✓
+✓
+Filtered by privacy
+Edit own profile
+✓
+✓
+✓
+✓
+Own only
+Assign YG roles
+–
+–
+✓
+✓
+Own YG only
+Assign Platform roles
+–
+–
+✓
+✓
+Platform
+Add / remove year groups
+–
+–
+–
+✓
+Any school
+Add / remove schools
+–
+–
+–
+✓
+Master
+Add / remove IT staff
+–
+–
+–
+✓
+Master
+Access all school data
+–
+–
+✓*
+✓
+* Read only for Platform Pres.
+Manage platform configuration
+–
+–
+–
+✓
+Master
+View licensing &amp; analytics
+–
+–
+✓
+✓
+Own school / All schools
+
+3.  Year Group Identity System
+
+Year group identity is central to everything on OSA. When a member registers, they are permanently tied to one school, one year group, one final class, and one house. These are the "DNA" of their membership — they cannot be self-edited and require an IT admin or YG executive to amend.
+
+3.1  Identity Fields
+
+Field / Element
+Type
+Spec / Notes
+School
+Fixed
+The school the member attended. Determines which data partition they belong to.
+Year Group
+Fixed
+The year the member completed school (graduated), e.g. 2005. All members who left in the same year form a year group.
+Final Class
+Fixed
+The class designation in their final year, e.g. 3A, Form 6, Year 13. Schools define their own format.
+House Name
+Fixed
+The school house the member belonged to, e.g. Knutsford House, Aggrey House. Schools define their own houses.
+Cheque Colour
+Fixed
+Each year group is assigned a unique cheque colour from a defined palette. This is the single most visually distinctive identifier on the platform — it appears as a coloured stripe on every card, badge, and avatar belonging to that year group.
+Association Name
+School-level
+The name of the school's alumni association, e.g. AMOSA, AOSA, PREOBA. Defined at school level, displayed throughout.
+Year Group Nickname
+Fixed
+An optional informal nickname, e.g. "The Golden Set", "The Millennials". Provided at registration by the founding executives.
+
+3.2  Cheque Colour Palette
+The platform ships with 12 preset cheque colours. Super Admin can assign any colour to any year group. No two active year groups within the same school should share a cheque colour. The colour appears rendered as a diagonal stripe pattern (a visual reference to physical bank cheques) on profile cards, year group headers, and newsletter email headers.
+
+
+Colour Name
+Hex
+Light Variant
+Notes
+
+Navy Blue
+#1E3A8A
+#DBEAFE
+—
+
+Burgundy
+#7F1D1D
+#FEE2E2
+—
+
+Forest Green
+#14532D
+#DCFCE7
+
+
+Royal Purple
+#4C1D95
+#EDE9FE
+—
+
+Burnt Orange
+#7C2D12
+#FFEDD5
+—
+
+Steel Teal
+#134E4A
+#CCFBF1
+—
+
+Crimson
+#881337
+#FFE4E6
+—
+
+Antique Gold
+#78350F
+#FEF3C7
+—
+
+Slate Grey
+#1E293B
+#F1F5F9
+—
+
+Indigo
+#312E81
+#E0E7FF
+—
+
+Jade
+#065F46
+#D1FAE5
+—
+
+Mauve
+
+
+—
+
+4.  Feature: Newsletter
+
+The newsletter is the platform's primary communication channel. Each year group has its own monthly newsletter. Members submit posts (short personal updates, announcements, professional news, tributes) and a Year Group executive reviews and approves each post before it is included in the month's dispatch. There is no chat. There is no comment thread. Posts that are approved become part of the permanent record.
+
+4.1  Post Lifecycle
+
+Stage
+Status
+Description
+1. Draft
+Composing
+Member writes title, selects category, writes content. Not yet submitted.
+2. Submitted
+Pending
+Member submits the post. It appears in the YG executive's review queue. The author sees "Pending Review" on their My Submissions tab.
+3a. Approved
+Approved
+A YG executive (President, VP, or above) approves the post. It is added to the current newsletter month and appears in the year group's newsletter feed immediately.
+3b. Returned
+Rejected
+A YG executive returns the post with a written note explaining what to revise. The author sees the note and can resubmit as a new post.
+4. Published
+Published
+When the YG President dispatches the monthly newsletter, all approved posts for that month are sent as a formatted HTML email to all year group members.
+
+4.2  Post Fields
+Field / Element
+Type
+Spec / Notes
+Title
+Text
+Required. Max 150 characters. Plain text only.
+Category
+Enum
+Required. Options: Personal News, Professional, Announcement, Initiative, Tribute, Other.
+Content
+Text
+Required. Max 2,000 characters. Plain text only. No markdown, no links, no images.
+Author
+Auto
+Set to the submitting user. Not editable.
+Year Group
+Auto
+Set to the author's year group. Posts cannot be submitted to another year group.
+Submission Date
+Auto
+Server timestamp at submission.
+Status
+Auto
+Managed by the workflow. Default: pending.
+Newsletter Month
+Auto
+Set when approved, in YYYY-MM format, e.g. 2026-04. Determines which monthly dispatch includes this post.
+Rejection Note
+Text
+Written by the reviewing executive. Shown only to the post author. Max 500 characters.
+
+4.3  Newsletter Dispatch
+The monthly newsletter dispatch is triggered manually by the YG President or any YG executive with dispatch permission. The system collects all approved posts for the year group for the current newsletter month and sends them as a single HTML email to every member of that year group.
+
+Email format: HTML, with the school's brand colour and year group's cheque colour as visual identifiers. Includes the school name, association name, year group year and nickname, list of posts with author names and categories, and a footer linking to OSA.
+Sender: The email is sent from a configured platform address (e.g. newsletter@osa.icuni.org) via Gmail / Apps Script MailApp.
+Recipients: All members of the year group whose accounts are active, regardless of their individual privacy settings — the newsletter is an internal communication.
+A dispatch record is written to the newsletters sheet, including the post IDs included, recipient count, and timestamp.
+Once dispatched, a newsletter month is closed. Posts cannot be retroactively added to a dispatched month.
+
+4.4  Newsletter Screen — UI Tabs
+
+Tab
+Description
+Newsletter Feed
+Approved posts for the user's year group, in reverse chronological order. Filterable by month and category. Each post shows the author name, cheque chip, category tag, and full content.
+My Submissions
+All posts submitted by the logged-in user. Shows status (pending / approved / rejected). If rejected, the editor's note is shown. Includes a "Submit New Post" button.
+Approve Posts
+Visible only to YG executives and above. Shows all pending posts for the year group. Each post has "Approve for Newsletter" and "Return to Author" actions. The return action requires a written note.
+Dispatch
+Visible only to YG President, Platform Exec, and IT. Shows a dispatch summary for the current month: post count, recipient count. One-click dispatch button, disabled if no posts are approved.
+
+5.  Feature: Fundraising
+
+Fundraising on OSA is designed for two distinct purposes: emergency relief and school development support. Campaigns are created by admins (not members) and are visible either to the whole school or to a specific year group. There is no self-service fundraiser — this prevents noise and keeps campaigns meaningful.
+
+5.1  Campaign Types
+
+Type
+Description
+Emergency
+Time-sensitive campaigns for crises: floods, fires, sudden illness, family bereavement affecting the school community. Displayed with a red warning indicator throughout the platform. Should be actioned quickly.
+School Support
+Longer-term campaigns for school infrastructure, equipment, scholarships, and development projects. Can run for months or years. Includes a campaign updates section for milestone announcements.
+
+5.2  Campaign Fields
+Field / Element
+Type
+Spec / Notes
+Title
+Text
+Required. Max 120 characters.
+Type
+Enum
+Required. emergency | school_support.
+Description
+Text
+Required. Max 1,000 characters. Clear explanation of the purpose and impact.
+Target Amount
+Decimal
+Required. The fundraising goal.
+Currency
+String
+Required. ISO code. Default: GHS. Others: USD, GBP, EUR.
+Deadline
+Date
+Required for emergency campaigns. Optional for school support. Displayed prominently.
+Scope
+Enum
+school (visible to all school members) or yeargroup (visible only to the specified year group).
+Year Group
+FK
+Populated only if scope = yeargroup.
+Status
+Enum
+active | closed | cancelled. Only active campaigns accept donations.
+Campaign Updates
+JSON
+Array of timestamped update strings. Admin-added. Displayed in the campaign card to keep donors informed of progress.
+Created By
+Auto
+The admin user who created the campaign.
+
+5.3  Donation Flow
+Donor selects a campaign and clicks "Donate Now".
+A donation modal appears showing the current total, a set of quick-select amounts (GHS 50, 100, 200, 500, 1000), and a custom amount field.
+Donor confirms. The donation is recorded in the donations sheet. The campaign's raised_amount and donor_count are updated.
+A receipt is sent to the donor's registered email address via Apps Script.
+Note: v1 does not integrate a payment gateway. Donations are recorded as pledges / acknowledgements. Actual payment collection is managed by the YG executives via bank transfer, mobile money, or cheque. A payment_method field captures the method agreed upon. The platform records intent and tracks amounts. The Finance Executive logs, updates and manages payment for spreadsheet.
+
+v2 Scope: Mobile money (MTN MoMo, Vodafone Cash) and card payment gateway integration to be implemented in a future version, enabling real-time fund collection and automated receipts.
+
+5.4  Fundraising Screen — UI
+Scope filter: My School | All Schools.
+Type filter: All | Emergency | School Support.
+Each campaign card shows: title, type indicator, school pill, description (truncated), progress bar with percentage, raised amount vs target, donor count, deadline, and latest update.
+Emergency campaigns have a red left border and "Warning" indicator to communicate urgency.
+Admins see a "Create Campaign" button. Members do not.
+
+6.  Feature: Events
+
+OSA strongly favours virtual events — video calls, webinars, and online hangouts — because members are scattered globally. In-person meetups and physical gatherings are supported as well, but the platform is not designed as a venue-booking tool. The platform provides structure, visibility, and RSVP management for every type of gathering.
+
+6.1  Event Types
+Field / Element
+Type
+Spec / Notes
+Virtual
+Event type
+A video call, webinar, or online event. Requires a virtual link (Zoom, Google Meet, or other). The link is shown to RSVP'd members only.
+Meetup
+Event type
+A formal in-person gathering — could be a dinner, networking event, or formal reunion. Has a physical venue. Can be school-wide or cross-school.
+Hangout
+Event type
+A casual, low-key virtual or in-person gathering. Year group hangouts (e.g. monthly video catch-ups with no formal agenda) fall here.
+
+6.2  Event Scope
+
+Scope
+Visibility &amp; Access
+Year Group
+Visible only to members of the specific year group. Created by YG executives.
+School
+Visible to all members of the school (all year groups). Created by school-level admins or Platform Exec.
+Platform
+Visible to old students of all schools on OSA — cross-school events, grand reunions, professional webinars. Created by Platform Exec or IT.
+
+6.3  Event Fields
+Field / Element
+Type
+Spec / Notes
+Title
+Text
+Required. Max 120 characters.
+Type
+Enum
+Required. virtual | meetup | hangout.
+Description
+Text
+Required. Max 1,000 characters.
+Date
+Date
+Required. YYYY-MM-DD.
+Time
+String
+Required. Plain text with timezone, e.g. "3:00 PM GMT".
+Virtual Link
+URL
+Required for virtual and hangout types. Hidden from non-RSVP'd users.
+Venue
+String
+Required for meetup type. Physical address.
+Scope
+Enum
+Required. yeargroup | school | platform.
+Year Group
+FK
+Required when scope = yeargroup.
+Max Attendees
+Integer
+Optional. 0 = unlimited. When capacity is reached, RSVP is disabled.
+Status
+Enum
+upcoming | live | past | cancelled. Managed manually or by scheduled trigger.
+
+6.4  RSVP Logic
+Any member can RSVP to any event visible to them.
+RSVP can be cancelled before the event date.
+For virtual events: the meeting link is shown only after RSVP, and only in the event detail modal. It is never shown in the card list view.
+When max_attendees is reached, the RSVP button shows "Full" and is disabled.
+The organiser receives no RSVP notifications in v1. RSVP counts are visible to all.
+
+7.  Feature: Members Directory
+
+The members directory is a searchable, filterable list of registered old students. Every field is subject to the individual member's privacy settings. The platform never overrides a member's privacy choices, except that Super Admins always see all fields.
+
+7.1  Directory Scope Filters
+My Year Group — shows only members of the viewer's own year group. Default view.
+My School — shows all members of the viewer's school, across all year groups.
+All Schools — shows members across all schools on the platform. Only fields with priv_[field] = "all" are visible in this scope.
+
+7.2  Searchable Fields
+Name — always visible, always searchable.
+Profession — visible according to privacy settings. Searchable.
+Location — visible according to privacy settings. Not searchable.
+
+7.3  Member Card — Displayed Fields
+Always shown: Full name, Year Group (with cheque chip), School pill, House, Role badge.
+Subject to privacy: Location, Profession.
+Shown only in the member detail modal, subject to privacy: Email, Phone, LinkedIn, Bio.
+
+7.4  Privacy System
+Each contact field has an independent privacy setting controlled by the member. The three levels are:
+
+Level
+Behaviour
+Hidden
+The field is never returned in any API response for this user. It is invisible to all other users including admins. Only IT (Super Admin) can see hidden fields.
+Year Group Only
+The field is visible only to members of the same year group. It will not appear in school-wide or cross-school directory views.
+All Old Students
+The field is visible to all logged-in users on the platform, regardless of school or year group.
+
+Privacy is enforced server-side in every API handler. The frontend never receives data it should not display. This is a hard requirement.
+
+7.5  Contact Information Fields
+Field / Element
+Type
+Spec / Notes
+Full Name
+Always public
+Shown to all logged-in users. No privacy control.
+Bio
+Editable
+Short paragraph about the member. Privacy: yeargroup by default.
+Profession
+Privacy-controlled
+Occupation or title. Default: all.
+Location
+Privacy-controlled
+City, Country. Default: all.
+Email
+Privacy-controlled
+Registered email. Default: yeargroup.
+Phone
+Privacy-controlled
+Phone number. Default: hidden.
+LinkedIn
+Privacy-controlled
+LinkedIn profile URL. Default: all.
+
+8.  Feature: My Profile
+
+Every user has a private profile page accessible only to themselves. From here they can update their personal information, manage their privacy settings, and view their fixed school identity fields.
+
+8.1  Editable Fields
+Full Name
+Profession / Occupation
+Location (City, Country)
+Phone Number
+LinkedIn Profile URL
+Short Bio (up to 500 characters)
+Privacy settings for each contact field (see Section 7.4)
+
+8.2  Fixed Fields (Read-Only)
+School
+Year Group (year and nickname)
+Final Class
+House Name
+Cheque Colour
+Association Name
+Role(s)
+Date joined
+
+Fixed fields cannot be changed by the user. A member who believes there is an error in their fixed identity should contact their YG executive or ICUNI Labs IT. An IT admin can edit these fields in the Super Admin panel.
+
+8.3  Account Actions
+Change Password — available from the profile page.
+Sign Out — ends the session and clears the session token.
+Request Correction — a form to request a change to a fixed identity field. Sends a notification to the IT department.
+
+9.  Feature: Admin Panel
+
+The Admin Panel is accessible to all YG executives, Platform executives, and IT staff. What is visible within it depends on the user's role. The panel is accessed via a nav item that is only rendered if the user holds an admin role.
+
+9.1  Admin Panel Tabs
+
+Tab
+Access &amp; Description
+Post Moderation
+All roles. Shows pending posts for the admin's scope (own YG for YG Exec; all schools for Platform Exec and IT). Approve or return-with-note actions.
+Year Groups
+All roles. Shows all year groups for the admin's school with member counts, cheque colours, and house names. IT can see all schools.
+Roles
+Platform Exec and IT only. Directory of all users holding non-member roles. IT can edit any role. Platform Exec can assign YG roles within their school.
+Newsletter Dispatch
+YG Exec and above. Shows monthly dispatch status for each year group: approved post count, recipient count, and a dispatch button.
+Campaigns
+YG Exec and above. Create and manage fundraising campaigns. View donation logs.
+Events
+YG Exec and above. Create and manage events within their scope.
+
+10.  Feature: Super Admin Panel
+
+The Super Admin Panel is accessible only to ICUNI Labs IT staff. It provides full control over the platform, all schools, and the master configuration. It is accessed via a separate, distinctly styled nav item.
+
+10.1  Super Admin Tabs
+
+Tab
+Description
+Schools
+Full registry of all schools on the platform. Add, configure, or suspend a school. Each school entry shows name, short code, association, Sheet ID, Script URL, license tier, and status.
+Year Groups
+All year groups across all schools, grouped by school. Add, edit, or archive year groups. Assign or change cheque colours. Edit fixed identity fields for members.
+Governance
+Assign or revoke Platform executive roles (President, VP, Gen. Secretary, Organiser). Manage the IT department: add or remove ICUNI Labs staff, each with Super Admin credentials.
+Platform Config
+System-wide settings: platform name, contact email, newsletter sender email, feature flags (enable/disable modules per school or globally).
+ICUNI Licensing
+All schools shown as licensees with their tier, member count, year group count, and status. Quick links to each school's Google Sheet. Used for billing and account management.
+Analytics
+Cross-school aggregated metrics: total members, total raised, newsletters dispatched, events held. School-by-school breakdown.
+
+10.2  Feature Flags
+Super Admin can toggle platform features on or off for individual schools or globally. Feature flags include:
+Newsletter module
+Fundraising module
+Events module
+Members directory
+Cross-school event visibility
+Newsletter email open-rate tracking
+API access (for future third-party integrations)
+
+11.  Authentication &amp; Registration
+
+11.1  Registration Flow
+User visits osa.icuni.org and is presented with the multi-school landing page.
+User selects their school from the school grid.
+User is taken to the school's registration form.
+User fills in: Full Name, Email, Password, Year Group (dropdown of available year groups), Final Class, House Name.
+User submits the form. The system checks that the email is not already registered for that school.
+Account is created with role = "member". A confirmation email is sent.
+YG executive is not required to approve registration in v1. Registration is open and self-service.
+
+v2 Consideration: Optional admin-approval of new registrations for schools that want tighter control over who joins.
+
+11.2  Login Flow
+User selects their school on the landing page.
+User enters email and password.
+Apps Script verifies the password hash against the members sheet.
+On success: a session token (UUID) is generated, written to the members sheet with a 7-day expiry, and returned to the frontend.
+The frontend stores the token in memory (React state) for the session. No localStorage.
+Every subsequent API call includes the token. The server validates it before executing any operation.
+
+11.3  Password Reset
+User clicks "Forgot Password" on the login screen.
+Enters their registered email address.
+Apps Script generates a time-limited reset token (valid for 1 hour), writes it to the members sheet, and sends a reset link to the email via Gmail.
+User clicks the link, enters a new password. The script verifies the reset token, updates the password hash, and clears the token.
+
+11.4  Session Management
+Sessions expire after 7 days of inactivity.
+Explicit logout clears the session token from the members sheet.
+The frontend checks token expiry on app load. If expired, the user is redirected to login.
+IT staff can forcibly clear any user's session token (immediate logout) from the Super Admin panel.
+
+12.  Screen Inventory
+
+12.1  Public Screens (No Login Required)
+
+Screen
+Description
+Landing Page
+Hero section with platform pitch. Grid of all registered schools, each with logo placeholder, school name, association name, city, and year group count. "Find My School" CTA. "Sign In" and "Register" links.
+School Login
+School-specific login page. Shows selected school name and brand colour. Email + password form. Links to Register and Forgot Password.
+School Register
+Registration form for the selected school. Fields: name, email, password, year group (dropdown), final class, house name. Validates email uniqueness.
+Forgot Password
+Single email field. Submits and shows confirmation message. Reset link sent via email.
+Reset Password
+Reached from email link. New password + confirm password fields.
+
+12.2  Authenticated Screens (All Members)
+
+Screen
+Description
+Dashboard
+Personalised home screen. Welcome banner with name, cheque colour, school pill. Alert if posts are pending review. Stats row (YG members, active campaigns, events, my posts). Recent newsletter posts. Upcoming events. Active fundraising sidebar.
+Newsletter
+Tabbed view: Feed, My Submissions, (Approve — if exec). Submit Post button always visible.
+Fundraising
+Campaign cards with progress bars. Scope filter (My School / All Schools). Type filter (All / Emergency / School Support). Donate modal.
+Events
+Event cards in 2-column grid. Scope filter (My YG / My School / All). Type filter. RSVP button on each card. Event detail modal shows full description, virtual link (post-RSVP), venue.
+Members Directory
+Search bar + scope filter (My YG / My School / All Schools). Member cards in 3-column grid. Member detail modal with contact info according to privacy settings.
+My Profile
+Editable personal info section. Fixed identity section (read-only). Privacy controls with 3-state toggle per field. Change Password link.
+
+12.3  Admin &amp; Super Admin Screens
+
+Screen
+Description
+Admin Panel
+Visible to all exec roles. Tabbed: Post Moderation, Year Groups, Roles, Newsletter Dispatch, Campaigns, Events. Scope-filtered by the user's authority.
+Super Admin Panel
+IT only. Tabbed: Schools, Year Groups, Governance, Platform Config, ICUNI Licensing, Analytics. Full platform control.
+
+13.  Navigation &amp; Layout
+
+13.1  Layout Structure
+The authenticated app uses a two-column layout: a fixed left sidebar (232px wide) and a scrollable main content area.
+The sidebar contains: the platform logo, school name and association, the logged-in user's name, cheque chip, and role, the main navigation links, conditional Admin Panel and Super Admin links, and the ICUNI Labs attribution footer with a Sign Out button.
+All screens render within the main content area. No second sidebar, no top nav bar.
+Modals are used for: donation flow, event detail, member detail, post submission, post return/rejection, and confirmation dialogs.
+
+13.2  Navigation Items
+
+Nav Item
+Icon
+Visibility
+Dashboard
+Home symbol
+All authenticated users.
+Newsletter
+Envelope
+All authenticated users.
+Fundraising
+Heart
+All authenticated users.
+Events
+Diamond/square
+All authenticated users.
+Members
+Circle persons
+All authenticated users.
+My Profile
+Circle outline
+All authenticated users.
+Admin Panel
+Gear symbol
+YG Exec, Platform Exec, IT only.
+Super Admin
+Star symbol
+IT (ICUNI Labs) only. Displayed in gold to distinguish it.
+
+13.3  Active State &amp; Visual Feedback
+Active nav item: full-width background highlight + left border in amber / gold.
+Super Admin nav item: gold text when active, to visually distinguish elevated access.
+Pending-review alert: an amber notification banner on the dashboard when posts are awaiting the admin's review.
+Toast notifications: temporary success / error messages appear top-right on key actions (post submitted, approved, rejected, donated, RSVP'd, saved).
+Progress bars: all fundraising progress bars animate on load.
+
+14.  Design System
+
+14.1  Typography
+
+Usage
+Font
+Notes
+Display headings
+Playfair Display
+Used for H1, H2, section titles, post titles, campaign titles. Serif for gravitas.
+UI / Body
+DM Sans
+All body text, labels, buttons, input fields, navigation. Clean and readable.
+Code / references
+DM Mono (optional)
+For any technical references. Not required in v1 UI.
+
+14.2  Colour Palette
+
+
+Name
+Hex
+Usage
+
+Ink Black
+#0A0A08
+Sidebar background, deep text.
+
+Deep Forest
+#0C3B22
+Primary brand colour. Buttons, headings, sidebar.
+
+Mid Forest
+#1B5E3B
+Hover states, secondary backgrounds.
+
+Sage
+#2D7A50
+Active states, success indicators.
+
+Gold
+#B8912A
+Accent — active nav border, campaign highlights.
+
+Amber
+#D4AF5A
+ICUNI Labs accent. Sub-labels on dark backgrounds.
+
+Cream
+#F4F1EB
+Page background.
+
+Parchment
+#EDE7D9
+Card inner backgrounds, info panels.
+
+Off-White
+#FDFAF6
+Card backgrounds, modal backgrounds.
+
+Border
+#D6CEBC
+All borders, dividers.
+
+Muted
+#6B7060
+Secondary text, placeholders, inactive nav.
+
+14.3  Component Standards
+Buttons: Primary (deep forest), Gold (accent), Outline (transparent + forest border), Ghost (no border, muted text), Danger (red), Success (green). Sizes: sm, md, lg. All buttons have disabled state with 50% opacity.
+Cards: White background, 12px border radius, 1px border in BORDER colour, 22px padding. Hover state: slight upward transform + box shadow.
+Badges / Pills: Rounded-full, small text, background in the relevant light variant of the category colour. Used for roles, categories, schools, statuses.
+Cheque Chip: A small colour swatch (diagonal stripe pattern) paired with the colour name and year, displayed inline. Used wherever a year group is referenced.
+School Pill: School short code in white text on the school's brand colour. Small, rounded.
+Progress bars: 7px tall, BORDER colour track, brand/red fill, animated on mount.
+Avatars: Circular, coloured with the user's year group cheque colour, initials in white. No photos in v1.
+Modals: Centred, max-width 500px (wide: 680px), 16px border radius, sticky header with title + close button, scrollable body, background overlay at 55% opacity.
+Toasts: Fixed top-right, 10px border radius, 3 second auto-dismiss. Green for success, red for error.
+
+15.  Technical Architecture
+
+15.1  Stack
+
+Layer
+Technology
+Notes
+Frontend
+React + Top Notch CSS
+Web application. Hosted at osa.icuni.org.
+API Layer
+Google Apps Script Web App
+One deployment per school + one Master deployment.
+Database
+Google Sheets
+One spreadsheet per school + one Master spreadsheet.
+Email
+Apps Script MailApp / GmailApp
+Newsletter dispatch, receipts, password reset.
+Authentication
+Apps Script session tokens
+UUID tokens stored in Sheets. No third-party auth in v1.
+Hosting
+osa.icuni.org
+Hosted by ICUNI Labs. Short-term: osa.icuni.org.
+Google Calendar for sending updates for hangouts
+15.2  Data Architecture
+Master Spreadsheet (ICUNI Labs): Contains the schools registry, platform governance roles, IT department roster, and cross-platform analytics snapshots.
+School Spreadsheet (one per school): Contains 8 sheets — year_groups, members, posts, campaigns, donations, events, rsvps, newsletters. Fully isolated from other schools.
+All Sheets use UUIDs as primary keys. Foreign keys reference within the same spreadsheet for school data, or across to the Master for governance.
+Privacy-related fields are columns on the members sheet (priv_email, priv_phone, etc.) — not a separate sheet. This keeps privacy enforcement fast and co-located with the member record.
+
+15.3  API Architecture
+All API calls are HTTPS POST or GET requests to the school's Apps Script Web App URL.
+Every request includes a session token. The server validates the token before any operation.
+POST requests send a JSON body with { action, data, token }.
+GET requests send query parameters: ?action=xxx&amp;token=xxx&amp;param=xxx.
+All responses are JSON: { success: true/false, data: {...}, error: "message" }.
+Privacy filtering is applied server-side on every member data response.
+Role checks are performed server-side on every admin action.
+
+15.4  Frontend API Client
+A central api(action, data, method) utility function handles all calls.
+The session token is held in React state and injected by the utility. Never in localStorage.
+On 401 (expired/invalid token): the user is logged out and redirected to login.
+Optimistic UI updates are applied immediately on user actions, rolled back on API failure.
+Loading states are shown during all API calls. No silent failures.
+
+16.  Multi-School Model
+
+OSA is designed from the ground up to support any number of schools. A school is not a feature — it is an independent data partition. Adding a school means creating a spreadsheet, deploying a script, and adding one row to the Master. Nothing else changes.
+
+16.1  What Changes Per School
+Brand colour — used throughout the UI wherever school identity is displayed.
+School name and short code — displayed in all headers, school pills, and footers.
+Association name — the formal name of the school's alumni body (e.g. AMOSA, AOSA, PREOBA).
+Year groups — unique to each school, with their own houses, final class designations, and cheque colours.
+All data — completely isolated. No school can see another school's members, posts, campaigns, or events unless explicitly set to platform scope.
+
+16.2  What Is Shared Across Schools
+Platform governance roles (President, VP, Gen. Secretary, Organiser) — these roles span all schools. Their holders are regular members of a specific school but hold cross-platform authority.
+Platform-scope events — created by Platform Exec or IT and visible to old students of all schools.
+The OSA brand and platform infrastructure — hosted, maintained, and owned by ICUNI Labs.
+The ICUNI Labs IT department — Super Admin across all schools.
+
+16.3  School Landing Page
+The public landing page at osa.icuni.org shows all registered schools in a grid. Each school card displays the school name, short code, city, association name, founding year, and year group count. Clicking a school card takes the user to that school's login/registration page. The URL pattern is osa.icuni.org/[school_id] — e.g. osa.icuni.org/amosa.
+
+In the short term, while OSA begins with Aggrey Memorial only, the URL osa.icuni.org may redirect directly to the Aggrey Memorial login. The multi-school landing becomes the default once a second school is onboarded.
+
+17.  Business Model &amp; Go-To-Market
+
+17.1  Revenue Streams
+
+Stream
+Description
+School Licensing
+Recurring annual or monthly subscription fee per school. Three tiers: Free (limited), Standard, Premium. Billed to the alumni association. Free from 2026 till 20230.
+Year Group Onboarding
+One-time setup fee when a new year group is added to an existing school — covers data migration, initial executive role setup, and onboarding support.
+Premium Features
+Custom analytics dashboards, branded mobile app wrapper, WhatsApp integration, and payment gateway activation are premium add-ons.
+Custom Development
+Premium-tier schools can commission bespoke features from ICUNI Labs at a day rate. OSA becomes a gateway to ICUNI Labs' development services.
+ICUNI Group Brand
+Every member of every school sees "Powered by ICUNI Labs" in their sidebar. This is a direct pipeline from the OSA user base to ICUNI Starterclass, ICUNI Studios, ICUNI Consult, and ICUNI Connect.
+
+17.2  License Tiers
+
+Feature
+Free
+Standard
+Premium
+Newsletter (posts, approval, dispatch)
+✓
+✓
+✓
+Members Directory
+✓
+✓
+✓
+Fundraising Campaigns
+2 active
+Unlimited
+Unlimited
+Events
+3 active
+Unlimited
+Unlimited
+Year Groups
+3 max
+15 max
+Unlimited
+Cross-school event visibility
+–
+✓
+✓
+Custom school brand colour
+✓
+✓
+✓
+Newsletter email tracking
+–
+✓
+✓
+Donation receipt emails
+✓
+✓
+✓
+Payment gateway integration
+–
+✓
+✓
+Branded mobile app
+–
+✓
+✓
+Analytics dashboard
+Basic
+Full
+Full + Export
+IT Support (ICUNI Labs)
+Email
+Standard
+Priority
+Custom feature development
+–
+✓ (at rate)
+✓ (included hours)
+
+17.3  Go-To-Market Sequence
+Deploy OSA for Aggrey Memorial African Methodist Zion Episcopal School (AMOSA). The product owner (Menelek Makonnen) is a member of the Class of 2012 — this is the first and most important reference client. Build the live product here.
+Expand to all Aggrey year groups. Each year group onboarded is a new revenue unit and a new cohort of users who experience the platform.
+Use the live Aggrey deployment as the sales demo for other schools. No pitch deck needed — the working product is the pitch.
+Open self-service onboarding for schools beyond the initial five. ICUNI Labs handles setup remotely.
+Expand across anglophone West Africa: Nigeria, Sierra Leone, The Gambia — all share the "Old Students" naming convention and the same school culture.
+
+18.  Version Scope &amp; Roadmap
+
+18.1  Version 1.0 — In Scope
+Multi-school landing page with school selection.
+Full authentication: register, login, logout, password reset, session management.
+Newsletter: post submission, YG executive approval workflow, monthly dispatch via email.
+Fundraising: emergency and school support campaigns, donation recording (pledge model), campaign updates.
+Events: virtual, meetup, and hangout types with RSVP. Meeting link reveal post-RSVP.
+Members directory with full privacy controls enforced server-side.
+Profile page with editable personal info and granular privacy settings.
+Admin Panel for YG and Platform executives.
+Super Admin Panel for ICUNI Labs IT.
+Google Sheets + Apps Script backend with all 8 data sheets per school.
+Master Spreadsheet for ICUNI Labs platform oversight.
+ICUNI Labs branding throughout.
+
+18.2  Version 2.0 — Planned
+Mobile money and card payment gateway (MTN MoMo, Vodafone Cash, Paystack) for real-time donation collection.
+Admin-approval gating for new registrations (optional, per school).
+Newsletter email open-rate and click tracking.
+Branded mobile app wrapper (React Native or PWA).
+WhatsApp broadcast integration for event reminders and newsletter alerts.
+Self-service school onboarding flow with automated spreadsheet creation.
+Year group leaderboard for fundraising (most donors, highest total).
+Social feed, likes, comments, reactions.
+Post archiving and searchable newsletter history.
+File or image uploads from members (no attachments in posts, no profile photos in v1).
+
+18.3  Explicitly Out of Scope (All Versions)
+Chat or direct messaging of any kind.
+Public-facing profiles or pages (all content is members-only).
+Third-party social login (Google, Facebook). Email + password only.
+
+19.  Developer Notes &amp; Hard Requirements
+
+19.1  Non-Negotiables
+Privacy enforcement is always server-side. Never trust the frontend to hide sensitive fields. The Apps Script handler filters data before returning it.
+Role checks are always server-side. A user cannot escalate their own privileges by modifying frontend state.
+Session tokens are never stored in localStorage or sessionStorage. React state or equivalent in-memory store only.
+No chat and no comments. Do not implement these even if technically trivial.
+The cheque colour system is a first-class design element, not an afterthought. It must be rendered consistently across every component that references a year group.
+School data isolation is absolute. An API call for school A must never return data from school B.
+The ICUNI Labs "Powered by" attribution is permanent and non-removable by any user, including Super Admin.
+
+19.2  Code Conventions
+All primary keys are UUIDs generated server-side (Apps Script Utilities.getUuid()).
+All timestamps are stored in ISO 8601 format: YYYY-MM-DDTHH:mm:ss.sssZ.
+All monetary amounts are stored as plain decimal numbers. Currency is always stored alongside amount.
+JSON fields in Sheets (updates, post_ids) are stored as stringified JSON. Always parse/stringify safely with try/catch.
+Sheets column order must exactly match the schema defined in the Backend Architecture document. Never reorder columns once deployed — use column name lookups, not column index lookups.
+
+19.3  Testing Checklist
+Privacy: create two users in different year groups. Verify that yeargroup-only fields of user A are not visible to user B.
+Role enforcement: verify that a member (non-exec) receives 403 when attempting to call reviewPost or dispatchNewsletter.
+Session expiry: set a short token expiry, wait, verify the user is redirected to login on the next API call.
+Multi-school isolation: create two schools. Verify that a logged-in user of school A cannot retrieve members from school B.
+Newsletter dispatch: approve two posts, dispatch the newsletter, verify both the dispatch record is written and the posts' newsletter_month is updated.
+Campaign total: make two donations to the same campaign, verify the raised_amount and donor_count reflect both.
+
+
+OSA — Old Students Platform  ·  Product Specification v1.0  ·  ICUNI Labs, ICUNI Group  ·  osa.icuni.org  ·  2026

@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --surface-default: #FFFFFF;
+    --surface-muted: #F0F2F5;
+    --surface-hover: #F2F2F2;
+    --surface-glass: rgba(255, 255, 255, 0.85);
+
+    --ink-title: #050505;
+    --ink-body: #65676B;
+    --ink-muted: #8A8D91;
+
+    --border-light: #E4E6EB;
+    --border-focus: #1877F2;
+
+    --shadow-social-card: 0 1px 2px rgba(0, 0, 0, 0.1);
+    --shadow-social-dropdown: 0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  }
+
+  .dark {
+    --surface-default: #242526;
+    --surface-muted: #18191A;
+    --surface-hover: #3A3B3C;
+    --surface-glass: rgba(36, 37, 38, 0.85);
+
+    --ink-title: #E4E6EB;
+    --ink-body: #B0B3B8;
+    --ink-muted: #8A8D91;
+
+    --border-light: #3E4042;
+    --border-focus: #2D88FF;
+
+    --shadow-social-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-social-dropdown: 0 12px 28px 0 rgba(0, 0, 0, 0.5), 0 2px 4px 0 rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  body {
+    background-color: var(--surface-muted);
+    color: var(--ink-title);
+    font-family: theme('fontFamily.sans');
+    -webkit-font-smoothing: antialiased;
+    overflow-y: scroll; /* Keep scrollbar to prevent layout shift */
+  }
+
+  /* Reset heading styles to be consistent with modern sans */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: theme('fontFamily.heading');
+    font-weight: 700;
+  }
+}
+
+@layer components {
+  /* Modern Social Media Card Structure */
+  .social-card {
+    @apply bg-surface-default rounded-[var(--radius-social)] shadow-social-card border border-border-light;
+  }
+
+  /* Modern Inputs - Gray filled, borderless to focus ring */
+  .social-input {
+    @apply w-full bg-[#F0F2F5] text-ink-title px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-500 transition-shadow duration-200 placeholder-ink-muted;
+  }
+  
+  .social-textarea {
+    @apply w-full bg-[#F0F2F5] text-ink-title px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-500 transition-shadow duration-200 placeholder-ink-muted resize-none;
+  }
+
+  /* Core Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center font-bold px-4 py-2 rounded-md bg-brand-500 text-white hover:bg-brand-600 active:scale-95 transition-all duration-200 border-none;
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center justify-center font-bold px-4 py-2 rounded-md bg-[#E4E6EB] text-[#050505] hover:bg-[#D8DADF] active:scale-95 transition-all duration-200 border-none;
+  }
+  
+  .btn-ghost {
+    @apply inline-flex items-center justify-center font-semibold px-2 py-2 rounded-md text-[#65676B] hover:bg-[#F2F2F2] transition-colors duration-200;
+  }
+
+  /* Icons inside buttons */
+  .icon-btn {
+    @apply p-2 rounded-full bg-[#E4E6EB] text-[#050505] hover:bg-[#D8DADF] transition-colors duration-200 flex items-center justify-center;
+  }
+}
+
+/* Custom Scrollbar to match FB */
+::-webkit-scrollbar {
+  width: 14px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #BCC0C4;
+  border: 4px solid transparent;
+  background-clip: padding-box;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #A0A4A8;
+}
