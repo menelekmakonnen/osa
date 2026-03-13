@@ -26,12 +26,10 @@ const CORS_HEADERS = {
 /**
  * Handle HTTP OPTIONS request for CORS preflight
  */
-function doOptions() {
+function doOptions(e) {
   return ContentService.createTextOutput("")
-    .setMimeType(ContentService.MimeType.TEXT)
-    .setHeaders(CORS_HEADERS);
+    .setMimeType(ContentService.MimeType.TEXT);
 }
-
 /**
  * Handle HTTP POST requests (for mutations and some queries with larger payloads)
  */
@@ -90,15 +88,13 @@ function doGet(e) {
 }
 
 /**
- * Helper to build JSON responses with CORS headers
+ * Helper to build JSON responses. 
+ * NOTE: Google Apps Script Web Apps automatically append CORS headers when deployed as "Execute as Me" and "Access: Anyone". 
+ * However, we must ensure we return a successful response to OPTIONS, and that the payload is formatted correctly.
  */
 function jsonResponse(obj) {
   let output = ContentService.createTextOutput(JSON.stringify(obj));
   output.setMimeType(ContentService.MimeType.JSON);
-  // Apps Script Web Apps don't officially support custom headers well via WebApp output, 
-  // but we can try. Often the client needs to use 'no-cors' or standard JSONP.
-  // Actually, ContentService doesn't have setHeaders. 
-  // To deal with CORS in GAS, usually you return JSON normally and the browser allows it if called correctly.
   return output;
 }
 
@@ -848,8 +844,19 @@ function reactBoardMessage(user, data) {
 // DB Utility Helpers
 // ==========================================
 
+function getDB() {
+  // Bound to the official OSA Database Spreadsheet
+  return SpreadsheetApp.openById("1mXY-MoxvTiUcDOtOYkDoG2PtaE2-aN0JpvpCrDA2Jcc");
+}
+
 function getSheet(name) {
-  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+  let sheet = getDB().getSheetByName(name);
+  if (!sheet) {
+      console.log("Sheet " + name + " not found. Auto-initializing schema.");
+      INITIALIZE_SHEETS();
+      sheet = getDB().getSheetByName(name);
+  }
+  return sheet;
 }
 
 function getHeaders(sheet) {
@@ -899,7 +906,7 @@ function getYearGroupsData() {
  * Utility to run once to setup sheets schema manually if empty.
  */
 function INITIALIZE_SHEETS() {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getDB();
     const sheetsToCreate = {
         "year_groups": ["id", "school", "year", "nickname", "house_name", "cheque_colour"],
         "members": ["id", "name", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "bio", "profession", "location", "phone", "linkedin", "profile_pic"],

@@ -3,9 +3,8 @@
  * Interfaces with the Google Apps Script Backend
  */
 
-// Since the GAS deployment URL isn't final (it was just listed as a new deployment with ID),
-// we will define it here. In production, this would come from an environment variable.
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyI-RImXKWPoGznV16jiOmxTOizVbSEEXeAtotePeOJQ9YHi1xgo2rmpNnyZ9Uwk2vVG/exec";
+// We look for a VITE_GAS_URL environment variable first, but fallback to our deployed URL
+const GAS_URL = import.meta.env.VITE_GAS_URL || "https://script.google.com/macros/s/AKfycby88ZH_HMNAczLJwROj83yQ2jcEL7MURR9hlrKkTXc2KHRQpQnppZyY2Amq_IHKGAHp/exec";
 
 // In-memory session state (as per requirements: no localStorage)
 let sessionToken = null;
@@ -111,10 +110,10 @@ export const api = {
   submitPost: (postData) => apiRequest("submitPost", postData),
   approvePost: (postId) => apiRequest("approvePost", { post_id: postId }),
   returnPost: (postId, note) => apiRequest("returnPost", { post_id: postId, note }),
-  dispatchNewsletter: () => apiRequest("dispatchNewsletter"), // (Mocked in backend)
-  createCampaign: (campaignData) => apiRequest("createCampaign", campaignData), // (Mocked in backend)
+  dispatchNewsletter: () => apiRequest("dispatchNewsletter"),
+  createCampaign: (campaignData) => apiRequest("createCampaign", campaignData),
   donate: (campaignId, amount) => apiRequest("donate", { campaign_id: campaignId, amount }),
-  createEvent: (eventData) => apiRequest("createEvent", eventData), // (Mocked)
+  createEvent: (eventData) => apiRequest("createEvent", eventData),
   rsvp: (eventId) => apiRequest("rsvp", { event_id: eventId }),
 
   // Board & Gallery

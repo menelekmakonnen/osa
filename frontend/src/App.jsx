@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { authState } from './api/client';
 
-// Layouts
 import { AuthLayout, AppLayout } from './components/Layouts';
+import { TenantProvider } from './context/TenantContext';
 
 // Pages
 import { Login, Register, ForgotPassword } from './pages/Auth';
@@ -35,8 +35,9 @@ function App() {
   });
 
   return (
-    <BrowserRouter>
-      <Routes>
+    <TenantProvider>
+      <BrowserRouter>
+        <Routes>
         
         {/* Public Landing (Redirecting to Login for v1 MVP) */}
         <Route path="/" element={<Navigate to="/login" replace />} />
@@ -65,12 +66,12 @@ function App() {
           <Route path="superadmin" element={<SuperAdmin />} />
         </Route>
 
-        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/login" replace />} />
         
       </Routes>
     </BrowserRouter>
-  );
+  </TenantProvider>
+);
 }
 
 export default App;

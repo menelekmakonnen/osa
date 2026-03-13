@@ -103,22 +103,22 @@ export function Card({ children, hoverable = false, className = '', ...props }) 
 /* 
   Modal Component
 */
-export function Modal({ isOpen, onClose, title, children, wide = false }) {
+export function Modal({ isOpen, onClose, title, children, wide = false, noPadding = false }) {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-transparent" onClick={onClose}></div>
       <div 
-        className={`bg-surface-default w-full ${wide ? 'max-w-3xl' : 'max-w-xl'} rounded-[12px] shadow-[0_12px_28px_0_rgba(0,0,0,0.2),0_2px_4px_0_rgba(0,0,0,0.1),inset_0_0_0_1px_rgba(255,255,255,0.5)] flex flex-col max-h-[90vh] z-10`}
+        className={`bg-surface-default w-full ${wide ? 'max-w-3xl' : 'max-w-xl'} rounded-[12px] shadow-[0_12px_28px_0_rgba(0,0,0,0.2),0_2px_4px_0_rgba(0,0,0,0.1),inset_0_0_0_1px_rgba(255,255,255,0.5)] flex flex-col max-h-[90vh] z-10 overflow-hidden`}
       >
-        <div className="px-4 py-3 border-b border-border-light flex justify-between items-center bg-surface-default rounded-t-[12px] sticky top-0">
+        <div className="px-4 py-3 border-b border-border-light flex justify-between items-center bg-surface-default sticky top-0 z-20">
           <h2 className="text-xl font-bold text-ink-title m-0">{title}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Close">
+          <button className="icon-btn bg-surface-muted hover:bg-border-light rounded-full p-1" onClick={onClose} aria-label="Close">
             <X size={20} />
           </button>
         </div>
-        <div className="p-4 overflow-y-auto">
+        <div className={`${noPadding ? '' : 'p-4'} overflow-y-auto custom-scrollbar relative`}>
           {children}
         </div>
       </div>

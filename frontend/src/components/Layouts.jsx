@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { Home, Mail, Heart, Calendar, Users, UserCircle, Settings, ShieldAlert, LogOut, Menu, X, Sun, Moon, MessageSquare, Image as ImageIcon } from 'lucide-react';
 import { authState } from '../api/client';
+import { useTenant } from '../context/TenantContext';
 import { Logo } from './Logo';
 
 export function ThemeToggle() {
@@ -84,6 +85,7 @@ function NavItem({ to, icon, label, isAdminSection = false, onClick }) {
 
 export function AppLayout() {
   const user = authState.getUser();
+  const { name: tenantName, scope, setScope, isCustomDomain } = useTenant();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
@@ -106,7 +108,10 @@ export function AppLayout() {
       <div className="md:hidden sticky top-0 z-40 bg-surface-default border-b border-border-light px-4 py-3 flex items-center justify-between shadow-sm">
         <Link to="/" onClick={() => window.location.href='/'} className="flex items-center gap-2">
            <Logo className="w-5 h-5" wrapperClass="w-8 h-8" noText />
-           <h1 className="text-xl font-bold text-ink-title leading-tight">OSA</h1>
+           <div className="flex flex-col">
+             <h1 className="text-xl font-bold text-ink-title leading-tight">OSA</h1>
+             {isCustomDomain && <span className="text-[9px] font-bold text-brand-600 uppercase tracking-widest leading-none truncate max-w-[100px]">{tenantName}</span>}
+           </div>
         </Link>
         <div className="flex items-center gap-3">
            <ThemeToggle />
@@ -169,7 +174,7 @@ export function AppLayout() {
                <div className="flex flex-col">
                  <h1 className="text-[22px] font-bold text-ink-title leading-tight">OSA</h1>
                  <span className="text-[10px] font-bold text-brand-600 uppercase tracking-widest mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                    {user.school || 'Aggrey Memorial'}
+                    {isCustomDomain ? tenantName : (user.school || 'Aggrey Memorial')}
                  </span>
                </div>
              </Link>
@@ -194,6 +199,24 @@ export function AppLayout() {
                  </div>
               </div>
            </Link>
+        </div>
+
+        {/* Tenant Scope Toggle */}
+        <div className="px-4 mb-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1 block">Viewing Scope</label>
+            <select 
+               className="w-full bg-surface-muted text-ink-title border border-border-light rounded-lg text-xs font-semibold px-2 flex-grow h-8 focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"
+               value={scope.type}
+               onChange={(e) => {
+                  const type = e.target.value;
+                  const val = type === 'school' ? user.school : type === 'yeargroup' ? user.year_group_nickname : user.house_name;
+                  setScope(type, val);
+               }}
+            >
+               <option value="school">Whole School</option>
+               {user.year_group_nickname && <option value="yeargroup">My Year Group</option>}
+               {user.house_name && <option value="house">My House</option>}
+            </select>
         </div>
 
         {/* Main Nav */}

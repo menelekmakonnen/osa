@@ -106,11 +106,8 @@ export function Register() {
     api.getYearGroupsList()
       .then(res => setYearGroups(res || []))
       .catch(err => {
-          console.warn("Failed to fetch YGs", err);
-          setYearGroups([
-              { id: 'yg-1', year: '2012', nickname: 'The Millenniums' },
-              { id: 'yg-2', year: '2005', nickname: 'Pioneers' }
-          ]); // Mock fallback if API not ready
+          console.error("Failed to fetch YGs", err);
+          setYearGroups([]); 
       })
       .finally(() => setFetchingYGs(false));
   }, []);
