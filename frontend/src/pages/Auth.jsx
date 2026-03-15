@@ -43,25 +43,27 @@ export function Login() {
 
       <form onSubmit={handleLogin} className="flex flex-col gap-4">
         <div className="relative">
-          <Mail className="absolute left-3 top-3.5 text-muted" size={18} />
+          <Mail className="absolute left-3 top-9 text-muted" size={18} />
           <Input 
-            placeholder="Email Address"
+            label="Email Address"
+            placeholder="name@example.com"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="pl-10"
+            className="[&>input]:pl-10"
             required
           />
         </div>
         
         <div className="relative">
-          <Lock className="absolute left-3 top-3.5 text-muted" size={18} />
+          <Lock className="absolute left-3 top-9 text-muted" size={18} />
           <Input 
-            placeholder="Password"
+            label="Password"
+            placeholder="Enter your password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="pl-10"
+            className="[&>input]:pl-10"
             required
           />
         </div>
@@ -186,26 +188,29 @@ export function Register() {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input 
+          label="Full Name"
           name="name"
-          placeholder="Full Name"
+          placeholder="e.g. Jane Doe"
           value={formData.name}
           onChange={handleChange}
           required
         />
         
         <Input 
+          label="Email Address"
           name="email"
           type="email"
-          placeholder="Email Address"
+          placeholder="name@example.com"
           value={formData.email}
           onChange={handleChange}
           required
         />
 
         <Input 
+          label="Create Password"
           name="password"
           type="password"
-          placeholder="Create Password"
+          placeholder="Minimum 8 characters"
           value={formData.password}
           onChange={handleChange}
           required
@@ -244,29 +249,33 @@ export function Register() {
            <div className="flex flex-col gap-4 mt-2 bg-sage/5 p-4 rounded-xl border border-sage/20">
               <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">Super Admin Verification</label>
               <Input 
+                 label="Official School Name"
                  name="new_school_name"
-                 placeholder="Official School Name"
+                 placeholder="e.g. Aggrey Memorial"
                  value={formData.new_school_name}
                  onChange={handleChange}
                  required
               />
               <Input 
+                 label="Alumni Verification ID"
                  name="new_school_admin_id"
-                 placeholder="Alumni Exec/Staff Verification ID Number"
+                 placeholder="Exec/Staff ID Number"
                  value={formData.new_school_admin_id}
                  onChange={handleChange}
                  required
               />
               <Input 
+                 label="Class List (Comma Separated)"
                  name="new_school_classes"
-                 placeholder="Class List (e.g. Science 1, Arts 3) - Comma Separated"
+                 placeholder="e.g. Science 1, Arts 3"
                  value={formData.new_school_classes}
                  onChange={handleChange}
                  required
               />
               <Input 
+                 label="House Names (Comma Separated)"
                  name="new_school_houses"
-                 placeholder="House Names (e.g. WatKat, Casford) - Comma Separated"
+                 placeholder="e.g. WatKat, Casford"
                  value={formData.new_school_houses}
                  onChange={handleChange}
                  required
@@ -293,6 +302,7 @@ export function Register() {
 
                   {activeClasses.length > 0 ? (
                       <select 
+                          id="final_class"
                           name="final_class"
                           className="osa-select"
                           value={formData.final_class}
@@ -304,8 +314,9 @@ export function Register() {
                       </select>
                   ) : (
                       <Input 
+                          label="Final Class"
                           name="final_class"
-                          placeholder="Final Class (e.g. 3A)"
+                          placeholder="e.g. 3A"
                           value={formData.final_class}
                           onChange={handleChange}
                           required
@@ -315,6 +326,7 @@ export function Register() {
 
               {activeHouses.length > 0 ? (
                   <select 
+                      id="house_name"
                       name="house_name"
                       className="osa-select"
                       value={formData.house_name}
@@ -326,8 +338,9 @@ export function Register() {
                   </select>
               ) : (
                   <Input 
+                      label="School House Name"
                       name="house_name"
-                      placeholder="School House Name"
+                      placeholder="e.g. Casford"
                       value={formData.house_name}
                       onChange={handleChange}
                       required
@@ -340,15 +353,17 @@ export function Register() {
                           <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">Create Year Group</label>
                       </div>
                       <Input 
+                          label="Graduating Year"
                           name="new_yg_year"
-                          placeholder="Graduating Year (e.g. 2012)"
+                          placeholder="e.g. 2012"
                           value={formData.new_yg_year}
                           onChange={handleChange}
                           required
                       />
                       <Input 
+                          label="Nickname"
                           name="new_yg_nickname"
-                          placeholder="Nickname (e.g. The Pioneers)"
+                          placeholder="e.g. The Pioneers"
                           value={formData.new_yg_nickname}
                           onChange={handleChange}
                           required

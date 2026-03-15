@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { X } from 'lucide-react';
 
 /* 
@@ -129,31 +129,37 @@ export function Modal({ isOpen, onClose, title, children, wide = false, noPaddin
 /*
   Input Fields
 */
-export function Input({ label, error, className = '', ...props }) {
+export function Input({ label, error, className = '', id, ...props }) {
+    const generatedId = useId();
+    const inputId = id || generatedId;
     return (
         <div className={`mb-3 ${className}`}>
-            {label && <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">{label}</label>}
-            <input className="social-input" {...props} />
+            {label && <label htmlFor={inputId} className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">{label}</label>}
+            <input id={inputId} className="social-input" {...props} />
             {error && <span className="block text-danger text-xs mt-1 ml-1 font-medium">{error}</span>}
         </div>
     )
 }
 
-export function Textarea({ label, error, className = '', ...props }) {
+export function Textarea({ label, error, className = '', id, ...props }) {
+    const generatedId = useId();
+    const inputId = id || generatedId;
     return (
         <div className={`mb-3 ${className}`}>
-            {label && <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">{label}</label>}
-            <textarea className="social-textarea flex-1 min-h-[100px]" {...props} />
+            {label && <label htmlFor={inputId} className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">{label}</label>}
+            <textarea id={inputId} className="social-textarea flex-1 min-h-[100px]" {...props} />
             {error && <span className="block text-danger text-xs mt-1 ml-1 font-medium">{error}</span>}
         </div>
     )
 }
 
-export function Select({ label, options, error, className = '', ...props }) {
+export function Select({ label, options, error, className = '', id, ...props }) {
+    const generatedId = useId();
+    const inputId = id || generatedId;
     return (
         <div className={`mb-3 ${className}`}>
-            {label && <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">{label}</label>}
-            <select className="social-input appearance-none bg-no-repeat bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%2365676B%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[position:right_12px_center]" {...props}>
+            {label && <label htmlFor={inputId} className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">{label}</label>}
+            <select id={inputId} className="social-input appearance-none bg-no-repeat bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%208l5%205%205-5%22%20stroke%3D%22%2365676B%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[position:right_12px_center]" {...props}>
                 {options.map((opt, i) => (
                     <option key={i} value={opt.value}>{opt.label}</option>
                 ))}

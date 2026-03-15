@@ -4,10 +4,125 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Old Students Association Platform - Connect with your alumni network." />
     <title>OSA Directory</title>
+    
+    <!-- Pre-load essential fonts or styles if needed -->
+    <!-- Inline Critical CSS for the App Shell to prevent FOUC -->
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #F0F2F5; /* Matches surface-muted typically */
+      }
+      /* Fast dark mode apply before React loads */
+      html.dark body {
+        background-color: #050505;
+      }
+      .osa-app-shell {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+      }
+      .osa-shell-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: #ffffff;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        padding: 0 1rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      }
+      html.dark .osa-shell-header {
+        background: #242526;
+        border-color: #3E4042;
+      }
+      .osa-shell-logo {
+        font-weight: 800;
+        font-size: 1.5rem;
+        color: #22c55e;
+        text-decoration: none;
+      }
+      .osa-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(34, 197, 94, 0.2);
+        border-left-color: #22c55e;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1rem;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .osa-shell-error {
+        display: none;
+        max-width: 400px;
+        padding: 1.5rem;
+        background: #FEF2F2;
+        border: 1px solid #FCA5A5;
+        border-radius: 8px;
+        color: #991B1B;
+        text-align: center;
+      }
+      html.dark .osa-shell-error {
+        background: #450a0a;
+        border-color: #7f1d1d;
+        color: #fca5a5;
+      }
+    </style>
+
+    <!-- Early Error Monitoring -->
+    <script>
+      window.osaAppConfig = {
+        hasMounted: false,
+        errors: []
+      };
+
+      function handleGlobalError(message, source, lineno, colno, error) {
+         window.osaAppConfig.errors.push({ type: 'error', message, source, lineno, colno, error });
+         if (!window.osaAppConfig.hasMounted) {
+            // Show the fallback UI if React hasn't mounted
+            document.addEventListener("DOMContentLoaded", () => {
+              const spinner = document.getElementById('osa-initial-spinner');
+              const errorBox = document.getElementById('osa-initial-error');
+              if (spinner) spinner.style.display = 'none';
+              if (errorBox) {
+                  errorBox.style.display = 'block';
+                  errorBox.innerHTML = `<strong>Failed to load application.</strong><br/><small>${message}</small><br/><button onclick="window.location.reload()" style="mt-2 text-sm underline cursor-pointer">Retry</button>`;
+              }
+            });
+         }
+      }
+
+      window.onerror = handleGlobalError;
+      window.onunhandledrejection = (event) => {
+         handleGlobalError(event.reason ? event.reason.toString() : 'Unhandled Promise Rejection', 'Promise', 0, 0, event.reason);
+      };
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- App Shell: Pre-rendered HTML for SEO and perceived performance -->
+    <div id="root">
+       <div class="osa-app-shell">
+          <header class="osa-shell-header">
+             <span class="osa-shell-logo">OSA</span>
+          </header>
+          
+          <main style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 60px; padding: 2rem;">
+             <div id="osa-initial-spinner" class="osa-spinner"></div>
+             <p id="osa-initial-text" style="color: #65676B; font-weight: 500;">Loading Directory...</p>
+             <div id="osa-initial-error" class="osa-shell-error"></div>
+          </main>
+       </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
       // Apply dark mode on initial load
