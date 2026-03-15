@@ -114,20 +114,32 @@ function handleAction(action, data, token) {
   } else if (action === "ping") {
     return { success: true, message: "PONG" };
   } else if (action === "getSchools") {
-    // For V1, we hardcode the school list for the landing page or pull from Master
-    return {
-      success: true,
-      data: [{
-        id: "AMOSA",
-        name: "Aggrey Memorial A.M.E. Zion Senior High School",
-        short_code: "AGGREY",
-        association: "AMOSA",
-        city: "Cape Coast",
-        classes: ["General Arts 1", "General Arts 2", "General Arts 3", "General Arts 4", "General Science 1", "General Science 2", "General Science 3", "Business 1", "Business 2", "Business 3", "Visual Arts 1", "Visual Arts 2", "Home Economics 1", "Home Economics 2", "Technical"],
-        houses: ["WatKat", "PinNew", "Enchilfia", "Cascille"],
-        year_groups_count: Object.keys(getYearGroupsData()).length
-      }]
-    };
+      let schools = getSheetData("schools");
+      if (schools.length === 0) {
+        // Fallback for empty new instances
+        return {
+          success: true,
+          data: [{
+            id: "AMOSA",
+            name: "Aggrey Memorial A.M.E. Zion Senior High School",
+            short_code: "AGGREY",
+            type: "Mixed",
+            association: "AMOSA",
+            city: "Cape Coast",
+            classes: "[]",
+            houses: "[]",
+            year_groups_count: Object.keys(getYearGroupsData()).length
+          }]
+        };
+      }
+      return { success: true, data: schools.map(s => ({
+         id: s.id,
+         name: s.name,
+         short_code: s.name.substring(0, 6).toUpperCase(), // Basic shortcode gen
+         type: s.type,
+         classes: s.classes,
+         houses: s.houses
+      })) };
   } else if (action === "getYearGroupsList") {
       let ygs = getYearGroupsData();
       return { success: true, data: Object.values(ygs).map(y => ({id: y.id, year: y.year, nickname: y.nickname})) };
@@ -255,8 +267,8 @@ function handleLogin(data) {
 }
 
 function handleRegister(data) {
-  const { name, email, password, year_group_id, new_yg_year, new_yg_nickname, final_class, house_name } = data;
-  if (!name || !email || !password || (!year_group_id && !new_yg_year)) {
+  const { name, email, password, year_group_id, school_id, new_yg_year, new_yg_nickname, final_class, house_name, gender } = data;
+  if (!name || !email || !password || (!year_group_id && !new_yg_year) || !school_id) {
     return { success: false, error: "Missing required fields" };
   }
 
@@ -313,6 +325,7 @@ function handleRegister(data) {
     year_group_nickname: yg_nickname,
     final_class: final_class || "",
     house_name: house_name || "",
+    gender: gender || "",
     cheque_colour: cheque_color,
     school: school,
     association: assoc,
@@ -350,13 +363,15 @@ function handleRegister(data) {
 }
 
 function handleOnboardSchool(data) {
-  const { name, email, password, new_school_name, new_school_admin_id, new_school_classes, new_school_houses } = data;
-  if (!name || !email || !password || !new_school_name || !new_school_admin_id) {
+  const { name, email, password, new_school_name, new_school_type, new_school_admin_id, new_school_classes, new_school_houses } = data;
+  if (!name || !email || !password || !new_school_name || !new_school_type || !new_school_admin_id) {
     return { success: false, error: "Missing required fields for school onboarding" };
   }
 
   const membersSheet = getSheet("members");
+  const schoolsSheet = getSheet("schools");
   const headers = getHeaders(membersSheet);
+  const sHeaders = getHeaders(schoolsSheet);
   
   // Check if email exists
   const rows = membersSheet.getDataRange().getValues();
@@ -370,6 +385,17 @@ function handleOnboardSchool(data) {
   const token = Utilities.getUuid();
   const expiry = new Date();
   expiry.setDate(expiry.getDate() + 7);
+  const newSchoolId = Utilities.getUuid();
+  const schoolRowObj = {
+     id: newSchoolId,
+     name: new_school_name,
+     type: new_school_type,
+     classes: JSON.stringify(new_school_classes || []),
+     houses: JSON.stringify(new_school_houses || []),
+     status: "Pending",
+     admin_id: newId
+  };
+  schoolsSheet.appendRow(sHeaders.map(h => schoolRowObj[h] !== undefined ? schoolRowObj[h] : ""));
 
   const newRowObj = {
     id: newId,
@@ -381,8 +407,9 @@ function handleOnboardSchool(data) {
     year_group_nickname: "PENDING",
     final_class: "",
     house_name: "",
+    gender: "",
     cheque_colour: "#1E293B",
-    school: new_school_name,
+    school: newSchoolId,
     association: "Pending Verification",
     date_joined: new Date().toISOString(),
     session_token: token,
@@ -396,7 +423,7 @@ function handleOnboardSchool(data) {
     priv_profession: "all",
     priv_linkedin: "all",
     priv_bio: "all",
-    bio: `School Administrator (Pending Verification)\nClasses: ${new_school_classes || 'None provided'}\nHouses: ${new_school_houses || 'None provided'}`,
+    bio: `School Administrator (Pending Verification)`,
     profession: "",
     location: "",
     phone: "",
@@ -645,7 +672,7 @@ function applyPrivacyFilters(targetMember, viewerUser) {
 // ==========================================
 
 function getPosts(user, data) {
-  const allPosts = getSheetData("posts");
+  const allPosts = getSheetData("posts").filter(p => p.school === user.school); // P0: Tenant Isolation
   let userPosts = allPosts.filter(p => p.year_group_id === user.year_group_id);
   
   // If not admin, only show Approved + own drafts
@@ -676,6 +703,7 @@ function submitPost(user, data) {
     author_id: user.id,
     author_name: user.name,
     year_group_id: user.year_group_id,
+    school: user.school, // P0: Tenant Isolation
     submission_date: new Date().toISOString(),
     status: "Pending",
     newsletter_month: "",
@@ -746,6 +774,10 @@ function updatePostStatus(user, action, data) {
 }
 
 function dispatchNewsletter(user, data) {
+  if (!user.role || ROLE_TIERS[user.role] < 2) {
+      return { success: false, error: "Unauthorized: Dispatches require School Administrator or higher scope." };
+  }
+
   const d = new Date();
   const currentMonth = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0');
   
@@ -850,7 +882,7 @@ function dispatchNewsletter(user, data) {
 function getCampaigns(user, data) {
   const scopeFilter = data.scope || "all"; // my_school, all
   
-  const allCampaigns = getSheetData("campaigns");
+  const allCampaigns = getSheetData("campaigns").filter(c => c.school === user.school); // P0: Tenant Isolation
   const visible = allCampaigns.filter(c => {
      if(c.scope === "yeargroup" && c.year_group_id !== user.year_group_id) return false;
      if(scopeFilter === "my_school" && c.school !== user.school) return false;
@@ -903,7 +935,7 @@ function handleDonation(user, data) {
 function getEvents(user, data) {
   const scopeFilter = data.scope || "all";
   
-  const events = getSheetData("events");
+  const events = getSheetData("events").filter(e => e.school === user.school); // P0: Tenant Isolation
   const visible = events.filter(e => {
      if(e.scope === "yeargroup" && e.year_group_id !== user.year_group_id && user.role !== "Super Admin") return false;
      return true;
@@ -1021,7 +1053,7 @@ function uploadImage(user, data) {
 }
 
 function getAlbums(user, data) {
-    const albums = getSheetData("albums").filter(a => a.group_id === data.group_id);
+    const albums = getSheetData("albums").filter(a => a.school === user.school && a.group_id === data.group_id); // P0: Tenant Isolation
     return { success: true, data: albums.reverse() };
 }
 
@@ -1035,6 +1067,7 @@ function createAlbum(user, data) {
     sheet.appendRow(headers.map(h => {
         if(h==="id") return id;
         if(h==="group_id") return group_id;
+        if(h==="school") return user.school; // P0: Tenant Isolation
         if(h==="name") return name;
         if(h==="description") return description || "";
         if(h==="created_by_id") return user.id;
@@ -1046,7 +1079,7 @@ function createAlbum(user, data) {
 }
 
 function getGalleryItems(user, data) {
-    let images = getSheetData("galleries").filter(g => g.group_id === data.group_id);
+    let images = getSheetData("galleries").filter(g => g.school === user.school && g.group_id === data.group_id); // P0: Tenant Isolation
     if (data.album_id) {
         images = images.filter(g => g.album_id === data.album_id);
     }
@@ -1055,7 +1088,7 @@ function getGalleryItems(user, data) {
 
 function getBoardMessages(user, data) {
     const group_id = data.group_id || user.year_group_id;
-    let msgs = getSheetData("board_messages").filter(m => m.group_id === group_id);
+    let msgs = getSheetData("board_messages").filter(m => m.school === user.school && m.group_id === group_id); // P0: Tenant Isolation
     
     msgs.forEach(m => {
         m.comments = safeJsonParse(m.comments, []);
@@ -1075,6 +1108,7 @@ function postBoardMessage(user, data) {
     sheet.appendRow(headers.map(h => {
         if(h==="id") return msgId;
         if(h==="group_id") return group_id;
+        if(h==="school") return user.school; // P0: Tenant Isolation
         if(h==="author_id") return user.id;
         if(h==="author_name") return user.name;
         if(h==="content") return content;
@@ -1199,17 +1233,18 @@ function getYearGroupsData() {
 function INITIALIZE_SHEETS() {
     const ss = getDB();
     const sheetsToCreate = {
+        "schools": ["id", "name", "type", "classes", "houses", "status", "admin_id"],
         "year_groups": ["id", "school", "year", "nickname", "house_name", "cheque_colour"],
-        "members": ["id", "name", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "bio", "profession", "location", "phone", "linkedin", "profile_pic", "school_admin_id", "verification_status"],
-        "posts": ["id", "title", "category", "content", "author_id", "author_name", "year_group_id", "submission_date", "status", "newsletter_month", "rejection_note"],
-        "campaigns": ["id", "title", "type", "description", "target_amount", "currency", "deadline", "scope", "year_group_id", "status", "raised_amount", "donor_count", "updates", "created_by"],
+        "members": ["id", "name", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "bio", "profession", "location", "phone", "linkedin", "profile_pic", "school_admin_id", "verification_status"],
+        "posts": ["id", "title", "category", "content", "author_id", "author_name", "year_group_id", "school", "submission_date", "status", "newsletter_month", "rejection_note"],
+        "campaigns": ["id", "title", "type", "description", "target_amount", "currency", "deadline", "scope", "year_group_id", "school", "status", "raised_amount", "donor_count", "updates", "created_by"],
         "donations": ["id", "campaign_id", "donor_id", "amount", "timestamp", "payment_method"],
-        "events": ["id", "title", "type", "description", "date", "time", "virtual_link", "venue", "scope", "year_group_id", "max_attendees", "status", "created_by"],
+        "events": ["id", "title", "type", "description", "date", "time", "virtual_link", "venue", "scope", "year_group_id", "school", "max_attendees", "status", "created_by"],
         "rsvps": ["id", "event_id", "user_id", "timestamp"],
         "newsletters": ["id", "month", "year_group_id", "post_ids", "recipient_count", "dispatched_by", "timestamp"],
-        "board_messages": ["id", "group_id", "author_id", "author_name", "content", "comments", "reactions", "timestamp"],
-        "albums": ["id", "group_id", "name", "description", "created_by_id", "created_by_name", "timestamp"],
-        "galleries": ["id", "group_id", "album_id", "uploaded_by_id", "uploaded_by_name", "url", "timestamp"]
+        "board_messages": ["id", "group_id", "school", "author_id", "author_name", "content", "comments", "reactions", "timestamp"],
+        "albums": ["id", "group_id", "school", "name", "description", "created_by_id", "created_by_name", "timestamp"],
+        "galleries": ["id", "group_id", "school", "album_id", "uploaded_by_id", "uploaded_by_name", "url", "timestamp"]
     };
 
     for (let s in sheetsToCreate) {

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { Card, Button, Badge, Modal } from '../components/ui';
-import { Calendar, MapPin, Video, Users, Link as LinkIcon, CheckCircle } from 'lucide-react';
+import { Calendar, MapPin, Video, Users, Link as LinkIcon, CheckCircle, PlusCircle } from 'lucide-react';
+import { authState } from '../api/client';
 
 export function Events() {
   const [activeFilter, setActiveFilter] = useState('all'); // all, virtual, meetup, hangout
@@ -9,6 +10,8 @@ export function Events() {
   
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const user = authState.getUser();
+  const isAdmin = user && (user.role.includes("Admin") || user.role === "IT Department");
 
   const [selectedEvent, setSelectedEvent] = useState(null); // For details modal
   const [rsvping, setRsvping] = useState(false);
@@ -65,9 +68,19 @@ export function Events() {
       
       {/* Header Area */}
       <div className="bg-surface-default p-4 rounded-[var(--radius-social)] shadow-social-card border border-border-light flex flex-col gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-ink-title m-0">Events</h1>
-          <p className="text-[14px] text-ink-muted mt-0.5">Virtual hangouts, formal meetups, and cross-school webinars.</p>
+        <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-xl font-bold text-ink-title m-0">Events</h1>
+              <p className="text-[14px] text-ink-muted mt-0.5">Virtual hangouts, formal meetups, and cross-school webinars.</p>
+            </div>
+            {isAdmin && (
+                <Button 
+                   onClick={() => alert("Event Creation Modal coming in v2!")} 
+                   className="gap-2 shrink-0 bg-[#E4E6EB] hover:bg-[#D8DADF] text-ink-title border-none font-semibold text-[14px]"
+                >
+                   <PlusCircle size={18} /> Create Event
+                </Button>
+            )}
         </div>
 
         {/* Segmented Control Filters */}

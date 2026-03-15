@@ -6,9 +6,11 @@
 // We look for a VITE_GAS_URL environment variable first, but fallback to our deployed URL
 const GAS_URL = import.meta.env.VITE_GAS_URL || "https://script.google.com/macros/s/AKfycby88ZH_HMNAczLJwROj83yQ2jcEL7MURR9hlrKkTXc2KHRQpQnppZyY2Amq_IHKGAHp/exec";
 
-// In-memory session state (as per requirements: no localStorage)
-let sessionToken = null;
-let currentUser = null;
+// Initialize from localStorage if available
+let sessionToken = window.localStorage.getItem('osa_session_token') || null;
+let currentUser = window.localStorage.getItem('osa_current_user') 
+  ? JSON.parse(window.localStorage.getItem('osa_current_user')) 
+  : null;
 
 export const authState = {
   getToken: () => sessionToken,
@@ -16,10 +18,14 @@ export const authState = {
   setSession: (token, user) => {
     sessionToken = token;
     currentUser = user;
+    window.localStorage.setItem('osa_session_token', token);
+    window.localStorage.setItem('osa_current_user', JSON.stringify(user));
   },
   clearSession: () => {
     sessionToken = null;
     currentUser = null;
+    window.localStorage.removeItem('osa_session_token');
+    window.localStorage.removeItem('osa_current_user');
   },
   isAuthenticated: () => !!sessionToken
 };
@@ -56,9 +62,9 @@ export async function apiRequest(action, data = {}) {
     if (result.code === 401) {
       // Token expired or invalid
       authState.clearSession();
-      // Force a reload or redirect to login (handled typically in React Router context)
+      // Dispatch an event so App.jsx or Root context can redirect gracefully
       window.dispatchEvent(new Event("osa-auth-expired"));
-      throw new Error("Session expired. Please log in again.");
+      return null; // Return null instead of throwing to prevent unhandled promise rejections crashing React
     }
 
     if (!result.success) {
@@ -68,7 +74,12 @@ export async function apiRequest(action, data = {}) {
     return result.data;
 
   } catch (error) {
-    console.error(`[API Error] ${action}: `, error);
+    if (error.message.includes("401")) {
+       authState.clearSession();
+       window.dispatchEvent(new Event("osa-auth-expired"));
+       return null;
+    }
+    console.warn(`[API Error] ${action}: `, error);
     throw error;
   }
 }

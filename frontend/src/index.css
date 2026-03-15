@@ -60,11 +60,11 @@
 
   /* Modern Inputs - Gray filled, borderless to focus ring */
   .social-input {
-    @apply w-full bg-[#F0F2F5] text-ink-title px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-500 transition-shadow duration-200 placeholder-ink-muted;
+    @apply w-full bg-surface-muted text-ink-title px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-500 transition-shadow duration-200 placeholder-ink-muted;
   }
   
   .social-textarea {
-    @apply w-full bg-[#F0F2F5] text-ink-title px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-500 transition-shadow duration-200 placeholder-ink-muted resize-none;
+    @apply w-full bg-surface-muted text-ink-title px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-500 transition-shadow duration-200 placeholder-ink-muted resize-none;
   }
 
   /* Core Buttons */

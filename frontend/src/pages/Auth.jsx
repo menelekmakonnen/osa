@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { Button, Card, Input } from '../components/ui';
@@ -95,15 +95,18 @@ export function Register() {
     password: '',
     school_id: isCustomDomain ? schoolId : '',
     new_school_name: '',
+    new_school_type: 'Mixed',
     new_school_admin_id: '',
     year_group_id: '',
     new_yg_year: '',
     new_yg_nickname: '',
     final_class: '',
     house_name: '',
-    new_school_classes: '',
-    new_school_houses: ''
+    gender: '', // Required if school is mixed
   });
+
+  const [dynamicClasses, setDynamicClasses] = useState([""]);
+  const [dynamicHouses, setDynamicHouses] = useState([{ name: "", gender: "Boys" }]);
   
   const [schools, setSchools] = useState([]);
   const [yearGroups, setYearGroups] = useState([]);
@@ -138,9 +141,37 @@ export function Register() {
     fetchRequiredData();
   }, [isCustomDomain, formData.school_id]);
 
+  const handleDynamicClassChange = (index, value) => {
+    const newClasses = [...dynamicClasses];
+    newClasses[index] = value;
+    setDynamicClasses(newClasses);
+  };
+
+  const handleDynamicHouseChange = (index, field, value) => {
+    const newHouses = [...dynamicHouses];
+    newHouses[index][field] = value;
+    setDynamicHouses(newHouses);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
+
     setError('');
+
+    if (formData.school_id === 'new_school') {
+       // Filter empty arrays
+       const cleanClasses = dynamicClasses.filter(c => c.trim() !== "");
+       const cleanHouses = dynamicHouses.filter(h => h.name.trim() !== "");
+       
+       if (cleanClasses.length === 0 || cleanHouses.length === 0) {
+          setError("Please define at least one class and one house.");
+          return;
+       }
+       formData.new_school_classes = cleanClasses;
+       formData.new_school_houses = cleanHouses;
+    }
+
     setLoading(true);
 
     try {
@@ -166,8 +197,24 @@ export function Register() {
 
   const isNewSchoolFlow = formData.school_id === 'new_school';
   const selectedSchool = schools.find(s => s.id === formData.school_id);
-  const activeClasses = selectedSchool?.classes || [];
-  const activeHouses = selectedSchool?.houses || [];
+  
+  const { activeClasses, activeHouses } = useMemo(() => {
+    let classes = [];
+    let houses = [];
+    if (selectedSchool) {
+      try {
+        const classesArr = typeof selectedSchool.classes === 'string' ? JSON.parse(selectedSchool.classes) : (selectedSchool.classes || []);
+        classes = classesArr;
+
+        const housesArr = typeof selectedSchool.houses === 'string' ? JSON.parse(selectedSchool.houses) : (selectedSchool.houses || []);
+        // Extract the 'name' property as houses are now objects { name, gender }
+        houses = housesArr.map(h => typeof h === 'object' ? h.name : h);
+      } catch(e) {
+        console.error("Failed to parse school classes or houses", e);
+      }
+    }
+    return { activeClasses: classes, activeHouses: houses };
+  }, [selectedSchool]);
 
   return (
     <Card className="p-8">
@@ -224,10 +271,10 @@ export function Register() {
                  className="osa-select w-full"
                  value={formData.school_id}
                  onChange={handleChange}
-                 required
+                 required={!isNewSchoolFlow}
                  disabled={fetchingData}
              >
-                 <option value="">Choose your School...</option>
+                 <option value="">{isNewSchoolFlow ? "Building New Database..." : "Choose your School..."}</option>
                  {schools.map(s => (
                      <option key={s.id} value={s.id}>{s.name} ({s.short_code})</option>
                  ))}
@@ -264,22 +311,68 @@ export function Register() {
                  onChange={handleChange}
                  required
               />
-              <Input 
-                 label="Class List (Comma Separated)"
-                 name="new_school_classes"
-                 placeholder="e.g. Science 1, Arts 3"
-                 value={formData.new_school_classes}
-                 onChange={handleChange}
-                 required
+              <Select 
+                 label="School Type"
+                 name="new_school_type"
+                 value={formData.new_school_type}
+                 onChange={(e) => {
+                     handleChange(e);
+                     // If switching away from mixed, reset genders to primary type
+                     if (e.target.value !== 'Mixed') {
+                         setDynamicHouses(dynamicHouses.map(h => ({...h, gender: e.target.value})));
+                     }
+                 }}
+                 options={[
+                     {label: "Mixed School", value: "Mixed"},
+                     {label: "Boys School", value: "Boys"},
+                     {label: "Girls School", value: "Girls"}
+                 ]}
               />
-              <Input 
-                 label="House Names (Comma Separated)"
-                 name="new_school_houses"
-                 placeholder="e.g. WatKat, Casford"
-                 value={formData.new_school_houses}
-                 onChange={handleChange}
-                 required
-              />
+
+              <div className="mt-2">
+                 <label className="text-sm font-semibold text-ink-title block mb-2 ml-1">Classes</label>
+                 {dynamicClasses.map((c, i) => (
+                    <div key={`c-${i}`} className="flex gap-2 mb-2">
+                       <input 
+                         className="social-input" 
+                         placeholder="e.g. Science 1" 
+                         value={c} 
+                         onChange={(e) => handleDynamicClassChange(i, e.target.value)} 
+                         required
+                       />
+                       {i > 0 && <button type="button" onClick={() => setDynamicClasses(dynamicClasses.filter((_, idx) => idx !== i))} className="icon-btn text-danger"><X size={16}/></button>}
+                    </div>
+                 ))}
+                 <button type="button" onClick={() => setDynamicClasses([...dynamicClasses, ""])} className="text-sm text-brand-600 font-semibold ml-2 hover:underline">+ Add Class</button>
+              </div>
+
+              <div className="mt-4">
+                 <label className="text-sm font-semibold text-ink-title block mb-2 ml-1">Houses/Halls</label>
+                 {dynamicHouses.map((h, i) => (
+                    <div key={`h-${i}`} className="flex gap-2 mb-2">
+                       <input 
+                         className="social-input" 
+                         placeholder="e.g. Casford" 
+                         value={h.name} 
+                         onChange={(e) => handleDynamicHouseChange(i, 'name', e.target.value)} 
+                         required
+                       />
+                       {formData.new_school_type === 'Mixed' && (
+                           <select 
+                             className="osa-select !py-2 w-32" 
+                             value={h.gender}
+                             onChange={(e) => handleDynamicHouseChange(i, 'gender', e.target.value)}
+                           >
+                              <option value="Boys">Boys</option>
+                              <option value="Girls">Girls</option>
+                              <option value="Mixed">Mixed</option>
+                           </select>
+                       )}
+                       {i > 0 && <button type="button" onClick={() => setDynamicHouses(dynamicHouses.filter((_, idx) => idx !== i))} className="icon-btn text-danger"><X size={16}/></button>}
+                    </div>
+                 ))}
+                 <button type="button" onClick={() => setDynamicHouses([...dynamicHouses, {name: "", gender: formData.new_school_type === 'Mixed' ? "Boys" : formData.new_school_type}])} className="text-sm text-brand-600 font-semibold ml-2 hover:underline">+ Add House</button>
+              </div>
               <p className="text-xs text-ink-muted">Note: New school accounts require manual approval by ICUNI Labs before they become active on the network. Our team will contact you using the email provided above.</p>
            </div>
         ) : (
@@ -346,6 +439,28 @@ export function Register() {
                       required
                   />
               )}
+
+              {/* Mixed School Gender Logic */}
+              {!isNewSchoolFlow && formData.school_id && (() => {
+                  const selSchool = schools.find(s => s.id === formData.school_id);
+                  if (selSchool && selSchool.type === 'Mixed') {
+                      return (
+                          <Select 
+                              label="Member Gender"
+                              name="gender"
+                              value={formData.gender}
+                              onChange={handleChange}
+                              options={[
+                                  {label: "", value: ""},
+                                  {label: "Male", value: "Male"},
+                                  {label: "Female", value: "Female"},
+                              ]}
+                              required
+                          />
+                      );
+                  }
+                  return null;
+              })()}
 
               {formData.year_group_id === 'new_yg' && (
                   <div className="grid grid-cols-2 gap-4 mt-2 bg-brand-50/50 p-4 rounded-xl border border-brand-200 col-span-full">

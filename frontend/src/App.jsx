@@ -1,7 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { authState } from './api/client';
-
 import { AuthLayout, AppLayout } from './components/Layouts';
 import { TenantProvider } from './context/TenantContext';
 
@@ -18,22 +16,15 @@ import { SuperAdmin } from './pages/SuperAdmin';
 import { Board } from './pages/Board';
 import { Gallery } from './pages/Gallery';
 
+const ProtectedRoute = ({ children }) => {
+  const isAuth = !!window.localStorage.getItem('osa_session_token');
+  if (!isAuth) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(authState.isAuthenticated());
-
-  useEffect(() => {
-    setIsAuthenticated(authState.isAuthenticated());
-
-    const handleAuthExpired = () => setIsAuthenticated(false);
-    window.addEventListener('osa-auth-expired', handleAuthExpired);
-    return () => window.removeEventListener('osa-auth-expired', handleAuthExpired);
-  }, []);
-
-  // Sync auth state
-  useEffect(() => {
-     setIsAuthenticated(authState.isAuthenticated());
-  });
-
   return (
     <TenantProvider>
       <BrowserRouter>
@@ -50,7 +41,7 @@ function App() {
         </Route>
 
         {/* Protected Routes (App Layout) */}
-        <Route path="/app" element={<AppLayout />}>
+        <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route index element={<Navigate to="/app/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="newsletter" element={<Newsletter />} />

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { Card, Button, Badge, Modal, Input } from '../components/ui';
-import { Heart, AlertTriangle, Clock, Users } from 'lucide-react';
+import { Heart, AlertTriangle, Clock, Users, PlusCircle } from 'lucide-react';
+import { authState } from '../api/client';
 
 export function Fundraising() {
   const [activeFilter, setActiveFilter] = useState('all'); // all, emergency, school_support
@@ -9,6 +10,8 @@ export function Fundraising() {
   
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const user = authState.getUser();
+  const isAdmin = user && (user.role.includes("Admin") || user.role === "IT Department");
 
   // Donation Modal
   const [selectedCampaign, setSelectedCampaign] = useState(null);
@@ -60,9 +63,19 @@ export function Fundraising() {
       
       {/* Header Area */}
       <div className="bg-surface-default p-4 rounded-[var(--radius-social)] shadow-social-card border border-border-light flex flex-col gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-ink-title m-0">Fundraising</h1>
-          <p className="text-[14px] text-ink-muted mt-0.5">Support your community during emergencies and school development.</p>
+        <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-xl font-bold text-ink-title m-0">Fundraising</h1>
+              <p className="text-[14px] text-ink-muted mt-0.5">Support your community during emergencies and school development.</p>
+            </div>
+            {isAdmin && (
+                <Button 
+                   onClick={() => alert("Campaign Creation Modal coming in v2!")} 
+                   className="gap-2 shrink-0 bg-[#E4E6EB] hover:bg-[#D8DADF] text-ink-title border-none font-semibold text-[14px]"
+                >
+                   <PlusCircle size={18} /> Create Campaign
+                </Button>
+            )}
         </div>
 
         {/* Segmented Control Filters */}
