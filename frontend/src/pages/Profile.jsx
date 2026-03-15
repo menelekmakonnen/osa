@@ -101,6 +101,7 @@ export function Profile() {
   const privacyOptions = [
     { value: 'hidden', label: 'Hidden (Only IT)' },
     { value: 'yeargroup', label: 'Year Group Only' },
+    { value: 'school', label: 'School Only' },
     { value: 'all', label: 'All Old Students' }
   ];
 

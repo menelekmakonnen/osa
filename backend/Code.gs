@@ -107,8 +107,12 @@ function handleAction(action, data, token) {
     return handleLogin(data);
   } else if (action === "register") {
     return handleRegister(data);
+  } else if (action === "onboardSchool") {
+    return handleOnboardSchool(data);
   } else if (action === "resetPassword") {
     return handleResetPassword(data);
+  } else if (action === "ping") {
+    return { success: true, message: "PONG" };
   } else if (action === "getSchools") {
     // For V1, we hardcode the school list for the landing page or pull from Master
     return {
@@ -119,6 +123,8 @@ function handleAction(action, data, token) {
         short_code: "AGGREY",
         association: "AMOSA",
         city: "Cape Coast",
+        classes: ["General Arts 1", "General Arts 2", "General Arts 3", "General Arts 4", "General Science 1", "General Science 2", "General Science 3", "Business 1", "Business 2", "Business 3", "Visual Arts 1", "Visual Arts 2", "Home Economics 1", "Home Economics 2", "Technical"],
+        houses: ["WatKat", "PinNew", "Enchilfia", "Cascille"],
         year_groups_count: Object.keys(getYearGroupsData()).length
       }]
     };
@@ -141,6 +147,8 @@ function handleAction(action, data, token) {
       return getProfile(user);
     case "updateProfile":
       return updateProfile(user, data);
+    case "assignRole":
+      return assignTargetRole(user, data);
     case "getMembers":
       return getMembers(user, data);
       
@@ -169,17 +177,17 @@ function handleAction(action, data, token) {
       return submitPost(user, data);
     case "approvePost":
     case "returnPost":
-      requireRole(user, ["YG Admin", "Platform Admin", "Super Admin"]);
+      enforceRoleHierarchy(user, "Member", [1, 2, 3]); // Must be at least Tier 1 (YG Exec)
       return updatePostStatus(user, action, data);
     case "dispatchNewsletter":
-      requireRole(user, ["YG Admin", "Platform Admin", "Super Admin"]);
+      enforceRoleHierarchy(user, "Member", [1, 2, 3]); // Must be at least Tier 1
       return dispatchNewsletter(user, data);
 
     // Fundraising
     case "getCampaigns":
       return getCampaigns(user, data);
     case "createCampaign":
-      requireRole(user, ["YG Admin", "Platform Admin", "Super Admin"]);
+      enforceRoleHierarchy(user, "Member", [1, 2, 3]);
       return createCampaign(user, data);
     case "donate":
       return handleDonation(user, data);
@@ -188,14 +196,14 @@ function handleAction(action, data, token) {
     case "getEvents":
       return getEvents(user, data);
     case "createEvent":
-      requireRole(user, ["YG Admin", "Platform Admin", "Super Admin"]);
+      enforceRoleHierarchy(user, "Member", [1, 2, 3]);
       return createEvent(user, data);
     case "rsvp":
       return rsvpToEvent(user, data);
       
     // Admin
     case "getAdminData":
-      requireRole(user, ["YG Admin", "Platform Admin", "Super Admin"]);
+      enforceRoleHierarchy(user, "Member", [1, 2, 3]);
       return getAdminData(user);
 
     default:
@@ -247,8 +255,8 @@ function handleLogin(data) {
 }
 
 function handleRegister(data) {
-  const { name, email, password, year_group_id, final_class, house_name } = data;
-  if (!name || !email || !password || !year_group_id) {
+  const { name, email, password, year_group_id, new_yg_year, new_yg_nickname, final_class, house_name } = data;
+  if (!name || !email || !password || (!year_group_id && !new_yg_year)) {
     return { success: false, error: "Missing required fields" };
   }
 
@@ -272,12 +280,21 @@ function handleRegister(data) {
   let school = "Aggrey Memorial";
   let assoc = "AMOSA";
 
-  for(let i=1; i<ygRows.length; i++) {
-     let ygRow = rowToObject(ygRows[i], ygHeaders);
-     if(ygRow.id === year_group_id) {
-        cheque_color = ygRow.cheque_colour;
-        yg_nickname = ygRow.nickname;
-        break;
+  let actual_yg_id = year_group_id;
+
+  if (year_group_id === "new_yg" && new_yg_year && new_yg_nickname) {
+     actual_yg_id = Utilities.getUuid();
+     yg_nickname = new_yg_nickname;
+     // Create the new year group dynamically
+     ygSheet.appendRow([actual_yg_id, school, new_yg_year, new_yg_nickname, "", cheque_color]);
+  } else {
+     for(let i=1; i<ygRows.length; i++) {
+        let ygRow = rowToObject(ygRows[i], ygHeaders);
+        if(ygRow.id === year_group_id) {
+           cheque_color = ygRow.cheque_colour;
+           yg_nickname = ygRow.nickname;
+           break;
+        }
      }
   }
 
@@ -292,7 +309,7 @@ function handleRegister(data) {
     email: email.toLowerCase(),
     password: password, // In prod, hash this
     role: "Member",
-    year_group_id: year_group_id,
+    year_group_id: actual_yg_id,
     year_group_nickname: yg_nickname,
     final_class: final_class || "",
     house_name: house_name || "",
@@ -332,6 +349,75 @@ function handleRegister(data) {
   };
 }
 
+function handleOnboardSchool(data) {
+  const { name, email, password, new_school_name, new_school_admin_id, new_school_classes, new_school_houses } = data;
+  if (!name || !email || !password || !new_school_name || !new_school_admin_id) {
+    return { success: false, error: "Missing required fields for school onboarding" };
+  }
+
+  const membersSheet = getSheet("members");
+  const headers = getHeaders(membersSheet);
+  
+  // Check if email exists
+  const rows = membersSheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][headers.indexOf("email")].toLowerCase() === email.toLowerCase()) {
+      return { success: false, error: "Email already registered" };
+    }
+  }
+
+  const newId = Utilities.getUuid();
+  const token = Utilities.getUuid();
+  const expiry = new Date();
+  expiry.setDate(expiry.getDate() + 7);
+
+  const newRowObj = {
+    id: newId,
+    name: name,
+    email: email.toLowerCase(),
+    password: password, // In prod, hash this
+    role: "School Administrator", // Pending Super Admin
+    year_group_id: "PENDING",
+    year_group_nickname: "PENDING",
+    final_class: "",
+    house_name: "",
+    cheque_colour: "#1E293B",
+    school: new_school_name,
+    association: "Pending Verification",
+    date_joined: new Date().toISOString(),
+    session_token: token,
+    token_expiry: expiry.toISOString(),
+    school_admin_id: new_school_admin_id,
+    verification_status: "Pending", // Requires manual approval by Platform Admin
+    // Privacy defaults
+    priv_email: "all", // Admins usually public
+    priv_phone: "all",
+    priv_location: "all",
+    priv_profession: "all",
+    priv_linkedin: "all",
+    priv_bio: "all",
+    bio: `School Administrator (Pending Verification)\nClasses: ${new_school_classes || 'None provided'}\nHouses: ${new_school_houses || 'None provided'}`,
+    profession: "",
+    location: "",
+    phone: "",
+    linkedin: ""
+  };
+
+  const newRowArray = headers.map(h => newRowObj[h] !== undefined ? newRowObj[h] : "");
+  membersSheet.appendRow(newRowArray);
+  
+  delete newRowObj.password;
+  delete newRowObj.session_token;
+  
+  return {
+    success: true,
+    data: {
+      token: token,
+      user: newRowObj
+    }
+  };
+}
+
 function handleResetPassword(data) {
    return { success: false, error: "Not implemented in v1 mock" };
 }
@@ -356,11 +442,73 @@ function validateToken(token) {
   return null;
 }
 
-function requireRole(user, allowedRoles) {
-  if (user.role === "Super Admin" || user.role === "IT Department") return true;
-  if (!allowedRoles.includes(user.role)) {
-    throw new Error("Forbidden: Insufficient permissions");
+// ==========================================
+// Role Hierarchy & Governance
+// ==========================================
+
+const ROLE_TIERS = {
+  "IT Department": 3,
+  "Platform Super Admin": 3,
+  "School Administrator": 2, // School Super Admin
+  "YG President": 1,         // YG Super Admin
+  "YG Vice President": 1,
+  "YG Gen. Secretary": 1,
+  "YG Organiser": 1,
+  "YG Finance Executive": 1,
+  "Member": 0
+};
+
+function enforceRoleHierarchy(actingUser, targetRole, allowedTiers) {
+  const actorTier = ROLE_TIERS[actingUser.role] || 0;
+  
+  if (allowedTiers && !allowedTiers.includes(actorTier)) {
+     throw new Error("Forbidden: Insufficient tier permissions for this action");
   }
+
+  // A user cannot appoint or modify a role equal to or higher than their own tier
+  // Exception: Tier 3 can modify Tier 3 internally, but usually handled in master panel
+  const targetTier = ROLE_TIERS[targetRole] || 0;
+  
+  if (actorTier <= targetTier && actorTier !== 3) {
+     throw new Error(`Forbidden: A ${actingUser.role} cannot appoint or modify a ${targetRole}.`);
+  }
+  
+  return true;
+}
+
+function assignTargetRole(user, data) {
+  const { target_user_id, new_role } = data;
+  if (!target_user_id || !new_role) return { success: false, error: "Missing fields" };
+
+  // Validate the assigner has the right to appoint this specific role
+  try {
+     enforceRoleHierarchy(user, new_role);
+  } catch (err) {
+     return { success: false, error: err.message };
+  }
+
+  const sheet = getSheet("members");
+  const headers = getHeaders(sheet);
+  const rows = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < rows.length; i++) {
+    let rowObj = rowToObject(rows[i], headers);
+    if (rowObj.id === target_user_id) {
+       // Scope validation
+       if (ROLE_TIERS[user.role] === 1 && rowObj.year_group_id !== user.year_group_id) {
+           return { success: false, error: "A YG Admin can only assign roles within their own year group." };
+       }
+       if (ROLE_TIERS[user.role] === 2 && rowObj.school !== user.school) {
+           return { success: false, error: "A School Admin can only assign roles within their own school." };
+       }
+
+       // Perform assignment
+       sheet.getRange(i + 1, headers.indexOf("role") + 1).setValue(new_role);
+       return { success: true, message: `Role successfully updated to ${new_role}` };
+    }
+  }
+
+  return { success: false, error: "Target member not found" };
 }
 
 // ==========================================
@@ -444,17 +592,32 @@ function getMembers(user, data) {
  * Filter sensitive fields based on the viewer's relationship to the member
  */
 function applyPrivacyFilters(targetMember, viewerUser) {
-  // Super Admi sees all
-  if (viewerUser.role === "IT Department" || viewerUser.role === "Super Admin" || targetMember.id === viewerUser.id) {
+  // Super Admins see all
+  const viewerTier = ROLE_TIERS[viewerUser.role] || 0;
+  if (viewerTier === 3 || targetMember.id === viewerUser.id) {
      return targetMember; 
+  }
+
+  // School Admins see all within their own school
+  if (viewerTier === 2 && targetMember.school === viewerUser.school) {
+     return targetMember;
   }
 
   let safeTarget = { ...targetMember };
   delete safeTarget.password;
   delete safeTarget.session_token;
   delete safeTarget.token_expiry;
+  delete safeTarget.verification_status;
+  delete safeTarget.school_admin_id;
 
-  const relationship = (targetMember.year_group_id === viewerUser.year_group_id) ? "yeargroup" : "all";
+  // Determine relationship distance
+  let relationship = "all";
+  if (targetMember.school === viewerUser.school) {
+     relationship = "school";
+     if (targetMember.year_group_id === viewerUser.year_group_id) {
+         relationship = "yeargroup";
+     }
+  }
   
   const privFields = ["email", "phone", "location", "profession", "linkedin", "bio"];
   
@@ -463,10 +626,14 @@ function applyPrivacyFilters(targetMember, viewerUser) {
     
     if (setting === "hidden") {
       delete safeTarget[field];
-    } else if (setting === "yeargroup") {
-         if(relationship !== "yeargroup") delete safeTarget[field];
+    } else if (setting === "yeargroup" && relationship !== "yeargroup") {
+       // Only visible to own year group (or superiors, already caught above)
+       delete safeTarget[field];
+    } else if (setting === "school" && relationship !== "yeargroup" && relationship !== "school") {
+       // Only visible to own school
+       delete safeTarget[field];
     }
-    // if 'all', it's visible. So keep it.
+    // if 'all', it's visible to logged in users across the platform. So keep it.
   });
 
   return safeTarget;
@@ -539,7 +706,34 @@ function updatePostStatus(user, action, data) {
        let nMonth = "";
        if(newStatus === "Approved") {
            const d = new Date();
-           nMonth = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0');
+           let year = d.getFullYear();
+           let month = d.getMonth() + 1;
+           let proposedMonth = year + "-" + String(month).padStart(2,'0');
+           
+           // Check if this month is already dispatched
+           const nlSheet = getSheet("newsletters");
+           const nlHeaders = getHeaders(nlSheet);
+           const nlRows = nlSheet.getDataRange().getValues();
+           let isDispatched = false;
+           for(let j=1; j<nlRows.length; j++) {
+               let nlRow = rowToObject(nlRows[j], nlHeaders);
+               if(nlRow.year_group_id === row.year_group_id && nlRow.month === proposedMonth) {
+                   isDispatched = true;
+                   break;
+               }
+           }
+           
+           // If dispatched, queue for next month
+           if (isDispatched) {
+               month++;
+               if (month > 12) {
+                  month = 1;
+                  year++;
+               }
+               proposedMonth = year + "-" + String(month).padStart(2,'0');
+           }
+           
+           nMonth = proposedMonth;
            sheet.getRange(i+1, headers.indexOf("newsletter_month")+1).setValue(nMonth);
        }
        if(note) {
@@ -551,6 +745,103 @@ function updatePostStatus(user, action, data) {
   return { success: false, error: "Post not found" };
 }
 
+function dispatchNewsletter(user, data) {
+  const d = new Date();
+  const currentMonth = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0');
+  
+  // 1. Get Approved posts for the current month in this YG
+  const postSheet = getSheet("posts");
+  const pHeaders = getHeaders(postSheet);
+  const pRows = postSheet.getDataRange().getValues();
+  
+  let approvedPosts = [];
+  let postIds = [];
+  
+  for(let i=1; i<pRows.length; i++) {
+     let row = rowToObject(pRows[i], pHeaders);
+     if (row.year_group_id === user.year_group_id && row.status === "Approved" && row.newsletter_month === currentMonth) {
+        approvedPosts.push({ ...row, rowIndex: i + 1 });
+        postIds.push(row.id);
+     }
+  }
+
+  if (approvedPosts.length === 0) {
+      return { success: false, error: "No approved posts available to dispatch for " + currentMonth };
+  }
+
+  // 2. Get all members of the Year Group
+  const memberRows = getSheetData("members");
+  const recipients = memberRows
+     .filter(m => m.year_group_id === user.year_group_id && m.email)
+     .map(m => m.email);
+
+  if (recipients.length === 0) {
+      return { success: false, error: "No members found to receive the newsletter." };
+  }
+
+  // 3. Build HTML Email
+  let emailHtml = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+      <div style="background-color: ${user.cheque_colour || '#1E293B'}; color: white; padding: 20px; text-align: center;">
+         <h1 style="margin: 0; font-size: 24px;">Class of ${user.year_group_nickname || ''} Updates</h1>
+         <p style="margin: 5px 0 0 0; opacity: 0.9;">${user.school} - ${currentMonth}</p>
+      </div>
+      <div style="padding: 20px;">
+        <p>Hello,</p>
+        <p>Here are the latest updates from your year group:</p>
+  `;
+
+  approvedPosts.forEach(post => {
+      emailHtml += `
+         <div style="margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
+            <h3 style="margin: 0 0 5px 0; color: #1e293b;">${post.title}</h3>
+            <span style="display: inline-block; background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase;">${post.category}</span>
+            <span style="font-size: 13px; color: #64748b; margin-left: 10px;">By ${post.author_name}</span>
+            <p style="color: #334155; line-height: 1.6; white-space: pre-wrap;">${post.content}</p>
+         </div>
+      `;
+  });
+
+  emailHtml += `
+      </div>
+      <div style="background-color: #f8fafc; padding: 15px; text-align: center; font-size: 12px; color: #94a3b8;">
+         Sent via OSA Network - ICUNI Labs
+      </div>
+    </div>
+  `;
+
+  // 4. Send Emails via MailApp (BCC to save quota / keep private)
+  try {
+     MailApp.sendEmail({
+        to: user.email, // Send one to executor
+        bcc: recipients.join(","),
+        subject: `[${user.school}] Class of ${user.year_group_nickname || ''} Newsletter - ${currentMonth}`,
+        htmlBody: emailHtml,
+        name: "OSA Platform"
+     });
+  } catch (e) {
+     return { success: false, error: "MailApp Error: " + e.message };
+  }
+
+  // 5. Update Status to Published
+  approvedPosts.forEach(post => {
+      postSheet.getRange(post.rowIndex, pHeaders.indexOf("status") + 1).setValue("Published");
+  });
+
+  // 6. Log Newsletter Record
+  const nlSheet = getSheet("newsletters");
+  nlSheet.appendRow([
+      Utilities.getUuid(),
+      currentMonth,
+      user.year_group_id,
+      JSON.stringify(postIds),
+      recipients.length,
+      user.id,
+      new Date().toISOString()
+  ]);
+
+  return { success: true, message: `Newsletter dispatched successfully to ${recipients.length} members.` };
+}
 
 // ==========================================
 // Fundraising
@@ -909,7 +1200,7 @@ function INITIALIZE_SHEETS() {
     const ss = getDB();
     const sheetsToCreate = {
         "year_groups": ["id", "school", "year", "nickname", "house_name", "cheque_colour"],
-        "members": ["id", "name", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "bio", "profession", "location", "phone", "linkedin", "profile_pic"],
+        "members": ["id", "name", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "bio", "profession", "location", "phone", "linkedin", "profile_pic", "school_admin_id", "verification_status"],
         "posts": ["id", "title", "category", "content", "author_id", "author_name", "year_group_id", "submission_date", "status", "newsletter_month", "rejection_note"],
         "campaigns": ["id", "title", "type", "description", "target_amount", "currency", "deadline", "scope", "year_group_id", "status", "raised_amount", "donor_count", "updates", "created_by"],
         "donations": ["id", "campaign_id", "donor_id", "amount", "timestamp", "payment_method"],
@@ -926,6 +1217,11 @@ function INITIALIZE_SHEETS() {
         if (!sheet) {
             sheet = ss.insertSheet(s);
             sheet.appendRow(sheetsToCreate[s]);
+            
+            // Auditor Hotfix: Seed Initial Year Group
+            if (s === "year_groups") {
+                sheet.appendRow(["yg-2012", "Aggrey Memorial", "2012", "The Pioneers", "Aggrey House", "#22c55e"]);
+            }
         }
     }
 }

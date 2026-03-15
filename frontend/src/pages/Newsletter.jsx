@@ -72,6 +72,20 @@ export function Newsletter() {
     }
   };
 
+  const handleDispatch = async () => {
+    if (!window.confirm("Are you sure you want to dispatch this month's newsletter to all members? This action cannot be undone.")) return;
+    setLoading(true);
+    try {
+      await api.dispatchNewsletter();
+      alert("Newsletter Dispatched Successfully!");
+      loadPosts();
+    } catch(err) {
+      alert("Error dispatching: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const categories = [
     { value: '', label: 'Select Category' },
     { value: 'Personal News', label: 'Personal News' },
@@ -114,6 +128,11 @@ export function Newsletter() {
             Review Queue
             {pendingPosts.length > 0 && <span className="ml-2 bg-red-100 text-danger px-2 py-0.5 rounded-full text-[11px] font-bold">{pendingPosts.length}</span>}
           </TabButton>
+        )}
+        {isExec && (
+           <TabButton active={activeTab === 'dispatch'} onClick={() => setActiveTab('dispatch')}>
+              Dispatch
+           </TabButton>
         )}
       </div>
 
@@ -188,6 +207,22 @@ export function Newsletter() {
                   </div>
                </Card>
              ))
+          )}
+
+          {/* DISPATCH TAB (Admins only) */}
+          {activeTab === 'dispatch' && isExec && (
+             <Card className="text-center py-10 px-6 border border-border-light flex flex-col items-center justify-center">
+                <div className="p-5 bg-brand-50 rounded-full mb-4">
+                   <Send size={40} className="text-brand-600"/>
+                </div>
+                <h3 className="text-xl font-bold text-ink-title mb-2">Ready to Dispatch?</h3>
+                <p className="text-[15px] text-ink-muted mb-6 max-w-sm">
+                   Dispatching will compile all currently Approved posts into an HTML email and send it to all members of your year group.
+                </p>
+                <Button size="lg" className="w-full sm:w-auto px-8" onClick={handleDispatch}>
+                   Dispatch Monthly Newsletter
+                </Button>
+             </Card>
           )}
         </div>
       )}

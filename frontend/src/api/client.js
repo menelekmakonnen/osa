@@ -106,7 +106,9 @@ export const api = {
   getYearGroupsList: () => apiRequest("getYearGroupsList"), // Public
 
   // POST mutations
+  onboardSchool: (schoolData) => apiRequest("onboardSchool", schoolData),
   updateProfile: (profileData) => apiRequest("updateProfile", profileData),
+  assignRole: (targetUserId, newRole) => apiRequest("assignRole", { target_user_id: targetUserId, new_role: newRole }),
   submitPost: (postData) => apiRequest("submitPost", postData),
   approvePost: (postId) => apiRequest("approvePost", { post_id: postId }),
   returnPost: (postId, note) => apiRequest("returnPost", { post_id: postId, note }),
