@@ -44,6 +44,7 @@ export function Gallery() {
     } else {
         fetchAlbums();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeAlbum]);
 
   const handleCreateAlbum = async (e) => {

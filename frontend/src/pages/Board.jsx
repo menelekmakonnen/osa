@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { api, authState } from '../api/client';
 import { Card, Button } from '../components/ui';
 import { Edit3, Image as ImageIcon, Video, MessageCircle, Smile, Send, ThumbsUp } from 'lucide-react';
@@ -28,6 +28,7 @@ export function Board() {
 
   useEffect(() => {
     fetchMessages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handlePostMessage = async () => {
