@@ -542,12 +542,15 @@ function assignTargetRole(user, data) {
 // ==========================================
 
 function getDashboard(user) {
+  const userSchool = user.school || "Aggrey Memorial";
+  
   // Assemble basic stats
-  const ygs = getSheetData("members").filter(m => m.year_group_id === user.year_group_id);
-  const posts = getSheetData("posts").filter(p => p.year_group_id === user.year_group_id && p.status === "Approved");
-  const activeCampaigns = getSheetData("campaigns").filter(c => c.status === "active" && (c.scope === "school" || (c.scope === "yeargroup" && c.year_group_id === user.year_group_id)));
+  const ygs = getSheetData("members").filter(m => (m.school || "Aggrey Memorial") === userSchool && m.year_group_id === user.year_group_id);
+  const posts = getSheetData("posts").filter(p => (p.school || "Aggrey Memorial") === userSchool && p.year_group_id === user.year_group_id && p.status === "Approved");
+  const activeCampaigns = getSheetData("campaigns").filter(c => (c.school || "Aggrey Memorial") === userSchool && c.status === "active" && (c.scope === "school" || (c.scope === "yeargroup" && c.year_group_id === user.year_group_id)));
   
   const upcomingEvents = getSheetData("events").filter(e => {
+     if ((e.school || "Aggrey Memorial") !== userSchool) return false;
      let isVisible = (e.scope === "platform" || e.scope === "school" || (e.scope === "yeargroup" && e.year_group_id === user.year_group_id));
      return isVisible && e.status !== "past";
   });
@@ -604,6 +607,11 @@ function getMembers(user, data) {
     // Determine scope visibility
     const memberSchool = member.school || "Aggrey Memorial";
     const userSchool = user.school || "Aggrey Memorial";
+    
+    // HARD TENANT ISOLATION: A user cannot see members of another school unless Platform Admin
+    const viewerTier = ROLE_TIERS[user.role] || 0;
+    if (memberSchool !== userSchool && viewerTier < 3) continue;
+
     if (scope === "yeargroup" && member.year_group_id !== user.year_group_id) continue;
     if (scope === "school" && memberSchool !== userSchool) continue;
     // (If platform scope, handled appropriately)
@@ -776,8 +784,8 @@ function updatePostStatus(user, action, data) {
 }
 
 function dispatchNewsletter(user, data) {
-  if (!user.role || ROLE_TIERS[user.role] < 2) {
-      return { success: false, error: "Unauthorized: Dispatches require School Administrator or higher scope." };
+  if (!user.role || ROLE_TIERS[user.role] < 1) {
+      return { success: false, error: "Unauthorized: Dispatches require Year Group Admin or higher scope." };
   }
 
   const d = new Date();

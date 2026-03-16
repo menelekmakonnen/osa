@@ -6,6 +6,7 @@ import { compressImage } from '../components/ImageUpload';
 
 export function Gallery() {
   const user = authState.getUser();
+  const isExec = user && user.role && user.role.toLowerCase() !== "member";
   const [albums, setAlbums] = useState([]);
   const [activeAlbum, setActiveAlbum] = useState(null);
   const [images, setImages] = useState([]);
@@ -102,9 +103,11 @@ export function Gallery() {
                   <h1 className="text-xl font-bold text-ink-title">Galleries</h1>
                   <p className="text-[14px] text-ink-muted">View and share memories with {user.year_group_nickname !== 'PENDING' ? user.year_group_nickname : 'your year group'}</p>
                </div>
-               <Button onClick={() => setIsCreatingModalOpen(!isCreatingModalOpen)} variant="primary" className="flex gap-2">
-                   <Plus size={18} strokeWidth={2.5}/> New Album
-               </Button>
+               {isExec && (
+                 <Button onClick={() => setIsCreatingModalOpen(!isCreatingModalOpen)} variant="primary" className="flex gap-2">
+                     <Plus size={18} strokeWidth={2.5}/> New Album
+                 </Button>
+               )}
            </div>
            
            {isCreatingModalOpen && (
