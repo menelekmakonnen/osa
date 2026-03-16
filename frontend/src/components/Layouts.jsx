@@ -136,8 +136,8 @@ export function AppLayout() {
             <div className="absolute top-[61px] left-0 right-0 bg-surface-default shadow-social-card border-b border-border-light flex flex-col gap-1 py-2 px-2 pb-6" onClick={e => e.stopPropagation()}>
                 <NavItem to="/app/dashboard" icon={Home} label="Dashboard" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/newsletter" icon={Mail} label="Newsletter" onClick={() => setMobileMenuOpen(false)} />
-                <NavItem to="/app/fundraising" icon={Heart} label="Fundraising" onClick={() => setMobileMenuOpen(false)} />
-                <NavItem to="/app/events" icon={Calendar} label="Events" onClick={() => setMobileMenuOpen(false)} />
+                {/* <NavItem to="/app/fundraising" icon={Heart} label="Fundraising" onClick={() => setMobileMenuOpen(false)} /> */}
+                {/* <NavItem to="/app/events" icon={Calendar} label="Events" onClick={() => setMobileMenuOpen(false)} /> */}
                 <NavItem to="/app/members" icon={Users} label="Members Directory" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/board" icon={MessageSquare} label="Group Board" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/gallery" icon={ImageIcon} label="Gallery" onClick={() => setMobileMenuOpen(false)} />
@@ -223,8 +223,8 @@ export function AppLayout() {
         <nav className="flex-1 py-2 flex flex-col gap-1 mt-2">
           <NavItem to="/app/dashboard" icon={Home} label="Dashboard" />
           <NavItem to="/app/newsletter" icon={Mail} label="Newsletter" />
-          <NavItem to="/app/fundraising" icon={Heart} label="Fundraising" />
-          <NavItem to="/app/events" icon={Calendar} label="Events" />
+          {/* <NavItem to="/app/fundraising" icon={Heart} label="Fundraising" /> */}
+          {/* <NavItem to="/app/events" icon={Calendar} label="Events" /> */}
           <NavItem to="/app/members" icon={Users} label="Directory" />
           <NavItem to="/app/board" icon={MessageSquare} label="Group Board" />
           <NavItem to="/app/gallery" icon={ImageIcon} label="Gallery" />

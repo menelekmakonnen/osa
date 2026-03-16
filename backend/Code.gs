@@ -141,7 +141,8 @@ function handleAction(action, data, token) {
          short_code: String(s.name || "UNNAMED").substring(0, 6).toUpperCase(), // Basic shortcode gen
          type: s.type,
          classes: s.classes,
-         houses: s.houses
+         houses: s.houses,
+         status: s.status
       })) };
   } else if (action === "getYearGroupsList") {
       let ygs = getYearGroupsData();
@@ -417,7 +418,7 @@ function handleOnboardSchool(data) {
     gender: "",
     cheque_colour: "#1E293B",
     school: newSchoolId,
-    association: "Pending Verification",
+    association: new_school_name,
     date_joined: new Date().toISOString(),
     session_token: token,
     token_expiry: expiry.toISOString(),

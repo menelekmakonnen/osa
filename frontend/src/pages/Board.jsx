@@ -51,13 +51,14 @@ export function Board() {
 
   const handlePostComment = async (msgId) => {
     if (!commentText.trim()) return;
+    const txt = commentText.trim();
+    setCommentText(""); // Clear early to prevent UI spam
+    setCommentingOn(null);
     try {
         await api.addBoardComment({
             message_id: msgId,
-            content: commentText.trim()
+            content: txt
         });
-        setCommentText("");
-        setCommentingOn(null);
         fetchMessages();
     } catch(err) {
         console.error("Failed to post comment", err);
