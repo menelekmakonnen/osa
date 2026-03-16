@@ -3,9 +3,11 @@ import { api, authState } from '../api/client';
 import { Card, Button } from '../components/ui';
 import { Edit3, Image as ImageIcon, Video, MessageCircle, Smile, Send, ThumbsUp } from 'lucide-react';
 import Picker from 'emoji-picker-react';
+import { useTenant } from '../context/TenantContext';
 
 export function Board() {
   const user = authState.getUser();
+  const { activeScope } = useTenant();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [composerText, setComposerText] = useState("");
@@ -20,7 +22,7 @@ export function Board() {
 
   const fetchMessages = () => {
     setLoading(true);
-    api.getBoardMessages(user.year_group_id)
+    api.getBoardMessages(activeScope)
       .then(res => setMessages(res || []))
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
@@ -36,7 +38,8 @@ export function Board() {
     setPosting(true);
     try {
        await api.postBoardMessage({
-           group_id: user.year_group_id,
+           scope_type: activeScope.type,
+           scope_id: activeScope.id,
            content: composerText.trim()
        });
        setComposerText("");
@@ -91,7 +94,7 @@ export function Board() {
             <textarea 
                value={composerText}
                onChange={e => setComposerText(e.target.value)}
-               placeholder={`Share something with ${user.year_group_nickname !== 'PENDING' ? user.year_group_nickname : 'your year group'}...`}
+               placeholder={`Share something with ${activeScope.label}...`}
                className="social-textarea flex-1 min-h-[60px] text-[15px] pt-2"
             />
          </div>

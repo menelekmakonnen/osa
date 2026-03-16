@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { api, authState } from '../api/client';
 import { Card, Button, Input, Textarea, Select, Badge, Modal } from '../components/ui';
 import { FileText, Send, CheckCircle, XCircle, Edit3, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
+import { useTenant } from '../context/TenantContext';
 
 export function Newsletter() {
   const user = authState.getUser();
+  const { activeScope } = useTenant();
   const isExec = user && user.role && user.role.toLowerCase() !== "member";
 
   const [activeTab, setActiveTab] = useState('feed'); // feed, my_submissions, approve, dispatch
@@ -23,7 +25,7 @@ export function Newsletter() {
   const loadPosts = async () => {
     setLoading(true);
     try {
-      const data = await api.getPosts();
+      const data = await api.getPosts(activeScope);
       setPosts(data || []);
     } catch (e) {
       console.error(e);
@@ -40,7 +42,11 @@ export function Newsletter() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await api.submitPost(submitData);
+      await api.submitPost({
+          ...submitData,
+          scope_type: activeScope.type,
+          scope_id: activeScope.id
+      });
       setIsSubmitModalOpen(false);
       setSubmitData({ title: '', category: '', content: '' });
       loadPosts();

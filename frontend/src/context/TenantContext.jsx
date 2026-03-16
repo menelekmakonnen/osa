@@ -20,9 +20,9 @@ const DOMAIN_MAPPING = {
 export function TenantProvider({ children }) {
   const [tenant, setTenant] = useState({
     schoolId: null,
-    name: "OSA Directory", // Default global name
+    name: "OSA Directory",
     isCustomDomain: false,
-    scope: { type: 'global', value: null } // type: global, school, yeargroup, house
+    activeScope: { type: 'school', id: null, label: 'Whole School' } // Tiers: yeargroup, club, house, school, all-schools
   });
   const [loading, setLoading] = useState(true);
 
@@ -41,7 +41,7 @@ export function TenantProvider({ children }) {
         updates.schoolId = mapped.schoolId;
         updates.name = mapped.name;
         updates.isCustomDomain = true;
-        updates.scope = { type: 'school', value: mapped.schoolId };
+        updates.activeScope = { type: 'school', id: mapped.schoolId, label: 'Whole School' };
     } else {
         // 2. Fallback to path parsing if on global osa.icuni.org
         const pathParts = pathname.split('/').filter(Boolean);
@@ -52,8 +52,8 @@ export function TenantProvider({ children }) {
             const standardRoutes = ['dashboard', 'newsletter', 'fundraising', 'events', 'members', 'board', 'gallery', 'profile', 'admin', 'superadmin'];
             if (!standardRoutes.includes(pathParts[1])) {
                 updates.schoolId = pathParts[1];
-                updates.name = pathParts[1].toUpperCase(); // Mock name
-                updates.scope = { type: 'school', value: pathParts[1] };
+                updates.name = pathParts[1].toUpperCase(); 
+                updates.activeScope = { type: 'school', id: pathParts[1], label: 'Whole School' };
             }
         }
     }
@@ -62,9 +62,9 @@ export function TenantProvider({ children }) {
     setLoading(false);
   }, []);
 
-  // Provide utility to change scope (Supergroup toggle)
-  const setScope = (type, value) => {
-      setTenant(prev => ({ ...prev, scope: { type, value } }));
+  // Provide utility to change scope
+  const setScope = (type, id, label) => {
+      setTenant(prev => ({ ...prev, activeScope: { type, id, label } }));
   };
 
   if (loading) {

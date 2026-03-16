@@ -2,18 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { api, authState } from '../api/client';
 import { Card, Badge, ChequeChip, Button } from '../components/ui';
 import { Users, Heart, Calendar, Bell, Edit3, Image, Video, MoreHorizontal, MessageCircle, Share2, ThumbsUp } from 'lucide-react';
+import { useTenant } from '../context/TenantContext';
 
 export function Dashboard() {
   const user = authState.getUser();
+  const { activeScope } = useTenant();
   const [data, setData] = useState({ stats: {}, recentPosts: [], upcomingEvents: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getDashboard()
+    api.getDashboard(activeScope)
       .then(res => setData(res))
       .catch(err => console.error("Dashboard error", err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [activeScope]);
 
   if (loading) return (
     <div className="flex flex-col gap-4 animate-pulse pt-4">
@@ -97,7 +99,7 @@ export function Dashboard() {
           <Card className="text-center py-10">
              <div className="flex justify-center mb-3"><div className="p-4 bg-surface-muted rounded-full"><Edit3 size={32} className="text-ink-muted"/></div></div>
              <p className="text-ink-body font-medium text-[15px]">No recent posts available.</p>
-             <p className="text-ink-muted text-sm mt-1">Be the first to share an update with the year group!</p>
+             <p className="text-ink-muted text-sm mt-1">Be the first to share an update with {activeScope.label}!</p>
           </Card>
         ) : (
           data.recentPosts.map((post, i) => (

@@ -107,8 +107,8 @@ export const api = {
   },
 
   // GET endpoints
-  getDashboard: () => apiRequest("getDashboard"),
-  getPosts: () => apiRequest("getPosts"),
+  getDashboard: (scope) => apiRequest("getDashboard", scope ? { scope_type: scope.type, scope_id: scope.id } : {}),
+  getPosts: (scope) => apiRequest("getPosts", scope ? { scope_type: scope.type, scope_id: scope.id } : {}),
   getCampaigns: (scope = "my_school") => apiRequest("getCampaigns", { scope }),
   getEvents: (scope = "my_school") => apiRequest("getEvents", { scope }),
   getMembers: (scope = "my_school") => apiRequest("getMembers", { scope }),
@@ -130,12 +130,12 @@ export const api = {
   rsvp: (eventId) => apiRequest("rsvp", { event_id: eventId }),
 
   // Board & Gallery
-  getBoardMessages: (groupId) => apiRequest("getBoardMessages", { group_id: groupId }),
+  getBoardMessages: (scope) => apiRequest("getBoardMessages", { scope_type: scope.type, scope_id: scope.id }),
   postBoardMessage: (messageData) => apiRequest("postBoardMessage", messageData),
   addBoardComment: (commentData) => apiRequest("addBoardComment", commentData),
   reactBoardMessage: (reactionData) => apiRequest("reactBoardMessage", reactionData),
-  getAlbums: (groupId) => apiRequest("getAlbums", { group_id: groupId }),
+  getAlbums: (scope) => apiRequest("getAlbums", { scope_type: scope.type, scope_id: scope.id }),
   createAlbum: (albumData) => apiRequest("createAlbum", albumData),
-  getGalleryItems: (groupId, albumId) => apiRequest("getGalleryItems", { group_id: groupId, album_id: albumId }),
+  getGalleryItems: (scope, albumId) => apiRequest("getGalleryItems", { scope_type: scope.type, scope_id: scope.id, album_id: albumId }),
   uploadImage: (uploadData) => apiRequest("uploadImage", uploadData)
 };

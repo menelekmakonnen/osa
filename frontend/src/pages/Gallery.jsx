@@ -3,9 +3,11 @@ import { api, authState } from '../api/client';
 import { Card, Button, Input, Textarea } from '../components/ui';
 import { Image as ImageIcon, Camera, Loader2, UploadCloud, Folder, Plus, ArrowLeft } from 'lucide-react';
 import { compressImage } from '../components/ImageUpload';
+import { useTenant } from '../context/TenantContext';
 
 export function Gallery() {
   const user = authState.getUser();
+  const { activeScope } = useTenant();
   const isExec = user && user.role && user.role.toLowerCase() !== "member";
   const [albums, setAlbums] = useState([]);
   const [activeAlbum, setActiveAlbum] = useState(null);
@@ -23,7 +25,7 @@ export function Gallery() {
 
   const fetchAlbums = () => {
     setLoading(true);
-    api.getAlbums(user.year_group_id)
+    api.getAlbums(activeScope)
        .then(res => setAlbums(res || []))
        .catch(err => console.error("Albums Error", err))
        .finally(() => setLoading(false));
@@ -32,7 +34,7 @@ export function Gallery() {
   const fetchGalleryItems = (albumId) => {
     setLoading(true);
     // Passing albumId to only get images for this album
-    api.getGalleryItems(user.year_group_id, albumId)
+    api.getGalleryItems(activeScope, albumId)
        .then(res => setImages(res || []))
        .catch(err => console.error("Gallery Error", err))
        .finally(() => setLoading(false));
@@ -53,7 +55,8 @@ export function Gallery() {
       setCreatingAlbum(true);
       try {
           await api.createAlbum({
-              group_id: user.year_group_id,
+              scope_type: activeScope.type,
+              scope_id: activeScope.id,
               name: newAlbumName.trim(),
               description: newAlbumDesc.trim()
           });
@@ -77,7 +80,8 @@ export function Gallery() {
      try {
          const compressedBase64 = await compressImage(file);
          await api.uploadImage({
-             group_id: user.year_group_id,
+             scope_type: activeScope.type,
+             scope_id: activeScope.id,
              album_id: activeAlbum ? activeAlbum.id : null,
              album_name: activeAlbum ? activeAlbum.name : null,
              image_base64: compressedBase64,

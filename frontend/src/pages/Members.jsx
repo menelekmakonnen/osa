@@ -5,8 +5,7 @@ import { Search, MapPin, Briefcase, Mail, Phone, Linkedin, Lock } from 'lucide-r
 import { useTenant } from '../context/TenantContext';
 
 export function Members() {
-  const { scope } = useTenant();
-  const [scopeFilter, setScopeFilter] = useState(scope.type === 'school' ? 'my_school' : 'my_yg'); // my_yg, my_school, all_schools
+  const { activeScope } = useTenant();
   const [searchQuery, setSearchQuery] = useState('');
   
   const [members, setMembers] = useState([]);
@@ -17,17 +16,14 @@ export function Members() {
   const loadData = React.useCallback(async () => {
     setLoading(true);
     try {
-      // Map frontend scope to backend scope
-      const apiScope = scopeFilter === 'my_yg' ? 'yeargroup' : 
-                       scopeFilter === 'my_school' ? 'school' : 'all';
-      const data = await api.getMembers(apiScope);
+      const data = await api.getMembers(activeScope);
       setMembers(data || []);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [scopeFilter]);
+  }, [activeScope]);
 
   useEffect(() => {
     loadData();
@@ -51,29 +47,18 @@ export function Members() {
           <p className="text-[14px] text-ink-muted mt-0.5">Find and connect with fellow old students.</p>
         </div>
 
-        {/* Directory Controls */}
         <div className="flex flex-col sm:flex-row gap-3 justify-between items-center border-t border-border-light pt-3">
           
-          <div className="relative w-full sm:w-auto flex-1">
+          <div className="relative w-full flex-1">
              <Search className="absolute left-3 top-2.5 text-ink-muted" size={18} strokeWidth={2.5} />
              <Input 
-               placeholder="Search by name or profession..." 
+               placeholder={`Search for alumni in ${activeScope.label}...`} 
                className="!mb-0" 
                inputClassName="pl-10 h-10 w-full bg-surface-muted text-[15px] font-medium placeholder-ink-muted rounded-pill border border-transparent focus:border-border-light focus:bg-white transition-colors outline-none px-4"
                value={searchQuery}
                onChange={(e) => setSearchQuery(e.target.value)}
              />
           </div>
-
-          <select 
-            className="bg-surface-muted border border-border-light rounded-lg text-[13px] font-semibold text-ink-title px-3 h-10 focus:outline-none focus:ring-2 focus:ring-brand-500 w-full sm:w-auto"
-            value={scopeFilter}
-            onChange={(e) => setScopeFilter(e.target.value)}
-          >
-            <option value="my_yg">My Year Group</option>
-            <option value="my_school">My School</option>
-            <option value="all_schools">All Schools</option>
-          </select>
           
         </div>
       </div>

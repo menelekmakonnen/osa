@@ -155,10 +155,10 @@ function handleAction(action, data, token) {
     return { success: false, error: "Invalid or expired token", code: 401 };
   }
 
-  // Protected actions
+    // Protected actions
   switch (action) {
     case "getDashboard":
-      return getDashboard(user);
+      return getDashboard(user, data);
     case "getProfile":
       return getProfile(user);
     case "updateProfile":
@@ -550,17 +550,32 @@ function assignTargetRole(user, data) {
 // Dashboard & Profile
 // ==========================================
 
-function getDashboard(user) {
+function getDashboard(user, data = {}) {
   const userSchool = user.school || "Aggrey Memorial";
+  const scope_type = data.scope_type || "yeargroup";
+  const scope_id = data.scope_id || user.year_group_id;
   
-  // Assemble basic stats
-  const ygs = getSheetData("members").filter(m => (m.school || "Aggrey Memorial") === userSchool && m.year_group_id === user.year_group_id);
-  const posts = getSheetData("posts").filter(p => (p.school || "Aggrey Memorial") === userSchool && p.year_group_id === user.year_group_id && p.status === "Approved");
-  const activeCampaigns = getSheetData("campaigns").filter(c => (c.school || "Aggrey Memorial") === userSchool && c.status === "active" && (c.scope === "school" || (c.scope === "yeargroup" && c.year_group_id === user.year_group_id)));
+  // Assemble basic stats based on active scope
+  const ygs = getSheetData("members").filter(m => 
+     (m.school || "Aggrey Memorial") === userSchool && 
+     (scope_type === "school" || m.year_group_id === scope_id || m.house_name === scope_id || m.final_class === scope_id)
+  );
+  
+  const posts = getSheetData("posts").filter(p => 
+     (p.school || "Aggrey Memorial") === userSchool && 
+     ((p.scope_type === scope_type && p.scope_id === scope_id) || (scope_type === "yeargroup" && p.year_group_id === scope_id)) && 
+     p.status === "Approved"
+  );
+  
+  const activeCampaigns = getSheetData("campaigns").filter(c => 
+     (c.school || "Aggrey Memorial") === userSchool && 
+     c.status === "active" && 
+     (c.scope === "school" || c.scope_id === scope_id)
+  );
   
   const upcomingEvents = getSheetData("events").filter(e => {
      if ((e.school || "Aggrey Memorial") !== userSchool) return false;
-     let isVisible = (e.scope === "platform" || e.scope === "school" || (e.scope === "yeargroup" && e.year_group_id === user.year_group_id));
+     let isVisible = (e.scope === "platform" || e.scope === "school" || e.scope_id === scope_id);
      return isVisible && e.status !== "past";
   });
 
@@ -607,30 +622,33 @@ function updateProfile(user, data) {
 // ==========================================
 
 function getMembers(user, data) {
-  const scope = data.scope || "yeargroup"; // "yeargroup", "school", "all"
+  const scope_type = data.scope_type || "yeargroup";
+  const scope_id = data.scope_id || user.year_group_id;
+  const targetSchool = user.school || "Aggrey Memorial"; 
   
-  const allMembers = getSheetData("members");
+  const allMembers = getSheetData("members").filter(m => (m.school || "Aggrey Memorial") === targetSchool);
+
   let filteredMembers = [];
   
-  for (let member of allMembers) {
-    // Determine scope visibility
-    const memberSchool = member.school || "Aggrey Memorial";
-    const userSchool = user.school || "Aggrey Memorial";
-    
-    // HARD TENANT ISOLATION: A user cannot see members of another school unless Platform Admin
-    const viewerTier = ROLE_TIERS[user.role] || 0;
-    if (memberSchool !== userSchool && viewerTier < 3) continue;
-
-    if (scope === "yeargroup" && member.year_group_id !== user.year_group_id) continue;
-    if (scope === "school" && memberSchool !== userSchool) continue;
-    // (If platform scope, handled appropriately)
-
-    // Apply privacy rules per field
-    let safeMember = applyPrivacyFilters(member, user);
-    filteredMembers.push(safeMember);
+  if (scope_type === "yeargroup") {
+    filteredMembers = allMembers.filter(m => m.year_group_id === scope_id);
+  } else if (scope_type === "club") {
+    // Phase 2 extension hook
+  } else if (scope_type === "house") {
+    filteredMembers = allMembers.filter(m => m.house_name === scope_id);
+  } else if (scope_type === "class") {
+    filteredMembers = allMembers.filter(m => m.final_class === scope_id);
+  } else if (scope_type === "school") {
+    filteredMembers = allMembers.filter(m => m.school === scope_id);
+  } else if (scope_type === "all") {
+    if (user.role.includes("Platform")) {
+        filteredMembers = getSheetData("members");
+    }
   }
-  
-  return { success: true, data: filteredMembers };
+
+  // Apply privacy rules per field (applyPrivacyFilters aliases into privacy map)
+  const safeMembers = filteredMembers.map(m => applyPrivacyFilters(m, user));
+  return { success: true, data: safeMembers };
 }
 
 /**
@@ -691,8 +709,16 @@ function applyPrivacyFilters(targetMember, viewerUser) {
 
 function getPosts(user, data) {
   const userSchool = user.school || "Aggrey Memorial";
+  const scope_type = data.scope_type || "yeargroup";
+  const scope_id = data.scope_id || user.year_group_id;
+
   const allPosts = getSheetData("posts").filter(p => (p.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
-  let userPosts = allPosts.filter(p => p.year_group_id === user.year_group_id);
+  
+  // Backwards compatibility migration map check
+  let userPosts = allPosts.filter(p => 
+      (p.scope_type === scope_type && p.scope_id === scope_id) ||
+      (scope_type === "yeargroup" && p.year_group_id === scope_id)
+  );
   
   // If not admin, only show Approved + own drafts
   let isYGAdmin = user.role.includes("Admin") || user.role.includes("President");
@@ -714,6 +740,9 @@ function submitPost(user, data) {
   const sheet = getSheet("posts");
   const headers = getHeaders(sheet);
   
+  const scope_type = data.scope_type || "yeargroup";
+  const scope_id = data.scope_id || user.year_group_id;
+
   const newPost = {
     id: Utilities.getUuid(),
     title: title,
@@ -721,7 +750,8 @@ function submitPost(user, data) {
     content: content,
     author_id: user.id,
     author_name: user.name,
-    year_group_id: user.year_group_id,
+    scope_type: scope_type,
+    scope_id: scope_id,
     school: user.school, // P0: Tenant Isolation
     submission_date: new Date().toISOString(),
     status: "Pending",
@@ -1057,7 +1087,9 @@ function uploadImage(user, data) {
         const headers = getHeaders(gSheet);
         gSheet.appendRow(headers.map(h => {
           if(h==="id") return Utilities.getUuid();
-          if(h==="group_id") return group_id;
+          if(h==="scope_type") return data.scope_type || "yeargroup";
+          if(h==="scope_id") return data.scope_id || group_id;
+          if(h==="group_id") return group_id; // legacy 
           if(h==="album_id") return album_id || "";
           if(h==="uploaded_by_id") return user.id;
           if(h==="uploaded_by_name") return user.name;
@@ -1075,7 +1107,13 @@ function uploadImage(user, data) {
 
 function getAlbums(user, data) {
     const userSchool = user.school || "Aggrey Memorial";
-    const albums = getSheetData("albums").filter(a => (a.school || "Aggrey Memorial") === userSchool && a.group_id === data.group_id); // P0: Tenant Isolation
+    const scope_type = data.scope_type || "yeargroup";
+    const scope_id = data.scope_id || user.year_group_id;
+
+    const albums = getSheetData("albums").filter(a => 
+       (a.school || "Aggrey Memorial") === userSchool && 
+       ((a.scope_type === scope_type && a.scope_id === scope_id) || a.group_id === scope_id)
+    ); 
     return { success: true, data: albums.reverse() };
 }
 
@@ -1088,7 +1126,9 @@ function createAlbum(user, data) {
     let id = Utilities.getUuid();
     sheet.appendRow(headers.map(h => {
         if(h==="id") return id;
-        if(h==="group_id") return group_id;
+        if(h==="scope_type") return data.scope_type || "yeargroup";
+        if(h==="scope_id") return data.scope_id || data.group_id;
+        if(h==="group_id") return data.group_id || ""; // legacy hook
         if(h==="school") return user.school; // P0: Tenant Isolation
         if(h==="name") return name;
         if(h==="description") return description || "";
@@ -1102,7 +1142,13 @@ function createAlbum(user, data) {
 
 function getGalleryItems(user, data) {
     const userSchool = user.school || "Aggrey Memorial";
-    let images = getSheetData("galleries").filter(g => (g.school || "Aggrey Memorial") === userSchool && g.group_id === data.group_id); // P0: Tenant Isolation
+    const scope_type = data.scope_type || "yeargroup";
+    const scope_id = data.scope_id || user.year_group_id;
+
+    let images = getSheetData("galleries").filter(g => 
+       (g.school || "Aggrey Memorial") === userSchool && 
+       ((g.scope_type === scope_type && g.scope_id === scope_id) || g.group_id === scope_id)
+    );
     if (data.album_id) {
         images = images.filter(g => g.album_id === data.album_id);
     }
@@ -1110,10 +1156,14 @@ function getGalleryItems(user, data) {
 }
 
 function getBoardMessages(user, data) {
-    const group_id = data.group_id || user.year_group_id;
+    const scope_type = data.scope_type || "yeargroup";
+    const scope_id = data.scope_id || data.group_id || user.year_group_id;
     const userSchool = user.school || "Aggrey Memorial";
-    let msgs = getSheetData("board_messages").filter(m => (m.school || "Aggrey Memorial") === userSchool && m.group_id === group_id); // P0: Tenant Isolation
-    
+
+    let msgs = getSheetData("board_messages").filter(m => 
+       (m.school || "Aggrey Memorial") === userSchool && 
+       ((m.scope_type === scope_type && m.scope_id === scope_id) || m.group_id === scope_id)
+    ); 
     msgs.forEach(m => {
         m.comments = safeJsonParse(m.comments, []);
         m.reactions = safeJsonParse(m.reactions, []);
@@ -1131,7 +1181,9 @@ function postBoardMessage(user, data) {
     let msgId = Utilities.getUuid();
     sheet.appendRow(headers.map(h => {
         if(h==="id") return msgId;
-        if(h==="group_id") return group_id;
+        if(h==="scope_type") return data.scope_type || "yeargroup";
+        if(h==="scope_id") return data.scope_id || data.group_id;
+        if(h==="group_id") return data.group_id || ""; // legacy bounds
         if(h==="school") return user.school; // P0: Tenant Isolation
         if(h==="author_id") return user.id;
         if(h==="author_name") return user.name;
@@ -1260,15 +1312,17 @@ function INITIALIZE_SHEETS() {
         "schools": ["id", "name", "motto", "colours", "cheque_representation", "type", "classes", "houses", "status", "admin_id"],
         "year_groups": ["id", "school", "year", "nickname", "house_name", "cheque_colour"],
         "members": ["id", "name", "username", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "bio", "profession", "location", "phone", "linkedin", "profile_pic", "school_admin_id", "verification_status"],
-        "posts": ["id", "title", "category", "content", "author_id", "author_name", "year_group_id", "school", "submission_date", "status", "newsletter_month", "rejection_note"],
-        "campaigns": ["id", "title", "type", "description", "target_amount", "currency", "deadline", "scope", "year_group_id", "school", "status", "raised_amount", "donor_count", "updates", "created_by"],
+        "posts": ["id", "title", "category", "content", "author_id", "author_name", "scope_type", "scope_id", "school", "submission_date", "status", "newsletter_month", "rejection_note"],
+        "campaigns": ["id", "title", "type", "description", "target_amount", "currency", "deadline", "scope", "scope_type", "scope_id", "school", "status", "raised_amount", "donor_count", "updates", "created_by"],
         "donations": ["id", "campaign_id", "donor_id", "amount", "timestamp", "payment_method"],
-        "events": ["id", "title", "type", "description", "date", "time", "virtual_link", "venue", "scope", "year_group_id", "school", "max_attendees", "status", "created_by"],
+        "events": ["id", "title", "type", "description", "date", "time", "virtual_link", "venue", "scope", "scope_type", "scope_id", "school", "max_attendees", "status", "created_by"],
         "rsvps": ["id", "event_id", "user_id", "timestamp"],
-        "newsletters": ["id", "month", "year_group_id", "post_ids", "recipient_count", "dispatched_by", "timestamp"],
-        "board_messages": ["id", "group_id", "school", "author_id", "author_name", "content", "comments", "reactions", "timestamp"],
-        "albums": ["id", "group_id", "school", "name", "description", "created_by_id", "created_by_name", "timestamp"],
-        "galleries": ["id", "group_id", "school", "album_id", "uploaded_by_id", "uploaded_by_name", "url", "timestamp"]
+        "newsletters": ["id", "month", "scope_type", "scope_id", "post_ids", "recipient_count", "dispatched_by", "timestamp"],
+        "board_messages": ["id", "scope_type", "scope_id", "school", "author_id", "author_name", "content", "comments", "reactions", "timestamp"],
+        "albums": ["id", "scope_type", "scope_id", "school", "name", "description", "created_by_id", "created_by_name", "timestamp"],
+        "galleries": ["id", "scope_type", "scope_id", "school", "album_id", "uploaded_by_id", "uploaded_by_name", "url", "timestamp"],
+        "tickets": ["id", "author_id", "author_name", "school", "issue_type", "description", "status", "current_tier", "created_at", "last_escalated_at", "resolution"],
+        "petitions": ["id", "target_sa_id", "target_sa_name", "scope_type", "scope_id", "school", "reason", "signatures", "status", "created_at"]
     };
 
     for (let s in sheetsToCreate) {
