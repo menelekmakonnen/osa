@@ -113,6 +113,9 @@ function handleAction(action, data, token) {
     return handleResetPassword(data);
   } else if (action === "ping") {
     return { success: true, message: "PONG" };
+  } else if (action === "sync_schema") {
+    INITIALIZE_SHEETS();
+    return { success: true, message: "Schema migrated successfully" };
   } else if (action === "getSchools") {
       let schools = getSheetData("schools");
       if (schools.length === 0) {
@@ -135,7 +138,7 @@ function handleAction(action, data, token) {
       return { success: true, data: schools.map(s => ({
          id: s.id,
          name: s.name,
-         short_code: s.name.substring(0, 6).toUpperCase(), // Basic shortcode gen
+         short_code: String(s.name || "UNNAMED").substring(0, 6).toUpperCase(), // Basic shortcode gen
          type: s.type,
          classes: s.classes,
          houses: s.houses
@@ -419,7 +422,7 @@ function handleOnboardSchool(data) {
     session_token: token,
     token_expiry: expiry.toISOString(),
     school_admin_id: new_school_admin_id,
-    verification_status: "Pending", // Requires manual approval by Platform Admin
+    verification_status: "Approved", // Auto-approved for MVP
     // Privacy defaults
     priv_email: "all", // Admins usually public
     priv_phone: "all",
@@ -1276,6 +1279,23 @@ function INITIALIZE_SHEETS() {
             // Auditor Hotfix: Seed Initial Year Group
             if (s === "year_groups") {
                 sheet.appendRow(["yg-2012", "Aggrey Memorial", "2012", "The Pioneers", "Aggrey House", "#22c55e"]);
+            }
+        } else {
+            // Schema Migration: Check if the sheet is missing new headers
+            const expectedHeaders = sheetsToCreate[s];
+            const lastCol = sheet.getLastColumn() || 1;
+            const currentHeadersRange = sheet.getRange(1, 1, 1, lastCol);
+            const currentHeaders = currentHeadersRange.getValues()[0].map(h => String(h).toLowerCase().replace(/\s+/g, '_'));
+            
+            if (currentHeaders.length > 0 && currentHeaders[0] !== "") {
+                let missingHeaders = expectedHeaders.filter(h => !currentHeaders.includes(h.toLowerCase().replace(/\s+/g, '_')));
+                if (missingHeaders.length > 0) {
+                    for (let i = 0; i < missingHeaders.length; i++) {
+                        sheet.getRange(1, lastCol + 1 + i).setValue(missingHeaders[i]);
+                    }
+                }
+            } else {
+                sheet.appendRow(expectedHeaders);
             }
         }
     }

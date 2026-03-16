@@ -43,6 +43,7 @@ export function Board() {
        fetchMessages();
     } catch(err) {
        console.error("Failed to post message", err);
+       alert("Failed to post message: " + err.message);
     } finally {
        setPosting(false);
     }
@@ -60,6 +61,7 @@ export function Board() {
         fetchMessages();
     } catch(err) {
         console.error("Failed to post comment", err);
+        alert("Failed to post comment: " + err.message);
     }
   };
 
@@ -73,6 +75,7 @@ export function Board() {
           fetchMessages();
       } catch(err) {
           console.error("Failed to react", err);
+          alert("Failed to react: " + err.message);
       }
   };
 
