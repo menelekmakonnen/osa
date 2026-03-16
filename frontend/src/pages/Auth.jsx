@@ -91,10 +91,13 @@ export function Register() {
   
   const [formData, setFormData] = useState({
     name: '',
+    username: '',
     email: '',
     password: '',
     school_id: isCustomDomain ? schoolId : '',
     new_school_name: '',
+    new_school_motto: '',
+    new_school_cheque_representation: 'N/A',
     new_school_type: 'Mixed',
     new_school_admin_id: '',
     year_group_id: '',
@@ -107,6 +110,7 @@ export function Register() {
 
   const [dynamicClasses, setDynamicClasses] = useState([""]);
   const [dynamicHouses, setDynamicHouses] = useState([{ name: "", gender: "Boys" }]);
+  const [dynamicColours, setDynamicColours] = useState(["Mauve", "Yellow"]);
   
   const [schools, setSchools] = useState([]);
   const [yearGroups, setYearGroups] = useState([]);
@@ -153,6 +157,12 @@ export function Register() {
     setDynamicHouses(newHouses);
   };
 
+  const handleDynamicColourChange = (index, value) => {
+    const newColours = [...dynamicColours];
+    newColours[index] = value;
+    setDynamicColours(newColours);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
@@ -163,13 +173,15 @@ export function Register() {
        // Filter empty arrays
        const cleanClasses = dynamicClasses.filter(c => c.trim() !== "");
        const cleanHouses = dynamicHouses.filter(h => h.name.trim() !== "");
+       const cleanColours = dynamicColours.filter(c => c.trim() !== "");
        
-       if (cleanClasses.length === 0 || cleanHouses.length === 0) {
-          setError("Please define at least one class and one house.");
+       if (cleanClasses.length === 0 || cleanHouses.length === 0 || cleanColours.length === 0) {
+          setError("Please define at least one class, one house, and one colour.");
           return;
        }
        formData.new_school_classes = cleanClasses;
        formData.new_school_houses = cleanHouses;
+       formData.new_school_colours = cleanColours;
     }
 
     setLoading(true);
@@ -244,6 +256,15 @@ export function Register() {
         />
         
         <Input 
+          label="Username"
+          name="username"
+          placeholder="e.g. janedoe"
+          value={formData.username}
+          onChange={handleChange}
+          required
+        />
+        
+        <Input 
           label="Email Address"
           name="email"
           type="email"
@@ -304,6 +325,25 @@ export function Register() {
                  required
               />
               <Input 
+                 label="School Motto"
+                 name="new_school_motto"
+                 placeholder="Semper Optimo Nitere"
+                 value={formData.new_school_motto}
+                 onChange={handleChange}
+              />
+              <Select 
+                 label="Cheque Colours represent..."
+                 name="new_school_cheque_representation"
+                 value={formData.new_school_cheque_representation}
+                 onChange={handleChange}
+                 options={[
+                     {label: "N/A", value: "N/A"},
+                     {label: "Year Groups", value: "Year Groups"},
+                     {label: "Houses", value: "Houses"},
+                     {label: "Courses", value: "Courses"}
+                 ]}
+              />
+              <Input 
                  label="Alumni Verification ID"
                  name="new_school_admin_id"
                  placeholder="Exec/Staff ID Number"
@@ -328,6 +368,23 @@ export function Register() {
                      {label: "Girls School", value: "Girls"}
                  ]}
               />
+
+              <div className="mt-2 text-sm">
+                 <label className="text-sm font-semibold text-ink-title block mb-2 ml-1">School Colours</label>
+                 {dynamicColours.map((c, i) => (
+                    <div key={`col-${i}`} className="flex gap-2 mb-2">
+                       <input 
+                         className="social-input" 
+                         placeholder="e.g. Mauve" 
+                         value={c} 
+                         onChange={(e) => handleDynamicColourChange(i, e.target.value)} 
+                         required
+                       />
+                       {i > 0 && <button type="button" onClick={() => setDynamicColours(dynamicColours.filter((_, idx) => idx !== i))} className="icon-btn text-danger"><X size={16}/></button>}
+                    </div>
+                 ))}
+                 <button type="button" onClick={() => setDynamicColours([...dynamicColours, ""])} className="text-sm text-brand-600 font-semibold ml-2 hover:underline">+ Add Colour</button>
+              </div>
 
               <div className="mt-2">
                  <label className="text-sm font-semibold text-ink-title block mb-2 ml-1">Classes</label>

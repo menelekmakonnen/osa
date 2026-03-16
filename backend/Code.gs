@@ -267,8 +267,8 @@ function handleLogin(data) {
 }
 
 function handleRegister(data) {
-  const { name, email, password, year_group_id, school_id, new_yg_year, new_yg_nickname, final_class, house_name, gender } = data;
-  if (!name || !email || !password || (!year_group_id && !new_yg_year) || !school_id) {
+  const { name, username, email, password, year_group_id, school_id, new_yg_year, new_yg_nickname, final_class, house_name, gender } = data;
+  if (!name || !username || !email || !password || (!year_group_id && !new_yg_year) || !school_id) {
     return { success: false, error: "Missing required fields" };
   }
 
@@ -317,6 +317,7 @@ function handleRegister(data) {
   const newRowObj = {
     id: newId,
     name: name,
+    username: username,
     email: email.toLowerCase(),
     password: password, // In prod, hash this
     role: "Member",
@@ -362,8 +363,8 @@ function handleRegister(data) {
 }
 
 function handleOnboardSchool(data) {
-  const { name, email, password, new_school_name, new_school_type, new_school_admin_id, new_school_classes, new_school_houses } = data;
-  if (!name || !email || !password || !new_school_name || !new_school_type || !new_school_admin_id) {
+  const { name, username, email, password, new_school_name, new_school_motto, new_school_colours, new_school_cheque_representation, new_school_type, new_school_admin_id, new_school_classes, new_school_houses } = data;
+  if (!name || !username || !email || !password || !new_school_name || !new_school_type || !new_school_admin_id) {
     return { success: false, error: "Missing required fields for school onboarding" };
   }
 
@@ -388,6 +389,9 @@ function handleOnboardSchool(data) {
   const schoolRowObj = {
      id: newSchoolId,
      name: new_school_name,
+     motto: new_school_motto || "",
+     colours: JSON.stringify(new_school_colours || []),
+     cheque_representation: new_school_cheque_representation || "N/A",
      type: new_school_type,
      classes: JSON.stringify(new_school_classes || []),
      houses: JSON.stringify(new_school_houses || []),
@@ -399,6 +403,7 @@ function handleOnboardSchool(data) {
   const newRowObj = {
     id: newId,
     name: name,
+    username: username,
     email: email.toLowerCase(),
     password: password, // In prod, hash this
     role: "School Administrator", // Pending Super Admin
@@ -574,7 +579,7 @@ function getProfile(user) {
 }
 
 function updateProfile(user, data) {
-  const allowedFields = ["name", "bio", "profession", "location", "phone", "linkedin", 
+  const allowedFields = ["name", "username", "bio", "profession", "location", "phone", "linkedin", 
                          "priv_bio", "priv_profession", "priv_location", "priv_phone", "priv_linkedin", "priv_email"];
   
   const sheet = getSheet("members");
@@ -1248,9 +1253,9 @@ function getYearGroupsData() {
 function INITIALIZE_SHEETS() {
     const ss = getDB();
     const sheetsToCreate = {
-        "schools": ["id", "name", "type", "classes", "houses", "status", "admin_id"],
+        "schools": ["id", "name", "motto", "colours", "cheque_representation", "type", "classes", "houses", "status", "admin_id"],
         "year_groups": ["id", "school", "year", "nickname", "house_name", "cheque_colour"],
-        "members": ["id", "name", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "bio", "profession", "location", "phone", "linkedin", "profile_pic", "school_admin_id", "verification_status"],
+        "members": ["id", "name", "username", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "bio", "profession", "location", "phone", "linkedin", "profile_pic", "school_admin_id", "verification_status"],
         "posts": ["id", "title", "category", "content", "author_id", "author_name", "year_group_id", "school", "submission_date", "status", "newsletter_month", "rejection_note"],
         "campaigns": ["id", "title", "type", "description", "target_amount", "currency", "deadline", "scope", "year_group_id", "school", "status", "raised_amount", "donor_count", "updates", "created_by"],
         "donations": ["id", "campaign_id", "donor_id", "amount", "timestamp", "payment_method"],

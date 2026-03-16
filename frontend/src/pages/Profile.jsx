@@ -27,6 +27,7 @@ export function Profile() {
       // Initialize form data with current profile values
       setFormData({
          name: data.name || '',
+         username: data.username || '',
          profession: data.profession || '',
          location: data.location || '',
          phone: data.phone || '',
@@ -149,6 +150,15 @@ export function Profile() {
                        privacyFixed="Always Public"
                        required
                      />
+
+                     <PrivacyFieldRow 
+                       label="Username" 
+                       name="username" 
+                       value={formData.username} 
+                       onChange={handleChange}
+                       privacyFixed="Always Public"
+                       required
+                     />
                      
                      <PrivacyFieldRow 
                        label="Profession / Occupation" 
@@ -248,6 +258,14 @@ export function Profile() {
                <p className="text-[13px] text-ink-muted mb-4 pb-4 border-b border-border-light leading-relaxed">
                   These fields are fixed and locked to your account upon registration. If there is an error, please contact your Year Group executive.
                </p>
+               
+               {profile.username && (
+                 <div className="text-center mb-4">
+                    <span className="font-bold text-ink-title text-sm tracking-wide bg-white px-3 py-1.5 rounded-full border border-border-light shadow-sm">
+                       @{profile.username}
+                    </span>
+                 </div>
+               )}
 
                <div className="flex flex-col gap-4 text-[14px]">
                   <IdentityItem label="School" value={profile.school} />
