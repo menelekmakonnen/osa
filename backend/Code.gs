@@ -289,7 +289,6 @@ function handleRegister(data) {
   const ygRows = ygSheet.getDataRange().getValues();
   let cheque_color = "#1E293B"; // Default slate
   let yg_nickname = "";
-  let school = "Aggrey Memorial";
   let assoc = "AMOSA";
 
   let actual_yg_id = year_group_id;
@@ -298,7 +297,7 @@ function handleRegister(data) {
      actual_yg_id = Utilities.getUuid();
      yg_nickname = new_yg_nickname;
      // Create the new year group dynamically
-     ygSheet.appendRow([actual_yg_id, school, new_yg_year, new_yg_nickname, "", cheque_color]);
+     ygSheet.appendRow([actual_yg_id, school_id, new_yg_year, new_yg_nickname, "", cheque_color]);
   } else {
      for(let i=1; i<ygRows.length; i++) {
         let ygRow = rowToObject(ygRows[i], ygHeaders);
@@ -327,7 +326,7 @@ function handleRegister(data) {
     house_name: house_name || "",
     gender: gender || "",
     cheque_colour: cheque_color,
-    school: school,
+    school: school_id,
     association: assoc,
     date_joined: new Date().toISOString(),
     session_token: token,
@@ -603,8 +602,10 @@ function getMembers(user, data) {
   
   for (let member of allMembers) {
     // Determine scope visibility
+    const memberSchool = member.school || "Aggrey Memorial";
+    const userSchool = user.school || "Aggrey Memorial";
     if (scope === "yeargroup" && member.year_group_id !== user.year_group_id) continue;
-    if (scope === "school" && member.school !== user.school) continue;
+    if (scope === "school" && memberSchool !== userSchool) continue;
     // (If platform scope, handled appropriately)
 
     // Apply privacy rules per field
@@ -672,7 +673,8 @@ function applyPrivacyFilters(targetMember, viewerUser) {
 // ==========================================
 
 function getPosts(user, data) {
-  const allPosts = getSheetData("posts").filter(p => p.school === user.school); // P0: Tenant Isolation
+  const userSchool = user.school || "Aggrey Memorial";
+  const allPosts = getSheetData("posts").filter(p => (p.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
   let userPosts = allPosts.filter(p => p.year_group_id === user.year_group_id);
   
   // If not admin, only show Approved + own drafts
@@ -881,8 +883,9 @@ function dispatchNewsletter(user, data) {
 
 function getCampaigns(user, data) {
   const scopeFilter = data.scope || "all"; // my_school, all
+  const userSchool = user.school || "Aggrey Memorial";
   
-  const allCampaigns = getSheetData("campaigns").filter(c => c.school === user.school); // P0: Tenant Isolation
+  const allCampaigns = getSheetData("campaigns").filter(c => (c.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
   const visible = allCampaigns.filter(c => {
      if(c.scope === "yeargroup" && c.year_group_id !== user.year_group_id) return false;
      if(scopeFilter === "my_school" && c.school !== user.school) return false;
@@ -934,8 +937,9 @@ function handleDonation(user, data) {
 
 function getEvents(user, data) {
   const scopeFilter = data.scope || "all";
+  const userSchool = user.school || "Aggrey Memorial";
   
-  const events = getSheetData("events").filter(e => e.school === user.school); // P0: Tenant Isolation
+  const events = getSheetData("events").filter(e => (e.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
   const visible = events.filter(e => {
      if(e.scope === "yeargroup" && e.year_group_id !== user.year_group_id && user.role !== "Super Admin") return false;
      return true;
@@ -1053,7 +1057,8 @@ function uploadImage(user, data) {
 }
 
 function getAlbums(user, data) {
-    const albums = getSheetData("albums").filter(a => a.school === user.school && a.group_id === data.group_id); // P0: Tenant Isolation
+    const userSchool = user.school || "Aggrey Memorial";
+    const albums = getSheetData("albums").filter(a => (a.school || "Aggrey Memorial") === userSchool && a.group_id === data.group_id); // P0: Tenant Isolation
     return { success: true, data: albums.reverse() };
 }
 
@@ -1079,7 +1084,8 @@ function createAlbum(user, data) {
 }
 
 function getGalleryItems(user, data) {
-    let images = getSheetData("galleries").filter(g => g.school === user.school && g.group_id === data.group_id); // P0: Tenant Isolation
+    const userSchool = user.school || "Aggrey Memorial";
+    let images = getSheetData("galleries").filter(g => (g.school || "Aggrey Memorial") === userSchool && g.group_id === data.group_id); // P0: Tenant Isolation
     if (data.album_id) {
         images = images.filter(g => g.album_id === data.album_id);
     }
@@ -1088,7 +1094,8 @@ function getGalleryItems(user, data) {
 
 function getBoardMessages(user, data) {
     const group_id = data.group_id || user.year_group_id;
-    let msgs = getSheetData("board_messages").filter(m => m.school === user.school && m.group_id === group_id); // P0: Tenant Isolation
+    const userSchool = user.school || "Aggrey Memorial";
+    let msgs = getSheetData("board_messages").filter(m => (m.school || "Aggrey Memorial") === userSchool && m.group_id === group_id); // P0: Tenant Isolation
     
     msgs.forEach(m => {
         m.comments = safeJsonParse(m.comments, []);

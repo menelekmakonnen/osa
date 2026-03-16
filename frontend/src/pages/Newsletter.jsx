@@ -5,7 +5,7 @@ import { FileText, Send, CheckCircle, XCircle, Edit3, ThumbsUp, MessageCircle, S
 
 export function Newsletter() {
   const user = authState.getUser();
-  const isExec = user.role.includes("Admin") || user.role.includes("President");
+  const isExec = user && user.role && user.role !== "Member";
 
   const [activeTab, setActiveTab] = useState('feed'); // feed, my_submissions, approve, dispatch
   const [posts, setPosts] = useState([]);

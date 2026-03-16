@@ -100,7 +100,7 @@ export function Gallery() {
            <div className="flex justify-between items-center bg-surface-default p-4 rounded-social shadow-sm border border-border-light">
                <div>
                   <h1 className="text-xl font-bold text-ink-title">Galleries</h1>
-                  <p className="text-[14px] text-ink-muted">View and share memories with {user.year_group_nickname}</p>
+                  <p className="text-[14px] text-ink-muted">View and share memories with {user.year_group_nickname !== 'PENDING' ? user.year_group_nickname : 'your year group'}</p>
                </div>
                <Button onClick={() => setIsCreatingModalOpen(!isCreatingModalOpen)} variant="primary" className="flex gap-2">
                    <Plus size={18} strokeWidth={2.5}/> New Album

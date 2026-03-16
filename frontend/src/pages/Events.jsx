@@ -76,7 +76,7 @@ export function Events() {
             {isAdmin && (
                 <Button 
                    onClick={() => alert("Event Creation Modal coming in v2!")} 
-                   className="gap-2 shrink-0 bg-[#E4E6EB] hover:bg-[#D8DADF] text-ink-title border-none font-semibold text-[14px]"
+                   className="gap-2 shrink-0 bg-surface-muted hover:bg-surface-hover text-ink-title border-none font-semibold text-[14px]"
                 >
                    <PlusCircle size={18} /> Create Event
                 </Button>

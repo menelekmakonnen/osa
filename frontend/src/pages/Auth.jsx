@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
-import { Button, Card, Input } from '../components/ui';
+import { Button, Card, Input, Select, Badge } from '../components/ui';
 import { Mail, Lock, User, School, Hash, Key } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';
 

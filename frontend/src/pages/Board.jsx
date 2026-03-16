@@ -86,7 +86,7 @@ export function Board() {
             <textarea 
                value={composerText}
                onChange={e => setComposerText(e.target.value)}
-               placeholder={`Share something with ${user.year_group_nickname}...`}
+               placeholder={`Share something with ${user.year_group_nickname !== 'PENDING' ? user.year_group_nickname : 'your year group'}...`}
                className="social-textarea flex-1 min-h-[60px] text-[15px] pt-2"
             />
          </div>
