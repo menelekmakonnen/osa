@@ -226,7 +226,7 @@ export function AppLayout() {
         <div className="px-3 mt-4 mb-2">
            <Link to="/app/profile" title={isSidebarCollapsed ? "Profile" : undefined} className={`flex items-center rounded-[12px] bg-surface-muted hover:bg-surface-hover border border-border-light transition-colors group ${isSidebarCollapsed ? 'justify-center p-2 mx-auto w-10' : 'gap-3 p-3'}`}>
               {user.profile_pic ? (
-                 <img src={user.profile_pic} className="w-10 h-10 rounded-full shadow-sm shrink-0 object-cover bg-white" alt="Avatar"/>
+                 <img src={user.profile_pic} referrerPolicy="no-referrer" className="w-10 h-10 rounded-full shadow-sm shrink-0 object-cover bg-white" alt="Avatar"/>
               ) : (
                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold shadow-sm shrink-0">
                     {user.name.charAt(0)}

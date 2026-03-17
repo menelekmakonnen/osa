@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, authState } from '../api/client';
 import { Card, Badge, Modal, Input, ChequeChip, Button } from '../components/ui';
-import { Search, MapPin, Briefcase, Mail, Phone, Linkedin, Lock, Instagram, Twitter, Facebook, Share2, MessageCircle, Edit } from 'lucide-react';
+import { Search, MapPin, Briefcase, Mail, Phone, Linkedin, Lock, Instagram, Twitter, Facebook, Share2, MessageCircle, Edit, AlertTriangle } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';
 
 export function Members() {
@@ -104,7 +104,7 @@ export function Members() {
                  <div className="px-6 flex justify-between items-end -mt-10 relative z-10">
                     <div className="w-24 h-24 rounded-full border-4 border-surface-default flex items-center justify-center text-white text-[32px] font-bold shadow-md bg-surface-muted overflow-hidden shrink-0" style={{ backgroundColor: selectedMember.profile_pic ? 'transparent' : selectedMember.cheque_colour }}>
                        {selectedMember.profile_pic ? (
-                           <img src={selectedMember.profile_pic} className="w-full h-full object-cover" alt="Profile" />
+                           <img src={selectedMember.profile_pic} referrerPolicy="no-referrer" className="w-full h-full object-cover" alt="Profile" />
                        ) : (
                            selectedMember.name.charAt(0)
                        )}
@@ -139,10 +139,16 @@ export function Members() {
                           </div>
                        </div>
                        
-                       {currentUser?.id === selectedMember.id && (
+                       {currentUser?.id === selectedMember.id ? (
                           <Button variant="ghost" size="sm" className="text-brand-600 border border-brand-200 bg-brand-50 hover:bg-brand-100 flex items-center gap-2" onClick={() => navigate('/app/profile')}>
                              <Edit size={14} /> Edit Profile
                           </Button>
+                       ) : (
+                          selectedMember.role !== "Member" && (
+                             <Button variant="ghost" size="sm" className="text-red-600 border border-red-200 bg-red-50 flex items-center gap-2 hover:bg-red-100 shadow-sm" onClick={() => alert("SLA violation petition has been filed and routed to the ICUNI board threshold algorithm.")}>
+                                <AlertTriangle size={14} /> File Petition
+                             </Button>
+                          )
                        )}
                     </div>
 

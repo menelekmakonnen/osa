@@ -74,19 +74,25 @@ export function ProfileCropper({ imageSrc, onComplete, onCancel, aspectRatio = 1
       const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
       const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
       
-      canvas.width = crop.width * scaleX;
-      canvas.height = crop.height * scaleY;
+      const isPercent = crop.unit === '%';
+      const pX = isPercent ? (crop.x / 100) * imgRef.current.naturalWidth : crop.x * scaleX;
+      const pY = isPercent ? (crop.y / 100) * imgRef.current.naturalHeight : crop.y * scaleY;
+      const pW = isPercent ? (crop.width / 100) * imgRef.current.naturalWidth : crop.width * scaleX;
+      const pH = isPercent ? (crop.height / 100) * imgRef.current.naturalHeight : crop.height * scaleY;
+
+      canvas.width = pW;
+      canvas.height = pH;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(
           imgRef.current,
-          crop.x * scaleX,
-          crop.y * scaleY,
-          crop.width * scaleX,
-          crop.height * scaleY,
+          pX,
+          pY,
+          pW,
+          pH,
           0,
           0,
-          crop.width * scaleX,
-          crop.height * scaleY
+          pW,
+          pH
       );
 
       const finalCanvas = document.createElement('canvas');
