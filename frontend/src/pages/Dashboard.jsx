@@ -43,14 +43,14 @@ export function Dashboard() {
       )}
 
       {/* Composer (Create Post mock area) */}
-      <Card className="!p-3 border border-border-light shadow-social-card">
+      <Card className="!p-3 border border-border-light shadow-social-card cursor-pointer hover:shadow-md transition-shadow" onClick={() => window.location.href = '/app/board'}>
          <div className="flex gap-3 px-1 pt-1 pb-3">
             {/* Avatar */}
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-400 to-brand-600 flex-shrink-0 flex items-center justify-center text-white font-bold text-lg">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-400 to-brand-600 flex-shrink-0 flex items-center justify-center text-white font-bold text-lg shadow-sm">
                 {user.name.charAt(0)}
             </div>
             {/* Input Trigger */}
-            <button className="flex-1 bg-surface-muted hover:bg-surface-hover transition-colors rounded-full px-4 text-left text-ink-muted text-[15px] font-medium min-h-[40px] flex items-center">
+            <button className="flex-1 bg-surface-muted hover:bg-surface-hover transition-colors rounded-full px-4 text-left text-ink-muted text-[15px] font-medium min-h-[40px] flex items-center shadow-inner">
                What's on your mind, {user.name.split(' ')[0]}?
             </button>
          </div>
