@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authState } from '../api/client';
 
 export const TenantContext = createContext(null);
 
@@ -18,11 +19,12 @@ const DOMAIN_MAPPING = {
 };
 
 export function TenantProvider({ children }) {
+  const user = authState.getUser();
   const [tenant, setTenant] = useState({
     schoolId: null,
     name: "OSA Directory",
     isCustomDomain: false,
-    activeScope: { type: 'school', id: null, label: 'Whole School' } // Tiers: yeargroup, club, house, school, all-schools
+    activeScope: { type: 'school', id: user?.school || null, label: 'Whole School' } // Tiers: yeargroup, club, house, school, all-schools
   });
   const [loading, setLoading] = useState(true);
 
