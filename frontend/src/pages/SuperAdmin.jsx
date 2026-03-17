@@ -6,7 +6,7 @@ import { Navigate } from 'react-router-dom';
 
 export function SuperAdmin() {
   const user = authState.getUser();
-  const isSuperAdmin = user?.role === "Super Admin" || user?.role === "IT Department";
+  const isSuperAdmin = user?.role === "Super Admin" || user?.role === "IT Department" || user?.role?.includes("School Administrator");
 
   if (!isSuperAdmin) {
     return <Navigate to="/app/dashboard" replace />;

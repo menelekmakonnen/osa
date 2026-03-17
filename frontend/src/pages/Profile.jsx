@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api, authState } from '../api/client';
 import { Card, Button, Input, Textarea, Select, Badge, ChequeChip } from '../components/ui';
-import { Save, UserCircle, ShieldAlert, Camera } from 'lucide-react';
+import { Save, UserCircle, ShieldAlert, Camera, Share2 } from 'lucide-react';
 import { ProfileCropper } from '../components/ImageUpload';
 
 export function Profile() {
@@ -16,6 +16,10 @@ export function Profile() {
   const [cropImage, setCropImage] = useState(null);
   const fileInputRef = useRef(null);
 
+  // Cover image cropping state
+  const [coverCropImage, setCoverCropImage] = useState(null);
+  const coverInputRef = useRef(null);
+
   useEffect(() => {
     loadProfile();
   }, []);
@@ -24,7 +28,9 @@ export function Profile() {
     try {
       const data = await api.getProfile();
       setProfile(data);
-      // Initialize form data with current profile values
+      let socialLinks = {};
+      try { socialLinks = JSON.parse(data.social_links || "{}"); } catch(e){ console.warn(e); }
+
       setFormData({
          name: data.name || '',
          username: data.username || '',
@@ -33,12 +39,19 @@ export function Profile() {
          phone: data.phone || '',
          linkedin: data.linkedin || '',
          bio: data.bio || '',
+         social_ig: socialLinks.ig || '',
+         social_tiktok: socialLinks.tiktok || '',
+         social_fb: socialLinks.fb || '',
+         social_x: socialLinks.x || '',
+         social_discord: socialLinks.discord || '',
+         social_snapchat: socialLinks.snapchat || '',
          priv_email: data.priv_email || 'yeargroup',
          priv_phone: data.priv_phone || 'hidden',
          priv_location: data.priv_location || 'all',
          priv_profession: data.priv_profession || 'all',
          priv_linkedin: data.priv_linkedin || 'all',
          priv_bio: data.priv_bio || 'yeargroup',
+         priv_social: data.priv_social || 'yeargroup',
       });
     } catch (e) {
       console.error(e);
@@ -54,8 +67,25 @@ export function Profile() {
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
+    
+    const payload = { ...formData };
+    payload.social_links = JSON.stringify({
+       ig: formData.social_ig,
+       tiktok: formData.social_tiktok,
+       fb: formData.social_fb,
+       x: formData.social_x,
+       discord: formData.social_discord,
+       snapchat: formData.social_snapchat
+    });
+    delete payload.social_ig;
+    delete payload.social_tiktok;
+    delete payload.social_fb;
+    delete payload.social_x;
+    delete payload.social_discord;
+    delete payload.social_snapchat;
+
     try {
-      const updated = await api.updateProfile(formData);
+      const updated = await api.updateProfile(payload);
       // Update local session user object
       authState.setSession(authState.getToken(), updated);
       setProfile(updated);
@@ -96,6 +126,35 @@ export function Profile() {
     }
   };
 
+  const handleCoverChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => setCoverCropImage(reader.result));
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+
+  const handleCoverCropComplete = async (base64Img) => {
+    setCoverCropImage(null);
+    setSaving(true);
+    try {
+      const result = await api.uploadImage({
+          group_id: "profile_covers",
+          image_base64: base64Img,
+          file_name: `cover_${profile.id}.jpg`
+      });
+      const updated = await api.updateProfile({ cover_url: result.url });
+      authState.setSession(authState.getToken(), { ...authState.getUser(), cover_url: result.url });
+      setProfile(updated);
+    } catch(err) {
+      console.error(err);
+      alert("Failed to upload cover picture.");
+    } finally {
+      setSaving(false);
+      if (coverInputRef.current) coverInputRef.current.value = "";
+    }
+  };
+
   if (loading) return <div className="text-muted text-center py-10">Loading profile...</div>;
   if (!profile) return null;
 
@@ -113,33 +172,50 @@ export function Profile() {
         <p className="text-[14px] text-ink-muted mt-0.5">Manage your personal information and privacy settings.</p>
       </div>
 
+      {/* Cover Image Area */}
+      <div className="w-full h-48 md:h-64 rounded-2xl overflow-hidden relative group bg-surface-muted border border-border-light shadow-sm shrink-0">
+         {profile.cover_url ? (
+            <img src={profile.cover_url} alt="Cover" className="w-full h-full object-cover" />
+         ) : (
+            <div className="w-full h-full bg-gradient-to-r from-brand-600/20 to-brand-400/20 flex items-center justify-center">
+               <span className="text-brand-600/50 font-bold text-lg">No Cover Image</span>
+            </div>
+         )}
+         
+         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <input type="file" ref={coverInputRef} accept="image/*" className="hidden" onChange={handleCoverChange} />
+            <Button onClick={() => coverInputRef.current.click()} variant="secondary" className="flex items-center gap-2 font-bold bg-white text-ink-title hover:bg-surface-hover">
+               <Camera size={18} strokeWidth={2.5}/> Change Cover
+            </Button>
+         </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
          
          {/* Edit Form - 2 Columns wide */}
-         <div className="md:col-span-2 flex flex-col gap-6">
-            <Card className="flex flex-col gap-6 !p-6 border border-border-light shadow-social-card">
-               <div className="flex justify-between items-center border-b border-border-light pb-4">
-                  <h2 className="text-[18px] font-bold text-ink-title flex items-center gap-2">
-                     <UserCircle className="text-brand-500" size={24} strokeWidth={2.5}/> Edit Information
-                  </h2>
-                  <div className="relative group shrink-0">
-                     <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleFileChange} />
-                     <button onClick={() => fileInputRef.current.click()} className="relative rounded-full overflow-hidden border border-border-light shadow-sm w-[60px] h-[60px] block transition-transform group-hover:scale-105">
-                        {profile.profile_pic ? (
-                           <img src={profile.profile_pic} alt="Profile" className="w-full h-full object-cover bg-white" />
-                        ) : (
-                           <div className="w-full h-full bg-gradient-to-tr from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold text-2xl">
-                              {profile.name.charAt(0)}
+         <div className="md:col-span-2">
+            <form id="profile-form" onSubmit={handleSave} className="flex flex-col gap-6">
+               <Card className="flex flex-col gap-6 !p-6 border border-border-light shadow-social-card max-w-full overflow-hidden">
+                  <div className="flex justify-between items-center border-b border-border-light pb-4">
+                     <h2 className="text-[18px] font-bold text-ink-title flex items-center gap-2">
+                        <UserCircle className="text-brand-500" size={24} strokeWidth={2.5}/> Edit Information
+                     </h2>
+                     <div className="relative group shrink-0">
+                        <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleFileChange} />
+                        <button type="button" onClick={() => fileInputRef.current.click()} className="relative rounded-full overflow-hidden border border-border-light shadow-sm w-[60px] h-[60px] block transition-transform group-hover:scale-105">
+                           {profile.profile_pic ? (
+                              <img src={profile.profile_pic} alt="Profile" className="w-full h-full object-cover bg-white" />
+                           ) : (
+                              <div className="w-full h-full bg-gradient-to-tr from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold text-2xl">
+                                 {profile.name.charAt(0)}
+                              </div>
+                           )}
+                           <div className="absolute inset-x-0 bottom-0 h-1/3 bg-black/50 flex justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Camera size={14} className="text-white"/>
                            </div>
-                        )}
-                        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-black/50 flex justify-center items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                           <Camera size={14} className="text-white"/>
-                        </div>
-                     </button>
+                        </button>
+                     </div>
                   </div>
-               </div>
-               
-               <form onSubmit={handleSave} className="flex flex-col gap-6">
                   
                   <div className="flex flex-col gap-4">
                      <PrivacyFieldRow 
@@ -239,14 +315,41 @@ export function Profile() {
                         </div>
                      </div>
                   </div>
+               </Card>
 
-                  <div className="pt-6 border-t border-border-light flex justify-end">
-                     <Button type="submit" disabled={saving} className="flex gap-2 font-bold shadow-sm px-6">
-                        <Save size={18} strokeWidth={2.5}/> {saving ? 'Saving...' : 'Save Profile'}
-                     </Button>
-                  </div>
-               </form>
-            </Card>
+               {/* Social Links Card */}
+               <Card className="flex flex-col gap-6 !p-6 border border-border-light shadow-social-card">
+                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border-light pb-4">
+                      <h2 className="text-[18px] font-bold text-ink-title flex items-center gap-2 shrink-0">
+                         <Share2 className="text-brand-500" size={24} strokeWidth={2.5}/> Social Links
+                      </h2>
+                      <div className="w-full md:w-64 shrink-0">
+                         <label className="text-[11px] font-bold uppercase tracking-widest text-ink-muted mb-1 block">Account Visibility</label>
+                         <Select 
+                            name="priv_social"
+                            value={formData.priv_social}
+                            onChange={handleChange}
+                            options={privacyOptions}
+                         />
+                      </div>
+                   </div>
+
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input label="Instagram" name="social_ig" value={formData.social_ig} onChange={handleChange} placeholder="@username" />
+                      <Input label="TikTok" name="social_tiktok" value={formData.social_tiktok} onChange={handleChange} placeholder="@username" />
+                      <Input label="X / Twitter" name="social_x" value={formData.social_x} onChange={handleChange} placeholder="@username" />
+                      <Input label="Snapchat" name="social_snapchat" value={formData.social_snapchat} onChange={handleChange} placeholder="username" />
+                      <Input label="Facebook" name="social_fb" value={formData.social_fb} onChange={handleChange} placeholder="Profile URL" />
+                      <Input label="Discord" name="social_discord" value={formData.social_discord} onChange={handleChange} placeholder="username#1234" />
+                   </div>
+
+                   <div className="pt-6 border-t border-border-light flex justify-end">
+                      <Button type="submit" disabled={saving} className="flex gap-2 font-bold shadow-sm px-6">
+                         <Save size={18} strokeWidth={2.5}/> {saving ? 'Saving...' : 'Save All Changes'}
+                      </Button>
+                   </div>
+               </Card>
+            </form>
          </div>
 
          {/* Fixed Identity Sidebar - 1 Column wide */}
@@ -302,6 +405,16 @@ export function Profile() {
             imageSrc={cropImage} 
             onComplete={handleCropComplete} 
             onCancel={() => { setCropImage(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} 
+         />
+      )}
+      
+      {coverCropImage && (
+         <ProfileCropper 
+            imageSrc={coverCropImage} 
+            onComplete={handleCoverCropComplete} 
+            onCancel={() => { setCoverCropImage(null); if (coverInputRef.current) coverInputRef.current.value = ""; }}
+            aspectRatio={3}
+            circularCrop={false}
          />
       )}
     </div>

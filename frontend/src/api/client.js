@@ -119,6 +119,7 @@ export const api = {
   // POST mutations
   onboardSchool: (schoolData) => apiRequest("onboardSchool", schoolData),
   updateProfile: (profileData) => apiRequest("updateProfile", profileData),
+  updateGroupAvatar: (scopeData) => apiRequest("updateGroupAvatar", scopeData),
   assignRole: (targetUserId, newRole) => apiRequest("assignRole", { target_user_id: targetUserId, new_role: newRole }),
   submitPost: (postData) => apiRequest("submitPost", postData),
   approvePost: (postId) => apiRequest("approvePost", { post_id: postId }),
@@ -138,5 +139,11 @@ export const api = {
   getAlbums: (scope) => apiRequest("getAlbums", { scope_type: scope.type, scope_id: scope.id }),
   createAlbum: (albumData) => apiRequest("createAlbum", albumData),
   getGalleryItems: (scope, albumId) => apiRequest("getGalleryItems", { scope_type: scope.type, scope_id: scope.id, album_id: albumId }),
-  uploadImage: (uploadData) => apiRequest("uploadImage", uploadData)
+  uploadImage: (uploadData) => apiRequest("uploadImage", uploadData),
+  
+  // Tech Support
+  getTickets: () => apiRequest("getTickets"),
+  submitTicket: (ticketData) => apiRequest("submitTicket", ticketData),
+  escalateTicket: (ticketId) => apiRequest("escalateTicket", { ticket_id: ticketId }),
+  resolveTicket: (ticketId, resolution) => apiRequest("resolveTicket", { ticket_id: ticketId, resolution })
 };

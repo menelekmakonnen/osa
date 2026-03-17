@@ -55,7 +55,7 @@ export function AuthLayout() {
   );
 }
 
-function NavItem({ to, icon, label, isAdminSection = false, onClick }) {
+function NavItem({ to, icon, label, isAdminSection = false, onClick, collapsed = false }) {
   const Icon = icon;
   const location = useLocation();
   const isActive = location.pathname === to || location.pathname.startsWith(to + '/');
@@ -75,10 +75,11 @@ function NavItem({ to, icon, label, isAdminSection = false, onClick }) {
     <Link 
       to={to} 
       onClick={onClick}
-      className={`flex items-center gap-3 px-3 py-2.5 mx-2 rounded-lg transition-colors duration-200 ${activeClass}`}
+      title={collapsed ? label : undefined}
+      className={`flex items-center gap-3 py-2.5 rounded-lg transition-colors duration-200 ${activeClass} ${collapsed ? 'justify-center mx-3 px-0' : 'px-3 mx-2'}`}
     >
-      <Icon size={24} strokeWidth={isActive ? 2.5 : 2} className={`transition-colors duration-200 ${iconClass}`} />
-      <span className="text-[15px]">{label}</span>
+      <Icon size={24} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 transition-colors duration-200 ${iconClass}`} />
+      {!collapsed && <span className="text-[15px] truncate">{label}</span>}
     </Link>
   );
 }
@@ -88,13 +89,14 @@ export function AppLayout() {
   const { name: tenantName, activeScope, setScope, isCustomDomain } = useTenant();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
 
   if (!authState.isAuthenticated() || !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  const isYGAdmin = ["YG Admin", "Platform Admin", "Super Admin"].includes(user.role);
-  const isSuperAdmin = user.role === "Super Admin" || user.role === "IT Department";
+  const isYGAdmin = user.role && (user.role.includes("Admin") || user.role.includes("President") || user.role === "IT Department");
+  const isSuperAdmin = user.role && (user.role === "Super Admin" || user.role.includes("School Administrator") || user.role === "IT Department");
 
   const handleLogout = () => {
     authState.clearSession();
@@ -194,25 +196,35 @@ export function AppLayout() {
       )}
 
       {/* Left Sidebar (Desktop Fixed) */}
-      <aside className="w-[280px] hidden md:flex flex-col fixed top-0 left-0 bottom-0 bg-surface-default overflow-y-auto z-10 custom-scrollbar border-r border-border-light shadow-sm">
+      <aside className={`hidden md:flex flex-col fixed top-0 left-0 bottom-0 bg-surface-default z-10 border-r border-border-light shadow-sm transition-all duration-300 ${isSidebarCollapsed ? 'w-20 overflow-x-hidden overflow-y-auto no-scrollbar' : 'w-[280px] overflow-y-auto custom-scrollbar'}`}>
         
+        {/* Toggle Handle */}
+        <button 
+           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+           className="absolute -right-[13px] top-1/2 -translate-y-1/2 w-4 h-16 bg-surface-default border border-border-light rounded-r-lg shadow-sm flex items-center justify-center text-ink-muted hover:text-ink-title z-30 group cursor-pointer"
+        >
+           <div className={`w-[2px] h-6 bg-ink-muted/30 group-hover:bg-brand-400 rounded-full transition-colors ${isSidebarCollapsed ? 'mr-0.5' : 'ml-0.5'}`}></div>
+        </button>
+
         {/* Brand Header */}
-        <div className="p-4 flex items-center justify-between sticky top-0 bg-surface-default/95 backdrop-blur-md z-20 pb-2">
-             <Link to="/" onClick={() => window.location.href='/'} className="flex items-center gap-3 group">
-               <Logo className="w-6 h-6 transition-transform group-hover:scale-110" wrapperClass="w-10 h-10" noText />
-               <div className="flex flex-col">
-                 <h1 className="text-[22px] font-bold text-ink-title leading-tight">OSA</h1>
-                 <span className="text-[10px] font-bold text-brand-600 uppercase tracking-widest mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                    {isCustomDomain ? tenantName : (user.school || 'Aggrey Memorial')}
-                 </span>
-               </div>
+        <div className={`p-4 flex items-center sticky top-0 bg-surface-default/95 backdrop-blur-md z-20 pb-2 ${isSidebarCollapsed ? 'justify-center mx-auto' : 'justify-between'}`}>
+             <Link to="/" onClick={() => window.location.href='/'} className={`flex items-center group ${isSidebarCollapsed ? '' : 'gap-3'}`}>
+               <Logo className="w-6 h-6 transition-transform group-hover:scale-110" wrapperClass="w-10 h-10 shrink-0" noText />
+               {!isSidebarCollapsed && (
+                 <div className="flex flex-col">
+                   <h1 className="text-[22px] font-bold text-ink-title leading-tight">OSA</h1>
+                   <span className="text-[10px] font-bold text-brand-600 uppercase tracking-widest mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
+                      {isCustomDomain ? tenantName : (user.school || 'Aggrey Memorial')}
+                   </span>
+                 </div>
+               )}
              </Link>
-             <ThemeToggle />
+             {!isSidebarCollapsed && <ThemeToggle />}
         </div>
 
         {/* User Mini Profile Target */}
         <div className="px-3 mt-4 mb-2">
-           <Link to="/app/profile" className="flex items-center gap-3 p-3 rounded-[12px] bg-surface-muted hover:bg-surface-hover border border-border-light transition-colors group">
+           <Link to="/app/profile" title={isSidebarCollapsed ? "Profile" : undefined} className={`flex items-center rounded-[12px] bg-surface-muted hover:bg-surface-hover border border-border-light transition-colors group ${isSidebarCollapsed ? 'justify-center p-2 mx-auto w-10' : 'gap-3 p-3'}`}>
               {user.profile_pic ? (
                  <img src={user.profile_pic} className="w-10 h-10 rounded-full shadow-sm shrink-0 object-cover bg-white" alt="Avatar"/>
               ) : (
@@ -220,18 +232,20 @@ export function AppLayout() {
                     {user.name.charAt(0)}
                  </div>
               )}
-              <div className="flex flex-col overflow-hidden">
-                 <span className="text-[15px] font-bold text-ink-title group-hover:text-brand-600 transition-colors truncate">{user.name}</span>
-                 <div className="flex items-center gap-1.5 mt-1">
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: user.cheque_colour || '#8A8D91' }} />
-                    <span className="text-[12px] text-ink-muted font-bold tracking-tight truncate">{user.year_group_nickname}</span>
-                 </div>
-              </div>
+              {!isSidebarCollapsed && (
+                <div className="flex flex-col overflow-hidden">
+                   <span className="text-[15px] font-bold text-ink-title group-hover:text-brand-600 transition-colors truncate">{user.name}</span>
+                   <div className="flex items-center gap-1.5 mt-1">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: user.cheque_colour || '#8A8D91' }} />
+                      <span className="text-[12px] text-ink-muted font-bold tracking-tight truncate">{user.year_group_nickname}</span>
+                   </div>
+                </div>
+              )}
            </Link>
         </div>
 
         {/* Tenant Scope Toggle */}
-        <div className="px-4 mb-2">
+        <div className={`px-4 mb-2 ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
             <label className="text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1 block">Viewing Scope</label>
             <select 
                className="w-full bg-surface-muted text-ink-title border border-border-light rounded-lg text-[13px] font-bold px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer shadow-sm transition-colors hover:border-brand-300"
@@ -268,47 +282,50 @@ export function AppLayout() {
 
         {/* Main Nav */}
         <nav className="flex-1 py-2 flex flex-col gap-1 mt-2">
-          <NavItem to="/app/dashboard" icon={Home} label="Dashboard" />
-          <NavItem to="/app/newsletter" icon={Mail} label="Newsletter" />
-          {/* <NavItem to="/app/fundraising" icon={Heart} label="Fundraising" /> */}
-          {/* <NavItem to="/app/events" icon={Calendar} label="Events" /> */}
-          <NavItem to="/app/members" icon={Users} label="Directory" />
-          <NavItem to="/app/board" icon={MessageSquare} label="Group Board" />
-          <NavItem to="/app/gallery" icon={ImageIcon} label="Gallery" />
-          <NavItem to="/app/support" icon={HelpCircle} label="Tech Support" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/dashboard" icon={Home} label="Dashboard" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/newsletter" icon={Mail} label="Newsletter" />
+          {/* <NavItem collapsed={isSidebarCollapsed} to="/app/fundraising" icon={Heart} label="Fundraising" /> */}
+          {/* <NavItem collapsed={isSidebarCollapsed} to="/app/events" icon={Calendar} label="Events" /> */}
+          <NavItem collapsed={isSidebarCollapsed} to="/app/members" icon={Users} label="Directory" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/board" icon={MessageSquare} label="Group Board" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/gallery" icon={ImageIcon} label="Gallery" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/support" icon={HelpCircle} label="Tech Support" />
           
           {/* Admin Section */}
           {isYGAdmin && (
-            <div className="mt-4 pt-4 border-t border-border-light mx-4">
-              <div className="px-2 mb-2 text-[11px] font-bold uppercase tracking-widest text-ink-muted">Administration</div>
-              <NavItem to="/app/admin" icon={Settings} label="Admin Panel" isAdminSection />
+            <div className={`mt-4 pt-4 border-t border-border-light ${isSidebarCollapsed ? 'mx-2' : 'mx-4'}`}>
+              {!isSidebarCollapsed && <div className="px-2 mb-2 text-[11px] font-bold uppercase tracking-widest text-ink-muted">Administration</div>}
+              <NavItem collapsed={isSidebarCollapsed} to="/app/admin" icon={Settings} label="Admin Panel" isAdminSection />
               {isSuperAdmin && (
-                 <NavItem to="/app/superadmin" icon={ShieldAlert} label="Super Admin" isAdminSection />
+                 <NavItem collapsed={isSidebarCollapsed} to="/app/superadmin" icon={ShieldAlert} label="Super Admin" isAdminSection />
               )}
             </div>
           )}
         </nav>
 
         {/* Support Footer */}
-        <div className="p-4 mt-auto border-t border-border-light bg-surface-muted/30">
+        <div className={`p-4 mt-auto border-t border-border-light bg-surface-muted/30 ${isSidebarCollapsed ? 'px-2' : 'p-4'}`}>
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full p-3 font-bold text-ink-body hover:bg-surface-hover hover:text-ink-title rounded-[12px] transition-colors"
+            title={isSidebarCollapsed ? "Log Out" : undefined}
+            className={`flex items-center font-bold text-ink-body hover:bg-surface-hover hover:text-ink-title rounded-[12px] transition-colors ${isSidebarCollapsed ? 'justify-center w-full p-2' : 'gap-3 w-full p-3'}`}
           >
-            <div className="w-9 h-9 rounded-full bg-surface-muted border border-border-light flex items-center justify-center text-ink-title shadow-sm">
+            <div className={`w-9 h-9 rounded-full bg-surface-muted border border-border-light flex items-center justify-center text-ink-title shadow-sm shrink-0`}>
                <LogOut size={18} strokeWidth={2.5}/>
             </div>
-            <span className="text-[14px]">Log Out</span>
+            {!isSidebarCollapsed && <span className="text-[14px]">Log Out</span>}
           </button>
-          <div className="mt-4 text-[11px] font-semibold text-ink-muted px-2 flex justify-between items-center">
-            <span>OSA Platform © 2026</span>
-            <span className="text-brand-500 bg-brand-50 px-2 rounded-full py-0.5">ICUNI</span>
-          </div>
+          {!isSidebarCollapsed && (
+            <div className="mt-4 text-[11px] font-semibold text-ink-muted px-2 flex justify-between items-center">
+              <span>OSA Platform © 2026</span>
+              <span className="text-brand-500 bg-brand-50 px-2 rounded-full py-0.5">ICUNI</span>
+            </div>
+          )}
         </div>
       </aside>
 
       {/* Main Content Area - Center Aligned Feed Style */}
-      <main className="flex-1 flex justify-center w-full md:ml-[280px]">
+      <main className={`flex-1 flex justify-center w-full transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-[280px]'}`}>
          <div className="w-full max-w-[680px] lg:max-w-[740px] xl:max-w-[800px] py-4 md:py-6 px-4 pb-20 md:pb-6">
             <Outlet />
          </div>

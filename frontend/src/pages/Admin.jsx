@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Badge, Modal, Select } from '../components/ui';
 import { api, authState } from '../api/client';
-import { Shield, Mail, Heart, Calendar, CheckCircle } from 'lucide-react';
+import { Shield, Mail, Heart, Calendar, CheckCircle, Image as ImageIcon, Camera } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { useTenant } from '../context/TenantContext';
+import { ProfileCropper } from '../components/ImageUpload';
 
 const getRolesForScope = (scopeType) => {
    const prefixes = {
@@ -36,6 +37,10 @@ export function Admin() {
   const [targetUserId, setTargetUserId] = useState('');
   const [targetRole, setTargetRole] = useState('');
   const [assigning, setAssigning] = useState(false);
+  
+  // Group Avatar Upload State
+  const [avatarImage, setAvatarImage] = useState(null);
+  const avatarInputRef = React.useRef(null);
 
   useEffect(() => {
     if (isRolesModalOpen) {
@@ -64,6 +69,40 @@ export function Admin() {
        alert("Failed to assign role: " + err.message);
     } finally {
        setAssigning(false);
+    }
+  };
+
+  const handleAvatarChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => setAvatarImage(reader.result));
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+
+  const handleAvatarCropComplete = async (base64Img) => {
+    setAvatarImage(null);
+    setAssigning(true); // Reuse assigning state for loading indicator
+    try {
+      const result = await api.uploadImage({
+          group_id: "group_avatars",
+          scope_type: activeScope.type,
+          scope_id: activeScope.id,
+          image_base64: base64Img,
+          file_name: `avatar_${activeScope.id}.jpg`
+      });
+      await api.updateGroupAvatar({
+         scope_type: activeScope.type,
+         scope_id: activeScope.id,
+         url: result.url
+      });
+      alert("Group profile picture updated successfully!");
+    } catch(err) {
+      console.error(err);
+      alert("Failed to upload group profile picture.");
+    } finally {
+      setAssigning(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
     }
   };
 
@@ -117,7 +156,7 @@ export function Admin() {
            </div>
         </Card>
 
-        {/* Roles & Members Management */}
+         {/* Roles & Members Management */}
         <Card className="flex flex-col gap-4 border border-border-light shadow-social-card hover:border-amber-300 transition-colors">
            <div className="flex items-center justify-between border-b border-border-light pb-3">
               <h2 className="text-[18px] font-bold text-ink-title flex items-center gap-2 m-0"><Shield className="text-amber-500" size={22} strokeWidth={2.5}/> Governance</h2>
@@ -130,6 +169,24 @@ export function Admin() {
              <Button size="sm" variant="ghost" className="font-bold text-ink-muted hover:text-ink-title px-2">Members</Button>
            </div>
         </Card>
+
+        {/* Group Profile Management */}
+        {activeScope.type !== 'all' && (
+           <Card className="flex flex-col gap-4 border border-border-light shadow-social-card hover:border-blue-300 transition-colors">
+              <div className="flex items-center justify-between border-b border-border-light pb-3">
+                 <h2 className="text-[18px] font-bold text-ink-title flex items-center gap-2 m-0"><ImageIcon className="text-blue-500" size={22} strokeWidth={2.5}/> Group Identity</h2>
+              </div>
+              <p className="text-[14px] text-ink-body flex-1 leading-relaxed">
+                Update the official profile picture/avatar for {activeScope.label}. This represents your group across the platform.
+              </p>
+              <div className="flex justify-between items-center mt-auto pt-2 gap-2">
+                <input type="file" ref={avatarInputRef} accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                <Button size="sm" variant="secondary" onClick={() => avatarInputRef.current.click()} disabled={assigning} className="flex-1 font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title flex items-center justify-center gap-2">
+                   <Camera size={16} /> {assigning ? 'Uploading...' : 'Upload New Picture'}
+                </Button>
+              </div>
+           </Card>
+        )}
 
       </div>
 
@@ -167,6 +224,14 @@ export function Admin() {
             </div>
          </form>
       </Modal>
+
+      {avatarImage && (
+         <ProfileCropper 
+            imageSrc={avatarImage} 
+            onComplete={handleAvatarCropComplete} 
+            onCancel={() => { setAvatarImage(null); if (avatarInputRef.current) avatarInputRef.current.value = ""; }} 
+         />
+      )}
     </div>
   );
 }

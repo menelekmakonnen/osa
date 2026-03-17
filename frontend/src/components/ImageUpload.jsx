@@ -54,14 +54,14 @@ export const compressImage = (file) => {
   });
 };
 
-export function ProfileCropper({ imageSrc, onComplete, onCancel }) {
+export function ProfileCropper({ imageSrc, onComplete, onCancel, aspectRatio = 1, circularCrop = true }) {
   const [crop, setCrop] = useState();
   const imgRef = useRef(null);
   
   const onImageLoad = (e) => {
       const { width, height } = e.currentTarget;
       const c = centerCrop(
-        makeAspectCrop({ unit: '%', width: 90 }, 1, width, height),
+        makeAspectCrop({ unit: '%', width: 90 }, aspectRatio, width, height),
         width,
         height
       );
@@ -89,14 +89,13 @@ export function ProfileCropper({ imageSrc, onComplete, onCancel }) {
           crop.height * scaleY
       );
 
-      // Downscale final cropped area max 400x400 for profile
       const finalCanvas = document.createElement('canvas');
-      const MAX_PROF = 400;
+      const MAX_WIDTH = aspectRatio === 1 ? 400 : 1200;
       let finalW = canvas.width;
       let finalH = canvas.height;
-      if (finalW > MAX_PROF) {
-          finalW = MAX_PROF;
-          finalH = MAX_PROF; // It's a square
+      if (finalW > MAX_WIDTH) {
+          finalH = Math.round((finalH * MAX_WIDTH) / finalW);
+          finalW = MAX_WIDTH;
       }
       finalCanvas.width = finalW;
       finalCanvas.height = finalH;
@@ -121,8 +120,8 @@ export function ProfileCropper({ imageSrc, onComplete, onCancel }) {
            <ReactCrop 
               crop={crop} 
               onChange={c => setCrop(c)} 
-              aspect={1}
-              circularCrop={true}
+              aspect={aspectRatio}
+              circularCrop={circularCrop}
            >
               <img 
                  ref={imgRef}

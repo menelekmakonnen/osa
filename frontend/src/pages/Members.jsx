@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../api/client';
-import { Card, Badge, Modal, Input, ChequeChip } from '../components/ui';
-import { Search, MapPin, Briefcase, Mail, Phone, Linkedin, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { api, authState } from '../api/client';
+import { Card, Badge, Modal, Input, ChequeChip, Button } from '../components/ui';
+import { Search, MapPin, Briefcase, Mail, Phone, Linkedin, Lock, Instagram, Twitter, Facebook, Share2, MessageCircle, Edit } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';
 
 export function Members() {
   const { activeScope } = useTenant();
+  const navigate = useNavigate();
+  const currentUser = authState.getUser();
   const [searchQuery, setSearchQuery] = useState('');
   
   const [members, setMembers] = useState([]);
@@ -93,8 +96,8 @@ export function Members() {
          {selectedMember && (
              <div className="flex flex-col relative w-full bg-surface-default pb-4">
                  {/* Modern Banner/Header */}
-                 <div className="h-32 w-full relative" style={{ backgroundColor: selectedMember.cheque_colour }}>
-                    <div className="absolute inset-0 opacity-20 bg-black/10 mix-blend-overlay"></div>
+                 <div className="h-32 w-full relative bg-cover bg-center" style={{ backgroundColor: selectedMember.cheque_colour, backgroundImage: selectedMember.cover_url ? `url(${selectedMember.cover_url})` : 'none' }}>
+                    {!selectedMember.cover_url && <div className="absolute inset-0 opacity-20 bg-black/10 mix-blend-overlay"></div>}
                  </div>
                  
                  {/* Avatar overlapping banner */}
@@ -128,27 +131,44 @@ export function Members() {
                     </div>
 
                     {/* Identity Chips */}
-                    <div className="flex gap-2">
-                       <ChequeChip colorHex={selectedMember.cheque_colour} text={selectedMember.year_group_nickname} className="shadow-sm border border-border-light" />
-                       <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-muted rounded-pill text-xs font-bold text-ink-title border border-border-light shadow-sm">
-                          {selectedMember.house_name}
+                    <div className="flex justify-between items-center">
+                       <div className="flex gap-2">
+                          <ChequeChip colorHex={selectedMember.cheque_colour} text={selectedMember.year_group_nickname} className="shadow-sm border border-border-light" />
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-muted rounded-pill text-xs font-bold text-ink-title border border-border-light shadow-sm">
+                             {selectedMember.house_name}
+                          </div>
                        </div>
+                       
+                       {currentUser?.id === selectedMember.id && (
+                          <Button variant="ghost" size="sm" className="text-brand-600 border border-brand-200 bg-brand-50 hover:bg-brand-100 flex items-center gap-2" onClick={() => navigate('/app/profile')}>
+                             <Edit size={14} /> Edit Profile
+                          </Button>
+                       )}
                     </div>
 
                     <div className="w-full h-[1px] bg-border-light mt-1"></div>
 
                     {/* Content / Privacy Check */}
-                    {(!selectedMember.bio && !selectedMember.profession && !selectedMember.location && !selectedMember.email && !selectedMember.phone && !selectedMember.linkedin) ? (
-                        <div className="flex flex-col items-center justify-center py-8 px-4 text-center bg-surface-muted/50 rounded-[16px] border border-dashed border-border-light">
-                           <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-ink-muted mb-3">
-                              <Lock size={20} strokeWidth={2.5} />
-                           </div>
-                           <h3 className="text-[16px] font-bold text-ink-title mb-1">Private Profile</h3>
-                           <p className="text-[14px] text-ink-muted leading-relaxed max-w-[280px]">
-                              This member has chosen to keep their contact and professional details private.
-                           </p>
-                        </div>
-                    ) : (
+                    {(() => {
+                        let socialLinks = {};
+                        try { socialLinks = JSON.parse(selectedMember.social_links || "{}"); } catch(e){ console.warn(e); }
+                        const hasSocials = Object.values(socialLinks).some(v => !!v);
+                        
+                        if (!selectedMember.bio && !selectedMember.profession && !selectedMember.location && !selectedMember.email && !selectedMember.phone && !selectedMember.linkedin && !hasSocials) {
+                            return (
+                                <div className="flex flex-col items-center justify-center py-8 px-4 text-center bg-surface-muted/50 rounded-[16px] border border-dashed border-border-light">
+                                   <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-ink-muted mb-3">
+                                      <Lock size={20} strokeWidth={2.5} />
+                                   </div>
+                                   <h3 className="text-[16px] font-bold text-ink-title mb-1">Private Profile</h3>
+                                   <p className="text-[14px] text-ink-muted leading-relaxed max-w-[280px]">
+                                      This member has chosen to keep their contact and professional details private.
+                                   </p>
+                                </div>
+                            );
+                        }
+                        
+                        return (
                         <div className="flex flex-col gap-5 text-[15px]">
                             {selectedMember.bio && (
                                 <div className="p-4 bg-brand-50/50 rounded-[12px] border border-brand-100/50 relative overflow-hidden">
@@ -174,9 +194,28 @@ export function Members() {
                                {selectedMember.linkedin && (
                                   <ModernDetailRow icon={<Linkedin size={16}/>} label="LinkedIn" value={<a href={selectedMember.linkedin} target="_blank" rel="noreferrer" className="text-brand-600 font-semibold hover:underline truncate inline-block max-w-[150px] align-bottom">View Profile</a>} />
                                )}
-                            </div>
+                               {socialLinks.ig && (
+                                   <ModernDetailRow icon={<Instagram size={16}/>} label="Instagram" value={socialLinks.ig} />
+                                )}
+                                {socialLinks.x && (
+                                   <ModernDetailRow icon={<Twitter size={16}/>} label="X (Twitter)" value={socialLinks.x} />
+                                )}
+                                {socialLinks.tiktok && (
+                                   <ModernDetailRow icon={<Share2 size={16}/>} label="TikTok" value={socialLinks.tiktok} />
+                                )}
+                                {socialLinks.fb && (
+                                   <ModernDetailRow icon={<Facebook size={16}/>} label="Facebook" value={socialLinks.fb} />
+                                )}
+                                {socialLinks.snapchat && (
+                                   <ModernDetailRow icon={<MessageCircle size={16}/>} label="Snapchat" value={socialLinks.snapchat} />
+                                )}
+                                {socialLinks.discord && (
+                                   <ModernDetailRow icon={<MessageCircle size={16}/>} label="Discord" value={socialLinks.discord} />
+                                )}
+                             </div>
                         </div>
-                    )}
+                    );
+                    })()}
                  </div>
              </div>
          )}

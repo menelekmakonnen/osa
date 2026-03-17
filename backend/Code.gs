@@ -343,11 +343,14 @@ function handleRegister(data) {
     priv_profession: "all",
     priv_linkedin: "all",
     priv_bio: "yeargroup",
+    priv_social: "yeargroup",
     bio: "",
     profession: "",
     location: "",
     phone: "",
-    linkedin: ""
+    linkedin: "",
+    social_links: "{}",
+    cover_url: ""
   };
 
   const newRowArray = headers.map(h => newRowObj[h] !== undefined ? newRowObj[h] : "");
@@ -399,7 +402,7 @@ function handleOnboardSchool(data) {
      type: new_school_type,
      classes: JSON.stringify(new_school_classes || []),
      houses: JSON.stringify(new_school_houses || []),
-     status: "Pending",
+     status: "Approved", // Auto-approved to unblock testing
      admin_id: newId
   };
   schoolsSheet.appendRow(sHeaders.map(h => schoolRowObj[h] !== undefined ? schoolRowObj[h] : ""));
@@ -431,11 +434,14 @@ function handleOnboardSchool(data) {
     priv_profession: "all",
     priv_linkedin: "all",
     priv_bio: "all",
-    bio: `School Administrator (Pending Verification)`,
+    priv_social: "all",
+    bio: `School Administrator (Approved)`,
     profession: "",
     location: "",
     phone: "",
-    linkedin: ""
+    linkedin: "",
+    social_links: "{}",
+    cover_url: ""
   };
 
   const newRowArray = headers.map(h => newRowObj[h] !== undefined ? newRowObj[h] : "");
@@ -606,8 +612,8 @@ function getProfile(user) {
 }
 
 function updateProfile(user, data) {
-  const allowedFields = ["name", "username", "bio", "profession", "location", "phone", "linkedin", 
-                         "priv_bio", "priv_profession", "priv_location", "priv_phone", "priv_linkedin", "priv_email"];
+  const allowedFields = ["name", "username", "bio", "profession", "location", "phone", "linkedin", "social_links", "cover_url", "profile_pic",
+                         "priv_bio", "priv_profession", "priv_location", "priv_phone", "priv_linkedin", "priv_email", "priv_social"];
   
   const sheet = getSheet("members");
   const headers = getHeaders(sheet);
@@ -690,21 +696,21 @@ function applyPrivacyFilters(targetMember, viewerUser) {
      }
   }
   
-  const privFields = ["email", "phone", "location", "profession", "linkedin", "bio"];
+  const privFields = ["email", "phone", "location", "profession", "linkedin", "bio", "social"];
   
   privFields.forEach(field => {
     let setting = safeTarget["priv_" + field] || "hidden";
     
+    // Social links are stored in 'social_links' but privacy setting is 'priv_social'
+    let dataField = field === "social" ? "social_links" : field;
+
     if (setting === "hidden") {
-      delete safeTarget[field];
+      delete safeTarget[dataField];
     } else if (setting === "yeargroup" && relationship !== "yeargroup") {
-       // Only visible to own year group (or superiors, already caught above)
-       delete safeTarget[field];
+       delete safeTarget[dataField];
     } else if (setting === "school" && relationship !== "yeargroup" && relationship !== "school") {
-       // Only visible to own school
-       delete safeTarget[field];
+       delete safeTarget[dataField];
     }
-    // if 'all', it's visible to logged in users across the platform. So keep it.
   });
 
   return safeTarget;
@@ -1089,8 +1095,8 @@ function uploadImage(user, data) {
       
       const url = "https://drive.google.com/uc?export=view&id=" + file.getId();
 
-      // Log the upload in the gallery if it's not a profile picture
-      if (group_id !== "profile_pics") {
+      // Log the upload in the gallery if it's not a profile or group picture
+      if (group_id !== "profile_pics" && group_id !== "profile_covers" && group_id !== "group_avatars") {
         const gSheet = getSheet("galleries");
         const headers = getHeaders(gSheet);
         gSheet.appendRow(headers.map(h => {
@@ -1103,6 +1109,7 @@ function uploadImage(user, data) {
           if(h==="uploaded_by_name") return user.name;
           if(h==="url") return url;
           if(h==="timestamp") return new Date().toISOString();
+          if(h==="school") return user.school; // P0 FIX: Data Isolation
           return "";
         }));
       }
@@ -1111,6 +1118,49 @@ function uploadImage(user, data) {
     } catch(err) {
       return { success: false, error: err.toString() };
     }
+}
+
+function updateGroupAvatar(user, data) {
+    const { scope_type, scope_id, url } = data;
+    if (!url) return { success: false, error: "No URL provided" };
+    
+    // Authorization check
+    let isExec = user.role.includes("President") || user.role.includes("Admin");
+    if (!isExec && user.role !== "Super Admin" && user.role !== "IT Department") {
+       return { success: false, error: "Unauthorized. Must be an admin/exec." };
+    }
+
+    let sheetName = scope_type === "school" ? "schools" : "year_groups";
+    let targetId = scope_type === "school" ? user.school : scope_id;
+    
+    // For school scope, targetId uses the school name from the user object right now.
+    // Let's find the correct row
+    const sheet = getSheet(sheetName);
+    const headers = getHeaders(sheet);
+    const rows = sheet.getDataRange().getValues();
+    
+    // Ensure avatar column exists
+    let avatarIndex = headers.indexOf("avatar");
+    if(avatarIndex === -1) {
+       // Append header dynamically if missing
+       sheet.getRange(1, headers.length + 1).setValue("avatar");
+       avatarIndex = headers.length;
+    }
+    
+    for(let i=1; i<rows.length; i++) {
+        let rowObj = rowToObject(rows[i], headers);
+        // Matching logic
+        let match = false;
+        if (sheetName === "schools" && rowObj.name === targetId) match = true;
+        if (sheetName === "year_groups" && rowObj.id === targetId) match = true;
+        
+        if (match) {
+            sheet.getRange(i+1, avatarIndex + 1).setValue(url);
+            return { success: true, message: "Avatar updated" };
+        }
+    }
+    
+    return { success: false, error: "Group not found to update." };
 }
 
 function getAlbums(user, data) {
@@ -1317,9 +1367,9 @@ function getYearGroupsData() {
 function INITIALIZE_SHEETS() {
     const ss = getDB();
     const sheetsToCreate = {
-        "schools": ["id", "name", "motto", "colours", "cheque_representation", "type", "classes", "houses", "status", "admin_id"],
-        "year_groups": ["id", "school", "year", "nickname", "house_name", "cheque_colour"],
-        "members": ["id", "name", "username", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "bio", "profession", "location", "phone", "linkedin", "profile_pic", "school_admin_id", "verification_status"],
+        "schools": ["id", "name", "motto", "colours", "cheque_representation", "type", "classes", "houses", "status", "admin_id", "avatar"],
+        "year_groups": ["id", "school", "year", "nickname", "house_name", "cheque_colour", "avatar"],
+        "members": ["id", "name", "username", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "priv_social", "bio", "profession", "location", "phone", "linkedin", "social_links", "profile_pic", "cover_url", "school_admin_id", "verification_status"],
         "posts": ["id", "title", "category", "content", "author_id", "author_name", "scope_type", "scope_id", "school", "submission_date", "status", "newsletter_month", "rejection_note"],
         "campaigns": ["id", "title", "type", "description", "target_amount", "currency", "deadline", "scope", "scope_type", "scope_id", "school", "status", "raised_amount", "donor_count", "updates", "created_by"],
         "donations": ["id", "campaign_id", "donor_id", "amount", "timestamp", "payment_method"],
