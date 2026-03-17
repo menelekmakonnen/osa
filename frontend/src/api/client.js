@@ -128,6 +128,7 @@ export const api = {
   donate: (campaignId, amount) => apiRequest("donate", { campaign_id: campaignId, amount }),
   createEvent: (eventData) => apiRequest("createEvent", eventData),
   rsvp: (eventId) => apiRequest("rsvp", { event_id: eventId }),
+  assignTargetRole: (target_user_id, new_role) => apiRequest("assignTargetRole", { target_user_id, new_role }),
 
   // Board & Gallery
   getBoardMessages: (scope) => apiRequest("getBoardMessages", { scope_type: scope.type, scope_id: scope.id }),

@@ -482,14 +482,22 @@ function validateToken(token) {
 // ==========================================
 
 const ROLE_TIERS = {
-  "IT Department": 3,
-  "Platform Super Admin": 3,
-  "School Administrator": 2, // School Super Admin
-  "YG President": 1,         // YG Super Admin
-  "YG Vice President": 1,
-  "YG Gen. Secretary": 1,
-  "YG Organiser": 1,
-  "YG Finance Executive": 1,
+  // Tier 5: Platform
+  "Platform President": 5, "Platform Vice President": 5, "Platform Gen. Secretary": 5, "Platform Organiser": 5, "Platform Finance Exec": 5, "IT Department": 5, "Platform Admin": 5, "Super Admin": 5,
+  
+  // Tier 4: School
+  "School President": 4, "School Vice President": 4, "School Gen. Secretary": 4, "School Organiser": 4, "School Finance Exec": 4, "School Administrator": 4,
+  
+  // Tier 3: House
+  "House Captain": 3, "House Vice President": 3, "House Gen. Secretary": 3, "House Organiser": 3, "House Finance Exec": 3,
+  
+  // Tier 2: Club
+  "Club President": 2, "Club Vice President": 2, "Club Gen. Secretary": 2, "Club Organiser": 2, "Club Finance Exec": 2,
+  
+  // Tier 1: Year Group
+  "YG President": 1, "YG Vice President": 1, "YG Gen. Secretary": 1, "YG Organiser": 1, "YG Finance Exec": 1,
+  
+  // Tier 0
   "Member": 0
 };
 

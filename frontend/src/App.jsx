@@ -15,6 +15,7 @@ import { Admin } from './pages/Admin';
 import { SuperAdmin } from './pages/SuperAdmin';
 import { Board } from './pages/Board';
 import { Gallery } from './pages/Gallery';
+import { Support } from './pages/Support';
 
 const ProtectedRoute = ({ children }) => {
   const isAuth = !!window.localStorage.getItem('osa_session_token');
@@ -51,6 +52,7 @@ function App() {
           <Route path="board" element={<Board />} />
           <Route path="gallery" element={<Gallery />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="support" element={<Support />} />
           
           {/* Admin Routes (Secured internally within components) */}
           <Route path="admin" element={<Admin />} />

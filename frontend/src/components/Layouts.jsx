@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
-import { Home, Mail, Heart, Calendar, Users, UserCircle, Settings, ShieldAlert, LogOut, Menu, X, Sun, Moon, MessageSquare, Image as ImageIcon } from 'lucide-react';
+import { Home, Mail, Heart, Calendar, Users, UserCircle, Settings, ShieldAlert, LogOut, Menu, X, Sun, Moon, MessageSquare, Image as ImageIcon, HelpCircle } from 'lucide-react';
 import { authState } from '../api/client';
 import { useTenant } from '../context/TenantContext';
 import { Logo } from './Logo';
@@ -85,7 +85,7 @@ function NavItem({ to, icon, label, isAdminSection = false, onClick }) {
 
 export function AppLayout() {
   const user = authState.getUser();
-  const { name: tenantName, scope, setScope, isCustomDomain } = useTenant();
+  const { name: tenantName, activeScope, setScope, isCustomDomain } = useTenant();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
@@ -134,6 +134,34 @@ export function AppLayout() {
       {mobileMenuOpen && (
          <div className="md:hidden fixed inset-0 z-30 bg-black/20 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}>
             <div className="absolute top-[61px] left-0 right-0 bg-surface-default shadow-social-card border-b border-border-light flex flex-col gap-1 py-2 px-2 pb-6" onClick={e => e.stopPropagation()}>
+                
+                {/* Mobile Scope Toggle */}
+                <div className="px-2 py-2 mb-2 border-b border-border-light">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1 block">Viewing Scope</label>
+                    <select 
+                       className="w-full bg-surface-muted text-ink-title border border-border-light rounded-lg text-sm font-bold px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-sm"
+                       value={activeScope?.type || 'school'}
+                       onChange={(e) => {
+                          const type = e.target.value;
+                          let id = user.school;
+                          let label = 'Whole School';
+                          if (type === 'yeargroup') { id = user.year_group_id; label = user.year_group_nickname || 'My Year Group'; }
+                          else if (type === 'house') { id = user.house_name; label = user.house_name || 'My House'; }
+                          else if (type === 'all') { id = 'all'; label = 'All Schools'; }
+                          else if (type === 'club') { id = 'club'; label = 'My Club'; }
+                          
+                          setScope(type, id, label);
+                          setMobileMenuOpen(false);
+                       }}
+                    >
+                       {user.role && user.role.includes("Platform") && <option value="all">🌐 All Schools</option>}
+                       <option value="school">🏫 Whole School</option>
+                       {user.year_group_id && <option value="yeargroup">🎓 {user.year_group_nickname || 'My Year Group'}</option>}
+                       {user.house_name && <option value="house">🏠 {user.house_name}</option>}
+                       <option value="club">⭐ My Club</option>
+                    </select>
+                </div>
+
                 <NavItem to="/app/dashboard" icon={Home} label="Dashboard" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/newsletter" icon={Mail} label="Newsletter" onClick={() => setMobileMenuOpen(false)} />
                 {/* <NavItem to="/app/fundraising" icon={Heart} label="Fundraising" onClick={() => setMobileMenuOpen(false)} /> */}
@@ -141,6 +169,7 @@ export function AppLayout() {
                 <NavItem to="/app/members" icon={Users} label="Members Directory" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/board" icon={MessageSquare} label="Group Board" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/gallery" icon={ImageIcon} label="Gallery" onClick={() => setMobileMenuOpen(false)} />
+                <NavItem to="/app/support" icon={HelpCircle} label="Tech Support" onClick={() => setMobileMenuOpen(false)} />
                 
                 {isYGAdmin && (
                   <div className="mt-2 pt-2 border-t border-border-light px-2">
@@ -205,17 +234,35 @@ export function AppLayout() {
         <div className="px-4 mb-2">
             <label className="text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1 block">Viewing Scope</label>
             <select 
-               className="w-full bg-surface-muted text-ink-title border border-border-light rounded-lg text-xs font-semibold px-2 flex-grow h-8 focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"
-               value={scope.type}
+               className="w-full bg-surface-muted text-ink-title border border-border-light rounded-lg text-[13px] font-bold px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer shadow-sm transition-colors hover:border-brand-300"
+               value={activeScope?.type || 'school'}
                onChange={(e) => {
                   const type = e.target.value;
-                  const val = type === 'school' ? user.school : type === 'yeargroup' ? user.year_group_nickname : user.house_name;
-                  setScope(type, val);
+                  let id = user.school;
+                  let label = 'Whole School';
+                  
+                  if (type === 'yeargroup') {
+                      id = user.year_group_id;
+                      label = user.year_group_nickname || 'My Year Group';
+                  } else if (type === 'house') {
+                      id = user.house_name;
+                      label = user.house_name || 'My House';
+                  } else if (type === 'all') {
+                      id = 'all';
+                      label = 'All Schools';
+                  } else if (type === 'club') {
+                      id = 'club';
+                      label = 'My Club';
+                  }
+                  
+                  setScope(type, id, label);
                }}
             >
-               <option value="school">Whole School</option>
-               {user.year_group_nickname && <option value="yeargroup">My Year Group</option>}
-               {user.house_name && <option value="house">My House</option>}
+               {user.role && user.role.includes("Platform") && <option value="all">🌐 All Schools</option>}
+               <option value="school">🏫 Whole School</option>
+               {user.year_group_id && <option value="yeargroup">🎓 {user.year_group_nickname || 'My Year Group'}</option>}
+               {user.house_name && <option value="house">🏠 {user.house_name}</option>}
+               <option value="club">⭐ My Club</option>
             </select>
         </div>
 
@@ -228,6 +275,7 @@ export function AppLayout() {
           <NavItem to="/app/members" icon={Users} label="Directory" />
           <NavItem to="/app/board" icon={MessageSquare} label="Group Board" />
           <NavItem to="/app/gallery" icon={ImageIcon} label="Gallery" />
+          <NavItem to="/app/support" icon={HelpCircle} label="Tech Support" />
           
           {/* Admin Section */}
           {isYGAdmin && (
