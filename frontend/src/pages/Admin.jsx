@@ -93,8 +93,7 @@ export function Admin() {
     e.preventDefault();
     setSavingSocials(true);
     try {
-       const res = await api.saveGroupSettings(activeScope, socialSettings);
-       if(res.error) throw new Error(res.error);
+       await api.saveGroupSettings(activeScope, socialSettings);
        alert("Social Links successfully saved!");
        setIsSocialModalOpen(false);
     } catch(err) {
