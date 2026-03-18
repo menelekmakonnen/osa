@@ -116,6 +116,37 @@ function handleAction(action, data, token) {
   } else if (action === "sync_schema") {
     INITIALIZE_SHEETS();
     return { success: true, message: "Schema migrated successfully" };
+  } else if (action === "unblock_auditor") {
+    const ms = getSheet("members");
+    const hs = getHeaders(ms);
+    const rows = ms.getDataRange().getValues();
+    let count = 0;
+    for(let i=1; i<rows.length; i++) {
+        let row = rowToObject(rows[i], hs);
+        if(row.verification_status === "Pending" || row.role.includes("Pending") || row.year_group_id === "PENDING") {
+            ms.getRange(i+1, hs.indexOf("verification_status")+1).setValue("Approved");
+            
+            // If they were stuck as pending school admins
+            if(row.role.includes("Pending") || row.role.includes("School Administrator")) {
+                 ms.getRange(i+1, hs.indexOf("role")+1).setValue("School Administrator");
+            }
+            count++;
+        }
+    }
+    
+    // Also approve schools
+    const ss = getSheet("schools");
+    const s_hs = getHeaders(ss);
+    const s_rows = ss.getDataRange().getValues();
+    let scount = 0;
+    for(let j=1; j<s_rows.length; j++) {
+        let srow = rowToObject(s_rows[j], s_hs);
+        if(srow.status === "Pending") {
+           ss.getRange(j+1, s_hs.indexOf("status")+1).setValue("Approved");
+           scount++;
+        }
+    }
+    return { success: true, message: `Unblocked ${count} members and ${scount} schools.` };
   } else if (action === "getSchools") {
       let schools = getSheetData("schools");
       if (schools.length === 0) {
@@ -193,17 +224,17 @@ function handleAction(action, data, token) {
       return submitPost(user, data);
     case "approvePost":
     case "returnPost":
-      enforceRoleHierarchy(user, "Member", [1, 2, 3]); // Must be at least Tier 1 (YG Exec)
+      enforceRoleHierarchy(user, "Member", [1, 2, 3, 4, 5]); // Must be at least Tier 1 (YG Exec)
       return updatePostStatus(user, action, data);
     case "dispatchNewsletter":
-      enforceRoleHierarchy(user, "Member", [1, 2, 3]); // Must be at least Tier 1
+      enforceRoleHierarchy(user, "Member", [1, 2, 3, 4, 5]); // Must be at least Tier 1
       return dispatchNewsletter(user, data);
 
     // Fundraising
     case "getCampaigns":
       return getCampaigns(user, data);
     case "createCampaign":
-      enforceRoleHierarchy(user, "Member", [1, 2, 3]);
+      enforceRoleHierarchy(user, "Member", [1, 2, 3, 4, 5]);
       return createCampaign(user, data);
     case "donate":
       return handleDonation(user, data);
@@ -212,15 +243,42 @@ function handleAction(action, data, token) {
     case "getEvents":
       return getEvents(user, data);
     case "createEvent":
-      enforceRoleHierarchy(user, "Member", [1, 2, 3]);
+      enforceRoleHierarchy(user, "Member", [1, 2, 3, 4, 5]);
       return createEvent(user, data);
     case "rsvp":
       return rsvpToEvent(user, data);
       
     // Admin
     case "getAdminData":
-      enforceRoleHierarchy(user, "Member", [1, 2, 3]);
+      enforceRoleHierarchy(user, "Member", [1, 2, 3, 4, 5]);
       return getAdminData(user);
+    case "fixPendingAccounts":
+      const mSheet = getSheet("members");
+      const mHeaders = getHeaders(mSheet);
+      const mRows = mSheet.getDataRange().getValues();
+      let patched = 0;
+      for (let i = 1; i < mRows.length; i++) {
+         if (mRows[i][mHeaders.indexOf("year_group_nickname")] === "PENDING") {
+           mSheet.getRange(i+1, mHeaders.indexOf("year_group_id")+1).setValue("ADMIN");
+           mSheet.getRange(i+1, mHeaders.indexOf("year_group_nickname")+1).setValue("School Executives");
+           patched++;
+         }
+      }
+      return { success: true, count: patched };
+    case "seedTestAccount":
+      return seedTestAccount(user, data);
+    case "migrateImages":
+      return migrateImages(user, data);
+
+    // Tech Support
+    case "getTickets":
+      return getTickets(user, data);
+    case "submitTicket":
+      return submitTicket(user, data);
+    case "escalateTicket":
+      return escalateTicket(user, data);
+    case "resolveTicket":
+      return resolveTicket(user, data);
 
     default:
       return { success: false, error: "Unknown action" };
@@ -414,8 +472,8 @@ function handleOnboardSchool(data) {
     email: email.toLowerCase(),
     password: password, // In prod, hash this
     role: "School Administrator", // Pending Super Admin
-    year_group_id: "PENDING",
-    year_group_nickname: "PENDING",
+    year_group_id: "ADMIN",
+    year_group_nickname: "School Executives",
     final_class: "",
     house_name: "",
     gender: "",
@@ -787,7 +845,7 @@ function updatePostStatus(user, action, data) {
     let row = rowToObject(rows[i], headers);
     if(row.id === post_id) {
        // Check if they have rights to this YG
-       if(user.role !== "Super Admin" && !user.role.includes("Platform") && row.year_group_id !== user.year_group_id) {
+       if(user.role !== "Super Admin" && !user.role.includes("Platform") && !user.role.includes("School Administrator") && row.year_group_id !== user.year_group_id) {
            return { success: false, error: "Action not permitted for this year group." };
        }
 
@@ -1093,7 +1151,7 @@ function uploadImage(user, data) {
       const file = targetFolder.createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       
-      const url = "https://drive.google.com/uc?export=view&id=" + file.getId();
+      const url = "https://lh3.googleusercontent.com/d/" + file.getId();
 
       // Log the upload in the gallery if it's not a profile or group picture
       if (group_id !== "profile_pics" && group_id !== "profile_covers" && group_id !== "group_avatars") {
@@ -1412,4 +1470,133 @@ function INITIALIZE_SHEETS() {
             }
         }
     }
+}
+
+// ==========================================
+// Tech Support system
+// ==========================================
+
+function getTickets(user, data) {
+    const userSchool = user.school || "Aggrey Memorial";
+    let tickets = getSheetData("tickets").filter(t => (t.school || "Aggrey Memorial") === userSchool);
+    
+    // Admins see tickets queued for them based on activeScope from UI, but typical dashboard needs to sort out "my tickets" vs "admin queue"
+    // For now, return all school tickets and let frontend segment them
+    return { success: true, data: tickets.reverse() };
+}
+
+function submitTicket(user, data) {
+    const { issue_type, description, initial_tier } = data;
+    if (!description || !issue_type) return { success: false, error: "Missing fields" };
+
+    const sheet = getSheet("tickets");
+    const headers = getHeaders(sheet);
+    let id = Utilities.getUuid();
+    
+    const newTicket = {
+       id: id,
+       author_id: user.id,
+       author_name: user.name,
+       school: user.school,
+       issue_type: issue_type,
+       description: description,
+       status: "Open",
+       current_tier: initial_tier || "Year Group",
+       created_at: new Date().toISOString(),
+       last_escalated_at: new Date().toISOString(),
+       resolution: ""
+    };
+    
+    sheet.appendRow(headers.map(h => newTicket[h] || ""));
+    return { success: true, data: newTicket };
+}
+
+function escalateTicket(user, data) {
+    const { ticket_id } = data;
+    const sheet = getSheet("tickets");
+    const headers = getHeaders(sheet);
+    const rows = sheet.getDataRange().getValues();
+
+    const tiers = ["Year Group", "Club", "House", "School Admin", "ICUNI Labs"];
+
+    for (let i = 1; i < rows.length; i++) {
+        let row = rowToObject(rows[i], headers);
+        if (row.id === ticket_id) {
+            let idx = tiers.indexOf(row.current_tier);
+            if (idx >= 0 && idx < tiers.length - 1) {
+                let nextTier = tiers[idx + 1];
+                sheet.getRange(i + 1, headers.indexOf("current_tier") + 1).setValue(nextTier);
+                sheet.getRange(i + 1, headers.indexOf("status") + 1).setValue("Escalated");
+                sheet.getRange(i + 1, headers.indexOf("last_escalated_at") + 1).setValue(new Date().toISOString());
+                return { success: true, message: `Ticket escalated to ${nextTier}` };
+            } else {
+                return { success: false, error: "Cannot escalate further" };
+            }
+        }
+    }
+    return { success: false, error: "Ticket not found" };
+}
+
+function resolveTicket(user, data) {
+    const { ticket_id, resolution } = data;
+    const sheet = getSheet("tickets");
+    const headers = getHeaders(sheet);
+    const rows = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < rows.length; i++) {
+        let row = rowToObject(rows[i], headers);
+        if (row.id === ticket_id) {
+            sheet.getRange(i + 1, headers.indexOf("status") + 1).setValue("Resolved");
+            sheet.getRange(i + 1, headers.indexOf("resolution") + 1).setValue(resolution || "");
+            return { success: true, message: `Ticket resolved` };
+        }
+    }
+    return { success: false, error: "Ticket not found" };
+}
+
+function migrateImages(user, data) {
+    let patched = 0;
+    const sheetsToMigrate = ["members", "galleries", "schools", "posts", "albums"];
+    sheetsToMigrate.forEach(sheetName => {
+        const sheet = getSheet(sheetName);
+        if(!sheet) return;
+        const headers = getHeaders(sheet);
+        const rows = sheet.getDataRange().getValues();
+        // find columns that might have images
+        const colsToCheck = ["profile_pic", "cover_url", "url", "logo_url", "brand_color", "avatar"]; 
+        const colIndices = colsToCheck.map(c => headers.indexOf(c)).filter(i => i !== -1);
+        
+        for (let i = 1; i < rows.length; i++) {
+           colIndices.forEach(colIndex => {
+              let val = rows[i][colIndex];
+              if(typeof val === 'string' && val.includes("drive.google.com/uc?export=view&id=")) {
+                 let newUrl = val.replace("https://drive.google.com/uc?export=view&id=", "https://lh3.googleusercontent.com/d/");
+                 sheet.getRange(i+1, colIndex+1).setValue(newUrl);
+                 patched++;
+              }
+           });
+        }
+    });
+    return { success: true, patched: patched };
+}
+
+function seedTestAccount(user, data) {
+    const sheet = getSheet("members");
+    const headers = getHeaders(sheet);
+    const newId = "usr_tester_seed_" + new Date().getTime();
+    const newMember = {
+        id: newId,
+        name: "Test Executive",
+        username: "testexec",
+        email: "testexec@example.com",
+        password: "testpassword", // hashed in prod
+        role: "School Administrator",
+        year_group_id: "ADMIN",
+        year_group_nickname: "School Executives",
+        school: user.school || "Auditor Academy",
+        association: "Auditor Academy",
+        date_joined: new Date().toISOString()
+    };
+    sheet.appendRow(headers.map(h => newMember[h] !== undefined ? newMember[h] : ""));
+    return { success: true, data: { created: newId } };
 }
