@@ -228,7 +228,7 @@ export function Gallery() {
           )}
           {images.map(img => (
              <div key={img.id} className="aspect-square bg-surface-muted rounded-social overflow-hidden relative group cursor-pointer shadow-sm border border-border-light">
-                 <img src={img.url} alt="Gallery" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                 <img src={img.url} referrerPolicy="no-referrer" alt="Gallery" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                  {/* Metadata tooltip/overlay */}
                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-end">
                      <div>

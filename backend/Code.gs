@@ -1605,6 +1605,25 @@ function seedTestAccount(user, data) {
         date_joined: new Date().toISOString()
     };
     sheet.appendRow(headers.map(h => newMember[h] !== undefined ? newMember[h] : ""));
+
+    const ticketsSheet = getSheet("tickets");
+    if (ticketsSheet) {
+        const tHeaders = getHeaders(ticketsSheet);
+        const newTicket = {
+           id: "ticket_seed_" + new Date().getTime(),
+           author_id: newId,
+           author_name: "Test Executive",
+           school: user.school || "Auditor Academy",
+           issue_type: "Access Request",
+           description: "I need assistance setting up my dashboard features. Please grant me permission to edit the general school gallery.",
+           status: "Open",
+           current_tier: 4,
+           created_at: new Date().toISOString(),
+           resolution: ""
+        };
+        ticketsSheet.appendRow(tHeaders.map(h => newTicket[h] !== undefined ? newTicket[h] : ""));
+    }
+
     return { success: true, data: { created: newId } };
 }
 

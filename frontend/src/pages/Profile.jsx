@@ -184,8 +184,8 @@ export function Profile() {
          )}
          </div>
          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <input type="file" ref={coverInputRef} accept="image/*" className="hidden" onClick={(e) => (e.target.value = null)} onChange={handleCoverChange} />
-            <Button onClick={() => coverInputRef.current.click()} variant="secondary" className="flex items-center gap-2 font-bold bg-white text-ink-title hover:bg-surface-hover">
+            <input type="file" ref={coverInputRef} accept="image/*" className="hidden" onChange={handleCoverChange} />
+            <Button onClick={() => { if(coverInputRef.current) coverInputRef.current.value = ""; coverInputRef.current.click(); }} variant="secondary" className="flex items-center gap-2 font-bold bg-white text-ink-title hover:bg-surface-hover">
                <Camera size={18} strokeWidth={2.5}/> Change Cover
             </Button>
          </div>
@@ -202,8 +202,8 @@ export function Profile() {
                         <UserCircle className="text-brand-500" size={24} strokeWidth={2.5}/> Edit Information
                      </h2>
                      <div className="relative group shrink-0">
-                        <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onClick={(e) => (e.target.value = null)} onChange={handleFileChange} />
-                        <button type="button" onClick={() => fileInputRef.current.click()} className="relative rounded-full overflow-hidden border border-border-light shadow-sm w-[60px] h-[60px] block transition-transform group-hover:scale-105">
+                        <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleFileChange} />
+                        <button type="button" onClick={() => { if(fileInputRef.current) fileInputRef.current.value = ""; fileInputRef.current.click(); }} className="relative rounded-full overflow-hidden border border-border-light shadow-sm w-[60px] h-[60px] block transition-transform group-hover:scale-105">
                            {profile.profile_pic ? (
                               <img src={profile.profile_pic} referrerPolicy="no-referrer" alt="Profile" className="w-full h-full object-cover bg-white" />
                            ) : (
