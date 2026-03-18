@@ -1,18 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { api, authState } from '../api/client';
 import { Card, Badge, ChequeChip, Button } from '../components/ui';
-import { Users, Heart, Calendar, Bell, Edit3, Image, Video, MoreHorizontal, MessageCircle, Share2, ThumbsUp } from 'lucide-react';
+import { Users, Heart, Calendar, Bell, Edit3, Image, Video, MoreHorizontal, MessageCircle, Share2, ThumbsUp, Facebook, Twitter, Mail, Phone, MessageSquare, Send } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';
 
 export function Dashboard() {
   const user = authState.getUser();
   const { activeScope } = useTenant();
   const [data, setData] = useState({ stats: {}, recentPosts: [], upcomingEvents: [] });
+  const [socialSettings, setSocialSettings] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getDashboard(activeScope)
-      .then(res => setData(res))
+    setLoading(true);
+    Promise.all([
+      api.getDashboard(activeScope),
+      api.getGroupSettings(activeScope)
+    ])
+      .then(([dashboardRes, settingsRes]) => {
+         setData(dashboardRes);
+         setSocialSettings(settingsRes || {});
+      })
       .catch(err => console.error("Dashboard error", err))
       .finally(() => setLoading(false));
   }, [activeScope]);
@@ -89,6 +97,52 @@ export function Dashboard() {
             <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Events</span>
          </div>
       </div>
+
+      {/* Dynamic Social & Contact Links */}
+      {socialSettings && Object.values(socialSettings).some(val => val && val.trim() !== '') && (
+         <div className="flex flex-wrap gap-2 mb-2 mt-[-4px]">
+            {socialSettings.facebookPage && (
+               <a href={socialSettings.facebookPage} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1877F2]/10 text-[#1877F2] rounded-full text-[13px] font-bold hover:bg-[#1877F2]/20 transition-colors shadow-sm">
+                  <Facebook size={14} /> Official Page
+               </a>
+            )}
+            {socialSettings.facebookGroup && (
+               <a href={socialSettings.facebookGroup} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1877F2]/10 text-[#1877F2] rounded-full text-[13px] font-bold hover:bg-[#1877F2]/20 transition-colors shadow-sm">
+                  <Users size={14} /> Facebook Group
+               </a>
+            )}
+            {socialSettings.whatsapp && (
+               <a href={socialSettings.whatsapp} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366]/10 text-[#25D366] rounded-full text-[13px] font-bold hover:bg-[#25D366]/20 transition-colors shadow-sm">
+                  <MessageSquare size={14} /> WhatsApp Group
+               </a>
+            )}
+            {socialSettings.telegram && (
+               <a href={socialSettings.telegram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0088cc]/10 text-[#0088cc] rounded-full text-[13px] font-bold hover:bg-[#0088cc]/20 transition-colors shadow-sm">
+                  <Send size={14} /> Telegram
+               </a>
+            )}
+            {socialSettings.twitter && (
+               <a href={socialSettings.twitter} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 dark:bg-white/10 dark:text-white bg-black/5 text-black rounded-full border border-black/10 dark:border-white/10 text-[13px] font-bold hover:bg-black/10 dark:hover:bg-white/20 transition-colors shadow-sm">
+                  <Twitter size={14} /> Twitter / X
+               </a>
+            )}
+            {socialSettings.threads && (
+               <a href={socialSettings.threads} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 dark:bg-white/10 dark:text-white bg-black/5 text-black rounded-full border border-black/10 dark:border-white/10 text-[13px] font-bold hover:bg-black/10 dark:hover:bg-white/20 transition-colors shadow-sm">
+                  <span className="font-bold text-[14px] leading-none">@</span> Threads
+               </a>
+            )}
+            {socialSettings.email && (
+               <a href={`mailto:${socialSettings.email.split(',')[0].trim()}`} className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-full text-[13px] font-bold hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors shadow-sm">
+                  <Mail size={14} /> Contact Us
+               </a>
+            )}
+            {socialSettings.phone && (
+               <a href={`tel:${socialSettings.phone.split(',')[0].replace(/[^\d+]/g, '')}`} className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full text-[13px] font-bold hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors shadow-sm">
+                  <Phone size={14} /> Support
+               </a>
+            )}
+         </div>
+      )}
 
       {/* Main Feed Header */}
       <h2 className="text-[17px] font-bold text-ink-title mt-2 mb-[-8px]">Recent Highlights</h2>

@@ -270,6 +270,12 @@ function handleAction(action, data, token) {
     case "migrateImages":
       return migrateImages(user, data);
 
+    // Group Settings
+    case "getGroupSettings":
+      return getGroupSettings(user, data);
+    case "saveGroupSettings":
+      return saveGroupSettings(user, data);
+
     // Tech Support
     case "getTickets":
       return getTickets(user, data);
@@ -1438,7 +1444,8 @@ function INITIALIZE_SHEETS() {
         "albums": ["id", "scope_type", "scope_id", "school", "name", "description", "created_by_id", "created_by_name", "timestamp"],
         "galleries": ["id", "scope_type", "scope_id", "school", "album_id", "uploaded_by_id", "uploaded_by_name", "url", "timestamp"],
         "tickets": ["id", "author_id", "author_name", "school", "issue_type", "description", "status", "current_tier", "created_at", "last_escalated_at", "resolution"],
-        "petitions": ["id", "target_sa_id", "target_sa_name", "scope_type", "scope_id", "school", "reason", "signatures", "status", "created_at"]
+        "petitions": ["id", "target_sa_id", "target_sa_name", "scope_type", "scope_id", "school", "reason", "signatures", "status", "created_at"],
+        "group_settings": ["id", "scope_type", "scope_id", "school", "settings_json", "updated_at"]
     };
 
     for (let s in sheetsToCreate) {
@@ -1599,4 +1606,71 @@ function seedTestAccount(user, data) {
     };
     sheet.appendRow(headers.map(h => newMember[h] !== undefined ? newMember[h] : ""));
     return { success: true, data: { created: newId } };
+}
+
+function getGroupSettings(user, data) {
+    const { scope_type, scope_id } = data;
+    if (!scope_type || !scope_id) return { success: false, error: "Missing scope" };
+
+    const rows = getSheetData("group_settings");
+    const targetSchool = user.school || "Aggrey Memorial";
+
+    const match = rows.find(r => 
+        (r.school === targetSchool) && 
+        (r.scope_type === scope_type) && 
+        (r.scope_id === scope_id)
+    );
+
+    if (match) {
+        return { success: true, data: safeJsonParse(match.settings_json, {}) };
+    }
+    return { success: true, data: {} };
+}
+
+function saveGroupSettings(user, data) {
+    const { scope_type, scope_id, settings } = data;
+    if (!scope_type || !scope_id) return { success: false, error: "Missing scope" };
+
+    // Authorization check
+    let isExec = user.role.includes("President") || user.role.includes("Admin");
+    if (!isExec && user.role !== "Super Admin" && user.role !== "IT Department") {
+       return { success: false, error: "Unauthorized. Must be an admin/exec." };
+    }
+
+    const sheet = getSheet("group_settings");
+    const headers = getHeaders(sheet);
+    const rows = sheet.getDataRange().getValues();
+    const targetSchool = user.school || "Aggrey Memorial";
+
+    let foundIndex = -1;
+    for (let i = 1; i < rows.length; i++) {
+        let row = rowToObject(rows[i], headers);
+        if (row.school === targetSchool && row.scope_type === scope_type && row.scope_id === scope_id) {
+            foundIndex = i;
+            break;
+        }
+    }
+
+    const newJson = JSON.stringify(settings);
+    const nowStamp = new Date().toISOString();
+
+    if (foundIndex > -1) {
+        // Upsert
+        sheet.getRange(foundIndex + 1, headers.indexOf("settings_json") + 1).setValue(newJson);
+        sheet.getRange(foundIndex + 1, headers.indexOf("updated_at") + 1).setValue(nowStamp);
+    } else {
+        // Insert
+        let newId = Utilities.getUuid();
+        let newRow = {
+            id: newId,
+            scope_type: scope_type,
+            scope_id: scope_id,
+            school: targetSchool,
+            settings_json: newJson,
+            updated_at: nowStamp
+        };
+        sheet.appendRow(headers.map(h => newRow[h] || ""));
+    }
+
+    return { success: true, message: "Settings saved successfully" };
 }
