@@ -109,9 +109,9 @@ export const api = {
   // GET endpoints
   getDashboard: (scope) => apiRequest("getDashboard", scope ? { scope_type: scope.type, scope_id: scope.id } : {}),
   getPosts: (scope) => apiRequest("getPosts", scope ? { scope_type: scope.type, scope_id: scope.id } : {}),
-  getCampaigns: (scope = "my_school") => apiRequest("getCampaigns", { scope }),
-  getEvents: (scope = "my_school") => apiRequest("getEvents", { scope }),
-  getMembers: (scope = "my_school") => apiRequest("getMembers", { scope }),
+  getCampaigns: (scope) => apiRequest("getCampaigns", scope ? { scope_type: scope.type, scope_id: scope.id } : {}),
+  getEvents: (scope) => apiRequest("getEvents", scope ? { scope_type: scope.type, scope_id: scope.id } : {}),
+  getMembers: (scope) => apiRequest("getMembers", scope ? { scope_type: scope.type, scope_id: scope.id } : {}),
   getProfile: () => apiRequest("getProfile"),
   getSchools: () => apiRequest("getSchools"), // Public
   getYearGroupsList: () => apiRequest("getYearGroupsList"), // Public

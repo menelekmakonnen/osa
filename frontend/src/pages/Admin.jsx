@@ -47,6 +47,7 @@ export function Admin() {
   const [socialSettings, setSocialSettings] = useState({});
   const [savingSocials, setSavingSocials] = useState(false);
   const [loadingSocials, setLoadingSocials] = useState(false);
+  const [inputKey, setInputKey] = useState(Date.now());
 
   useEffect(() => {
     if (isRolesModalOpen) {
@@ -211,8 +212,8 @@ export function Admin() {
                 Update the official profile picture/avatar for {activeScope.label}. This represents your group across the platform.
               </p>
               <div className="flex justify-between items-center mt-auto pt-2 gap-2">
-                <input type="file" ref={avatarInputRef} accept="image/*" className="hidden" onChange={handleAvatarChange} />
-                <Button size="sm" variant="secondary" onClick={() => avatarInputRef.current.click()} disabled={assigning} className="flex-1 font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title flex items-center justify-center gap-2">
+                <input key={`avatar-${inputKey}`} type="file" ref={avatarInputRef} accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                <Button size="sm" variant="secondary" onClick={() => { setInputKey(Date.now()); setTimeout(() => avatarInputRef.current?.click(), 50); }} disabled={assigning} className="flex-1 font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title flex items-center justify-center gap-2">
                    <Camera size={16} /> {assigning ? 'Uploading...' : 'Upload New Picture'}
                 </Button>
               </div>
