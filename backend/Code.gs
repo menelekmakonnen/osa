@@ -1595,13 +1595,13 @@ function seedTestAccount(user, data) {
         id: newId,
         name: "Test Executive",
         username: "testexec",
-        email: "testexec@example.com",
+        email: "testexec_" + new Date().getTime() + "@example.com",
         password: "testpassword", // hashed in prod
         role: "School Administrator",
         year_group_id: "ADMIN",
         year_group_nickname: "School Executives",
-        school: user.school || "Auditor Academy",
-        association: "Auditor Academy",
+        school: data.targetSchool || user.school || "Auditor Academy",
+        association: data.targetSchool || "Auditor Academy",
         date_joined: new Date().toISOString()
     };
     sheet.appendRow(headers.map(h => newMember[h] !== undefined ? newMember[h] : ""));
@@ -1613,7 +1613,7 @@ function seedTestAccount(user, data) {
            id: "ticket_seed_" + new Date().getTime(),
            author_id: newId,
            author_name: "Test Executive",
-           school: user.school || "Auditor Academy",
+           school: data.targetSchool || user.school || "Auditor Academy",
            issue_type: "Access Request",
            description: "I need assistance setting up my dashboard features. Please grant me permission to edit the general school gallery.",
            status: "Open",
