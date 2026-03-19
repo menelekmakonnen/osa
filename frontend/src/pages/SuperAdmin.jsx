@@ -1,13 +1,35 @@
 import React from 'react';
-import { Card, Button, Badge } from '../components/ui';
-import { authState } from '../api/client';
+import { Card, Button, Badge, Modal, Input } from '../components/ui';
+import { authState, api } from '../api/client';
 import { ShieldAlert, Database, Users, Settings, Activity } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
 export function SuperAdmin() {
   const user = authState.getUser();
   const isSuperAdmin = user?.role === "Super Admin" || user?.role === "IT Department" || user?.role?.includes("School Administrator");
-  const navigate = useNavigate();
+
+  const [isAddSchoolOpen, setIsAddSchoolOpen] = React.useState(false);
+  const [newSchoolData, setNewSchoolData] = React.useState({ school_name: '', admin_name: '', admin_email: '' });
+  const [submittingSchool, setSubmittingSchool] = React.useState(false);
+
+  const handleAddSchool = async (e) => {
+     e.preventDefault();
+     setSubmittingSchool(true);
+     try {
+        await api.onboardSchool({
+            school_name: newSchoolData.school_name,
+            admin_name: newSchoolData.admin_name,
+            admin_email: newSchoolData.admin_email,
+            admin_password: "TempPassword123!"
+        });
+        alert("School registered successfully and automatically APPROVED for Phase 11 Audit workflows.");
+        setIsAddSchoolOpen(false);
+     } catch(err) {
+        alert("Error: " + err.message);
+     } finally {
+        setSubmittingSchool(false);
+     }
+  };
 
   if (!isSuperAdmin) {
     return <Navigate to="/app/dashboard" replace />;
@@ -34,7 +56,7 @@ export function SuperAdmin() {
              Manage onboarded schools, update Google Apps Script endpoints, configure branding colors, and manage associations.
            </p>
            <div className="flex justify-between items-center mt-auto pt-2 gap-2">
-             <Button size="sm" className="bg-ink-title text-white hover:bg-black font-bold border-none shadow-sm flex-1" onClick={() => navigate('/auth')}>Add New School</Button>
+             <Button size="sm" className="bg-ink-title text-white hover:bg-black font-bold border-none shadow-sm flex-1" onClick={() => setIsAddSchoolOpen(true)}>Add New School</Button>
              <Button size="sm" variant="ghost" className="font-bold text-ink-muted hover:text-ink-title px-2">View Licenses</Button>
            </div>
         </Card>
@@ -184,6 +206,37 @@ export function SuperAdmin() {
       <div className="mt-8 text-center text-sm text-ink-muted">
          OSA Super Admin Interface restricted to authorised <strong>ICUNI Labs</strong> personnel only.
       </div>
+
+       <Modal isOpen={isAddSchoolOpen} onClose={() => setIsAddSchoolOpen(false)} title="Onboard New School">
+         <form onSubmit={handleAddSchool} className="flex flex-col gap-4 mt-2">
+            <div className="p-3 bg-green-50 text-green-800 rounded text-[13px] mb-2 border border-green-200">
+               <strong>Audit Phase 11:</strong> Schools onboarded here are automatically granted 'Approved' status to bypass manual ICUNI Labs review workflows.
+            </div>
+            <Input 
+               label="School Name" 
+               required 
+               value={newSchoolData.school_name}
+               onChange={e => setNewSchoolData({...newSchoolData, school_name: e.target.value})}
+            />
+            <Input 
+               label="Initial Admin Name" 
+               required 
+               value={newSchoolData.admin_name}
+               onChange={e => setNewSchoolData({...newSchoolData, admin_name: e.target.value})}
+            />
+            <Input 
+               label="Initial Admin Email" 
+               type="email"
+               required 
+               value={newSchoolData.admin_email}
+               onChange={e => setNewSchoolData({...newSchoolData, admin_email: e.target.value})}
+            />
+            <div className="flex justify-end gap-2 mt-2">
+               <Button variant="ghost" type="button" onClick={() => setIsAddSchoolOpen(false)}>Cancel</Button>
+               <Button type="submit" disabled={submittingSchool}>{submittingSchool ? 'Registering...' : 'Register School'}</Button>
+            </div>
+         </form>
+       </Modal>
     </div>
   );
 }

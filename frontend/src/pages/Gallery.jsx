@@ -54,6 +54,16 @@ export function Gallery() {
       e.preventDefault();
       if (!newAlbumName.trim()) return;
       setCreatingAlbum(true);
+      
+      const tempAlbum = { 
+          id: 'temp_' + Date.now(), 
+          name: newAlbumName.trim(), 
+          description: newAlbumDesc.trim(), 
+          created_by_name: user?.name || 'You', 
+          timestamp: new Date().toISOString() 
+      };
+      setAlbums(prev => [tempAlbum, ...prev]);
+
       try {
           await api.createAlbum({
               scope_type: activeScope.type,
@@ -97,6 +107,7 @@ export function Gallery() {
      } finally {
          setUploading(false);
          if (fileInputRef.current) fileInputRef.current.value = "";
+         e.target.value = '';
      }
   };
 
@@ -228,8 +239,18 @@ export function Gallery() {
              </div>
           )}
            {images.map(img => (
-             <div key={img.id} onClick={() => setLightboxImage(img)} className="aspect-square bg-surface-muted rounded-social overflow-hidden relative group cursor-pointer shadow-sm border border-border-light">
-                 <img src={img.url} referrerPolicy="no-referrer" alt="Gallery" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+             <div key={img.id} onClick={() => setLightboxImage(img)} className="aspect-square bg-surface-muted rounded-social overflow-hidden relative group cursor-pointer shadow-sm border border-border-light flex items-center justify-center">
+                 <img 
+                    src={img.url} 
+                    referrerPolicy="no-referrer" 
+                    alt="Gallery" 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                    onError={(e) => { 
+                       e.target.onerror = null; 
+                       e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>'; 
+                       e.target.className = 'w-16 h-16 opacity-30'; 
+                    }}
+                 />
                  {/* Metadata tooltip/overlay */}
                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-end">
                      <div>

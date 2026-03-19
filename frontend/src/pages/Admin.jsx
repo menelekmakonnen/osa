@@ -110,6 +110,7 @@ export function Admin() {
       reader.addEventListener('load', () => setAvatarImage(reader.result));
       reader.readAsDataURL(e.target.files[0]);
     }
+    e.target.value = '';
   };
 
   const handleAvatarCropComplete = async (base64Img) => {

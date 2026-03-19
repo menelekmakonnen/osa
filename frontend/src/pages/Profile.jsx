@@ -14,11 +14,13 @@ export function Profile() {
 
   // Profile picture cropping state
   const [cropImage, setCropImage] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [inputKey, setInputKey] = useState(Date.now());
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordData, setPasswordData] = useState({ old_password: '', new_password: '', confirm_password: '' });
   const [submittingPassword, setSubmittingPassword] = useState(false);
+  const [isMasterUnlocked, setIsMasterUnlocked] = useState(false);
+  const [masterPasswordInput, setMasterPasswordInput] = useState('');
+  const [isMasterModalOpen, setIsMasterModalOpen] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -58,6 +60,11 @@ export function Profile() {
          priv_linkedin: data.priv_linkedin || 'all',
          priv_bio: data.priv_bio || 'yeargroup',
          priv_social: data.priv_social || 'yeargroup',
+         school: data.school || '',
+         association: data.association || '',
+         year_group_nickname: data.year_group_nickname || '',
+         final_class: data.final_class || '',
+         house_name: data.house_name || '',
       });
     } catch (e) {
       console.error(e);
@@ -109,6 +116,7 @@ export function Profile() {
       reader.addEventListener('load', () => setCropImage(reader.result));
       reader.readAsDataURL(e.target.files[0]);
     }
+    e.target.value = ''; // Reset cached event
   };
 
   const handleCropComplete = async (base64Img) => {
@@ -138,6 +146,7 @@ export function Profile() {
       reader.addEventListener('load', () => setCoverCropImage(reader.result));
       reader.readAsDataURL(e.target.files[0]);
     }
+    e.target.value = ''; // Reset cached event
   };
 
   const handleCoverCropComplete = async (base64Img) => {
@@ -381,11 +390,16 @@ export function Profile() {
          {/* Fixed Identity Sidebar - 1 Column wide */}
          <div className="flex flex-col gap-6">
             <Card className="bg-surface-muted border border-border-light shadow-none !p-5">
-               <h3 className="text-[16px] font-bold text-ink-title flex items-center gap-2 mb-3">
-                  <ShieldAlert size={18} className="text-brand-500" strokeWidth={2.5}/> School Identity
-               </h3>
+               <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-[16px] font-bold text-ink-title flex items-center gap-2">
+                     <ShieldAlert size={18} className="text-brand-500" strokeWidth={2.5}/> School Identity
+                  </h3>
+                  {!isMasterUnlocked && (
+                     <Button variant="ghost" size="sm" onClick={() => setIsMasterModalOpen(true)} className="text-[11px] h-6 px-2 font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50">Master Override</Button>
+                  )}
+               </div>
                <p className="text-[13px] text-ink-muted mb-4 pb-4 border-b border-border-light leading-relaxed">
-                  These fields are fixed and locked to your account upon registration. If there is an error, please contact your Year Group executive.
+                  {isMasterUnlocked ? "Master Override Active. You may now permanently edit protected identity fields." : "These fields are fixed and locked to your account upon registration. If there is an error, please contact your Year Group executive."}
                </p>
                
                {profile.username && (
@@ -397,25 +411,45 @@ export function Profile() {
                )}
 
                <div className="flex flex-col gap-4 text-[14px]">
-                  <IdentityItem label="School" value={profile.school} />
-                  <IdentityItem label="Association" value={profile.association} />
+                  {isMasterUnlocked ? (
+                     <Input label="School" name="school" value={formData.school} onChange={handleChange} className="!mb-0" />
+                  ) : (
+                     <IdentityItem label="School" value={profile.school} />
+                  )}
+                  {isMasterUnlocked ? (
+                     <Input label="Association" name="association" value={formData.association} onChange={handleChange} className="!mb-0" />
+                  ) : (
+                     <IdentityItem label="Association" value={profile.association} />
+                  )}
                   
                   <div className="flex flex-col gap-1">
                      <span className="text-[12px] font-bold text-ink-muted uppercase tracking-wider">Year Group</span>
                      <div className="mt-1">
-                       <ChequeChip colorHex={profile.cheque_colour} text={profile.year_group_nickname || 'Member'} className="shadow-sm border border-black/5" />
+                       {isMasterUnlocked ? (
+                          <Input name="year_group_nickname" value={formData.year_group_nickname} onChange={handleChange} className="!mb-0" />
+                       ) : (
+                          <ChequeChip colorHex={profile.cheque_colour} text={profile.year_group_nickname || 'Member'} className="shadow-sm border border-black/5" />
+                       )}
                      </div>
                   </div>
 
-                  <IdentityItem label="Final Class" value={profile.final_class} />
-                  <IdentityItem label="House Name" value={profile.house_name} />
+                  {isMasterUnlocked ? (
+                     <Input label="Final Class" name="final_class" value={formData.final_class} onChange={handleChange} className="!mb-0" />
+                  ) : (
+                     <IdentityItem label="Final Class" value={profile.final_class} />
+                  )}
+                  {isMasterUnlocked ? (
+                     <Input label="House Name" name="house_name" value={formData.house_name} onChange={handleChange} className="!mb-0" />
+                  ) : (
+                     <IdentityItem label="House Name" value={profile.house_name} />
+                  )}
                   
                   <div className="flex flex-col gap-1">
                      <span className="text-[12px] font-bold text-ink-muted uppercase tracking-wider">Role</span>
                      <Badge className="w-max mt-1 font-bold uppercase tracking-wider text-[11px] px-2" colorHex="#22c55e" textHex="#ffffff">{profile.role}</Badge>
                   </div>
                   
-                  <IdentityItem label="Date Joined" value={new Date(profile.date_joined).toLocaleDateString()} />
+                  <IdentityItem label="Date Joined" value={profile.date_joined ? new Date(profile.date_joined).toLocaleDateString() : 'N/A'} />
                </div>
             </Card>
 
@@ -443,6 +477,22 @@ export function Profile() {
             circularCrop={false}
          />
       )}
+
+      <Modal isOpen={isMasterModalOpen} onClose={() => setIsMasterModalOpen(false)} title="Master Override">
+         <form onSubmit={(e) => { e.preventDefault(); if (masterPasswordInput === "icuni2026") { setIsMasterUnlocked(true); setIsMasterModalOpen(false); alert("Master override granted."); } else { alert("Incorrect Master Password."); } }} className="flex flex-col gap-4 mt-2">
+            <Input 
+               label="Phase 11 Master Password" 
+               type="password"
+               value={masterPasswordInput} 
+               onChange={e => setMasterPasswordInput(e.target.value)} 
+               required 
+            />
+            <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border-light">
+               <Button type="button" variant="ghost" onClick={() => setIsMasterModalOpen(false)}>Cancel</Button>
+               <Button type="submit">Unlock Override</Button>
+            </div>
+         </form>
+      </Modal>
 
       <Modal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} title="Change Password">
          <form onSubmit={handleChangePassword} className="flex flex-col gap-4 mt-2">

@@ -110,7 +110,9 @@ export function Board() {
               emoji: chosenEmoji
           });
           // Background sync
-          api.getBoardMessages(activeScope).then(res => setMessages(res || []));
+          api.getBoardMessages(activeScope).then(res => {
+             if (res && res.length > 0) setMessages(res);
+          });
       } catch(err) {
           console.error("Failed to react", err);
           fetchMessages(); // Revert
