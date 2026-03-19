@@ -198,6 +198,8 @@ function handleAction(action, data, token) {
       return assignTargetRole(user, data);
     case "getMembers":
       return getMembers(user, data);
+    case "changePassword":
+      return changePassword(user, data);
       
     // Board & Gallery
     case "getBoardMessages":
@@ -431,6 +433,28 @@ function handleRegister(data) {
       user: newRowObj
     }
   };
+}
+
+function changePassword(user, data) {
+  const { old_password, new_password, confirm_password } = data;
+  if (!old_password || !new_password || !confirm_password) return { success: false, error: "Missing fields" };
+  if (new_password !== confirm_password) return { success: false, error: "Passwords do not match" };
+
+  const membersSheet = getSheet("members");
+  const headers = getHeaders(membersSheet);
+  const rows = membersSheet.getDataRange().getValues();
+  
+  for (let i = 1; i < rows.length; i++) {
+    const rowObj = rowToObject(rows[i], headers);
+    if (rowObj.id === user.id) {
+      if (rowObj.password !== old_password) {
+         return { success: false, error: "Incorrect old password" };
+      }
+      membersSheet.getRange(i + 1, headers.indexOf("password") + 1).setValue(new_password);
+      return { success: true, message: "Password updated successfully" };
+    }
+  }
+  return { success: false, error: "User not found in database" };
 }
 
 function handleOnboardSchool(data) {

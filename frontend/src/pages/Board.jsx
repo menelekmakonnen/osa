@@ -35,18 +35,34 @@ export function Board() {
 
   const handlePostMessage = async () => {
     if (!composerText.trim()) return;
+    const txt = composerText.trim();
+    setComposerText("");
     setPosting(true);
+    
+    // Optimistic UI Append
+    const tempMsg = {
+       id: "temp_" + Date.now(),
+       author_name: user.name,
+       timestamp: new Date().toISOString(),
+       content: txt,
+       comments: [],
+       reactions: []
+    };
+    setMessages(prev => [tempMsg, ...prev]);
+
     try {
        await api.postBoardMessage({
            scope_type: activeScope.type,
            scope_id: activeScope.id,
-           content: composerText.trim()
+           content: txt
        });
-       setComposerText("");
-       fetchMessages();
+       // Silently resync list in background
+       api.getBoardMessages(activeScope).then(res => setMessages(res || []));
     } catch(err) {
        console.error("Failed to post message", err);
        alert("Failed to post message: " + err.message);
+       // Revert on fail
+       fetchMessages();
     } finally {
        setPosting(false);
     }
@@ -71,15 +87,33 @@ export function Board() {
 
   const handleReaction = async (msgId, emojiObject) => {
       setActiveEmojiPicker(null);
+      const chosenEmoji = emojiObject.emoji;
+
+      // Optimistic UI Update
+      setMessages(prev => prev.map(m => {
+          if (m.id === msgId) {
+             const newReactions = [...(m.reactions || [])];
+             const existing = newReactions.find(r => r.emoji === chosenEmoji);
+             if (existing) {
+                 existing.count += 1;
+             } else {
+                 newReactions.push({ emoji: chosenEmoji, count: 1 });
+             }
+             return { ...m, reactions: newReactions };
+          }
+          return m;
+      }));
+
       try {
           await api.reactBoardMessage({
               message_id: msgId,
-              emoji: emojiObject.emoji
+              emoji: chosenEmoji
           });
-          fetchMessages();
+          // Background sync
+          api.getBoardMessages(activeScope).then(res => setMessages(res || []));
       } catch(err) {
           console.error("Failed to react", err);
-          alert("Failed to react: " + err.message);
+          fetchMessages(); // Revert
       }
   };
 

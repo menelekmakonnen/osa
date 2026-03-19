@@ -119,6 +119,7 @@ export const api = {
   // POST mutations
   onboardSchool: (schoolData) => apiRequest("onboardSchool", schoolData),
   updateProfile: (profileData) => apiRequest("updateProfile", profileData),
+  changePassword: (passwordData) => apiRequest("changePassword", passwordData),
   updateGroupAvatar: (scopeData) => apiRequest("updateGroupAvatar", scopeData),
   getGroupSettings: (scope) => apiRequest("getGroupSettings", { scope_type: scope.type, scope_id: scope.id }),
   saveGroupSettings: (scope, settings) => apiRequest("saveGroupSettings", { scope_type: scope.type, scope_id: scope.id, settings }),

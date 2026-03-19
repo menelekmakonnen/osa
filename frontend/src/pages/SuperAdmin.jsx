@@ -2,11 +2,12 @@ import React from 'react';
 import { Card, Button, Badge } from '../components/ui';
 import { authState } from '../api/client';
 import { ShieldAlert, Database, Users, Settings, Activity } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 export function SuperAdmin() {
   const user = authState.getUser();
   const isSuperAdmin = user?.role === "Super Admin" || user?.role === "IT Department" || user?.role?.includes("School Administrator");
+  const navigate = useNavigate();
 
   if (!isSuperAdmin) {
     return <Navigate to="/app/dashboard" replace />;
@@ -33,7 +34,7 @@ export function SuperAdmin() {
              Manage onboarded schools, update Google Apps Script endpoints, configure branding colors, and manage associations.
            </p>
            <div className="flex justify-between items-center mt-auto pt-2 gap-2">
-             <Button size="sm" className="bg-ink-title text-white hover:bg-black font-bold border-none shadow-sm flex-1">Add New School</Button>
+             <Button size="sm" className="bg-ink-title text-white hover:bg-black font-bold border-none shadow-sm flex-1" onClick={() => navigate('/auth')}>Add New School</Button>
              <Button size="sm" variant="ghost" className="font-bold text-ink-muted hover:text-ink-title px-2">View Licenses</Button>
            </div>
         </Card>

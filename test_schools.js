@@ -1,0 +1,1 @@
+const GAS_URL = 'https://script.google.com/macros/s/AKfycby88ZH_HMNAczLJwROj83yQ2jcEL7MURR9hlrKkTXc2KHRQpQnppZyY2Amq_IHKGAHp/exec'; async function run() { const req = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'getSchools' }) }); const res = await req.json(); console.log(JSON.stringify(res.data, null, 2)); } run().catch(console.error);

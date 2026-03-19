@@ -378,7 +378,7 @@ export function Register() {
                          placeholder="e.g. Mauve" 
                          value={c} 
                          onChange={(e) => handleDynamicColourChange(i, e.target.value)} 
-                         required
+                         required={i === 0}
                        />
                        {i > 0 && <button type="button" onClick={() => setDynamicColours(dynamicColours.filter((_, idx) => idx !== i))} className="icon-btn text-danger"><X size={16}/></button>}
                     </div>
@@ -395,7 +395,7 @@ export function Register() {
                          placeholder="e.g. Science 1" 
                          value={c} 
                          onChange={(e) => handleDynamicClassChange(i, e.target.value)} 
-                         required
+                         required={i === 0}
                        />
                        {i > 0 && <button type="button" onClick={() => setDynamicClasses(dynamicClasses.filter((_, idx) => idx !== i))} className="icon-btn text-danger"><X size={16}/></button>}
                     </div>
@@ -412,7 +412,7 @@ export function Register() {
                          placeholder="e.g. Casford" 
                          value={h.name} 
                          onChange={(e) => handleDynamicHouseChange(i, 'name', e.target.value)} 
-                         required
+                         required={i === 0}
                        />
                        {formData.new_school_type === 'Mixed' && (
                            <select 

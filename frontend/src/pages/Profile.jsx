@@ -16,6 +16,9 @@ export function Profile() {
   const [cropImage, setCropImage] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [inputKey, setInputKey] = useState(Date.now());
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordData, setPasswordData] = useState({ old_password: '', new_password: '', confirm_password: '' });
+  const [submittingPassword, setSubmittingPassword] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -155,6 +158,25 @@ export function Profile() {
     } finally {
       setSaving(false);
       if (coverInputRef.current) coverInputRef.current.value = "";
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setSubmittingPassword(true);
+    try {
+       const res = await api.changePassword(passwordData);
+       if (res.success) {
+          alert("Password updated successfully!");
+          setIsPasswordModalOpen(false);
+          setPasswordData({ old_password: '', new_password: '', confirm_password: '' });
+       } else {
+          alert("Error: " + res.error);
+       }
+    } catch (err) {
+       alert("Failed to change password: " + err.message);
+    } finally {
+       setSubmittingPassword(false);
     }
   };
 
@@ -398,7 +420,7 @@ export function Profile() {
             </Card>
 
             <div className="text-center">
-               <Button variant="ghost" size="sm" className="font-bold text-ink-muted hover:text-ink-title">Change Password</Button>
+               <Button variant="ghost" size="sm" className="font-bold text-ink-muted hover:text-ink-title" onClick={() => setIsPasswordModalOpen(true)}>Change Password</Button>
             </div>
          </div>
 
@@ -421,6 +443,37 @@ export function Profile() {
             circularCrop={false}
          />
       )}
+
+      <Modal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} title="Change Password">
+         <form onSubmit={handleChangePassword} className="flex flex-col gap-4 mt-2">
+            <Input 
+               label="Current Password" 
+               type="password"
+               value={passwordData.old_password} 
+               onChange={e => setPasswordData({...passwordData, old_password: e.target.value})} 
+               required 
+            />
+            <Input 
+               label="New Password" 
+               type="password"
+               value={passwordData.new_password} 
+               onChange={e => setPasswordData({...passwordData, new_password: e.target.value})} 
+               required 
+            />
+            <Input 
+               label="Confirm New Password" 
+               type="password"
+               value={passwordData.confirm_password} 
+               onChange={e => setPasswordData({...passwordData, confirm_password: e.target.value})} 
+               required 
+            />
+            <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border-light">
+               <Button type="button" variant="ghost" onClick={() => setIsPasswordModalOpen(false)}>Cancel</Button>
+               <Button type="submit" disabled={submittingPassword}>{submittingPassword ? "Updating..." : "Update Password"}</Button>
+            </div>
+         </form>
+      </Modal>
+
     </div>
   );
 }

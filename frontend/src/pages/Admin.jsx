@@ -183,8 +183,8 @@ export function Admin() {
              Create emergency relief efforts or long-term school support campaigns. Track donations and post updates.
            </p>
            <div className="flex justify-between items-center mt-auto pt-2 gap-2">
-             <Button size="sm" variant="secondary" className="flex-1 font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title">Create New</Button>
-             <Button size="sm" variant="ghost" className="font-bold text-ink-muted hover:text-ink-title px-2">Manage</Button>
+             <Button size="sm" variant="secondary" onClick={() => alert("Fundraising module is currently undergoing active construction.")} className="flex-1 font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title">Create New</Button>
+             <Button size="sm" variant="ghost" onClick={() => alert("Fundraising module is currently undergoing active construction.")} className="font-bold text-ink-muted hover:text-ink-title px-2">Manage</Button>
            </div>
         </Card>
 
@@ -198,12 +198,12 @@ export function Admin() {
            </p>
            <div className="flex justify-between items-center mt-auto pt-2 gap-2">
              <Button size="sm" variant="secondary" onClick={() => setIsRolesModalOpen(true)} className="flex-1 font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title">Roles</Button>
-             <Button size="sm" variant="ghost" className="font-bold text-ink-muted hover:text-ink-title px-2">Members</Button>
+             <Button size="sm" variant="ghost" onClick={() => window.location.href='/app/directory'} className="font-bold text-ink-muted hover:text-ink-title px-2">Members</Button>
            </div>
         </Card>
 
         {/* Group Profile Management */}
-        {activeScope.type !== 'all' && (
+        {(activeScope.type === 'school' || activeScope.type === 'yeargroup') && (
            <Card className="flex flex-col gap-4 border border-border-light shadow-social-card hover:border-blue-300 transition-colors">
               <div className="flex items-center justify-between border-b border-border-light pb-3">
                  <h2 className="text-[18px] font-bold text-ink-title flex items-center gap-2 m-0"><ImageIcon className="text-blue-500" size={22} strokeWidth={2.5}/> Group Identity</h2>

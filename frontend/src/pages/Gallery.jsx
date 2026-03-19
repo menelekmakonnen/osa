@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { api, authState } from '../api/client';
 import { Card, Button, Input, Textarea } from '../components/ui';
-import { Image as ImageIcon, Camera, Loader2, UploadCloud, Folder, Plus, ArrowLeft } from 'lucide-react';
+import { Image as ImageIcon, Camera, Loader2, UploadCloud, Folder, Plus, ArrowLeft, X } from 'lucide-react';
 import { compressImage } from '../components/ImageUpload';
 import { useTenant } from '../context/TenantContext';
 
@@ -20,6 +20,7 @@ export function Gallery() {
   const [newAlbumDesc, setNewAlbumDesc] = useState("");
   
   const [isCreatingModalOpen, setIsCreatingModalOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState(null);
 
   const fileInputRef = useRef(null);
 
@@ -226,8 +227,8 @@ export function Gallery() {
                  <p className="text-sm mt-1">Be the first to share a moment here.</p>
              </div>
           )}
-          {images.map(img => (
-             <div key={img.id} className="aspect-square bg-surface-muted rounded-social overflow-hidden relative group cursor-pointer shadow-sm border border-border-light">
+           {images.map(img => (
+             <div key={img.id} onClick={() => setLightboxImage(img)} className="aspect-square bg-surface-muted rounded-social overflow-hidden relative group cursor-pointer shadow-sm border border-border-light">
                  <img src={img.url} referrerPolicy="no-referrer" alt="Gallery" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                  {/* Metadata tooltip/overlay */}
                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-end">
@@ -239,6 +240,20 @@ export function Gallery() {
              </div>
           ))}
        </div>
+
+       {lightboxImage && (
+          <div className="fixed inset-0 bg-black/95 z-[100] flex flex-col items-center justify-center p-4 backdrop-blur-sm cursor-zoom-out" onClick={() => setLightboxImage(null)}>
+             <button className="absolute top-6 right-6 text-white/50 hover:text-white p-2 transition-colors rounded-full bg-black/20 hover:bg-black/50">
+                <X size={32} />
+             </button>
+             <img src={lightboxImage.url} referrerPolicy="no-referrer" className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl cursor-default" onClick={e => e.stopPropagation()} />
+             <div className="absolute bottom-10 left-0 right-0 text-center text-white cursor-default" onClick={e => e.stopPropagation()}>
+                 <p className="font-bold text-lg">{lightboxImage.uploaded_by_name}</p>
+                 <p className="text-sm opacity-70 mb-2">{new Date(lightboxImage.timestamp).toLocaleString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}</p>
+             </div>
+          </div>
+       )}
+
     </div>
   );
 }
