@@ -427,6 +427,13 @@ function handleRegister(data) {
   // Return user obj without secrets
   delete newRowObj.password;
   delete newRowObj.session_token;
+
+  // Dispatch Verification Email
+  try {
+    sendVerificationEmail(newRowObj.email, newRowObj.name);
+  } catch (e) {
+    console.error("Failed to dispatch verification: ", e);
+  }
   
   return {
     success: true,
@@ -539,6 +546,13 @@ function handleOnboardSchool(data) {
   
   delete newRowObj.password;
   delete newRowObj.session_token;
+
+  // Dispatch Verification Email
+  try {
+    sendVerificationEmail(newRowObj.email, newRowObj.name);
+  } catch (e) {
+    console.error("Failed to dispatch verification: ", e);
+  }
   
   return {
     success: true,
@@ -551,6 +565,43 @@ function handleOnboardSchool(data) {
 
 function handleResetPassword(data) {
    return { success: false, error: "Not implemented in v1 mock" };
+}
+
+function sendVerificationEmail(recipientEmail, userName) {
+  const subject = "Verify your email - OSA Platform";
+  
+  const emailHtml = `
+    <div style="font-family: sans-serif; color: #1E293B; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #E2E8F0; border-radius: 8px;">
+      <h2 style="color: #2D88FF;">Welcome to the OSA Network!</h2>
+      <p>Hello ${userName},</p>
+      <p>Thank you for registering. To ensure the security of the platform, we require all users to verify their email address before granting them administrative network access.</p>
+      <p>Please click the link below to verify your account:</p>
+      <div style="margin: 30px 0;">
+        <a href="https://osa.icuni.org/verify?email=${encodeURIComponent(recipientEmail)}" style="background-color: #2D88FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Verify Email Address</a>
+      </div>
+      <p>If you did not create this account, please ignore this email.</p>
+      <p>Best regards,<br/>OSA Platform Security</p>
+    </div>
+  `;
+
+  try {
+    // Must be configured as a 'Send As' alias for the executing Google account
+    GmailApp.sendEmail(recipientEmail, subject, "", {
+      htmlBody: emailHtml,
+      from: "donotreply@icuni.org",
+      name: "OSA Platform"
+    });
+  } catch (e) {
+    // Fallback logic if the current script executor does not yet have the alias properly mapped
+    console.error("Alias send failed, falling back to base MailApp:", e);
+    MailApp.sendEmail({
+      to: recipientEmail,
+      subject: subject,
+      htmlBody: emailHtml,
+      name: "OSA Platform",
+      replyTo: "donotreply@icuni.org"
+    });
+  }
 }
 
 function validateToken(token) {
