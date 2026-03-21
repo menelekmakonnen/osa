@@ -43,6 +43,10 @@
     font-family: theme('fontFamily.sans');
     -webkit-font-smoothing: antialiased;
     overflow-y: scroll; /* Keep scrollbar to prevent layout shift */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none; /* Disable text selection globally */
   }
 
   /* Reset heading styles to be consistent with modern sans */
@@ -61,10 +65,17 @@
   /* Modern Inputs - Gray filled, borderless to focus ring */
   .social-input {
     @apply w-full bg-surface-muted text-ink-title px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-500 transition-shadow duration-200 placeholder-ink-muted;
+    -webkit-user-select: auto;
+    -moz-user-select: auto;
+    -ms-user-select: auto;
+    user-select: auto;
   }
-  
   .social-textarea {
     @apply w-full bg-surface-muted text-ink-title px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-brand-500 transition-shadow duration-200 placeholder-ink-muted resize-none;
+    -webkit-user-select: auto;
+    -moz-user-select: auto;
+    -ms-user-select: auto;
+    user-select: auto;
   }
 
   /* Core Buttons */

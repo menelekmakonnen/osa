@@ -129,6 +129,11 @@ export function Admin() {
          scope_id: activeScope.id,
          url: result.url
       });
+      if (activeScope.type === 'school') {
+         const updatedUser = { ...authState.getUser(), school_logo: result.url };
+         authState.setSession(updatedUser, window.localStorage.getItem('osa_session_token'));
+         setTimeout(() => window.location.reload(), 1500);
+      }
       alert("Group profile picture updated successfully!");
     } catch(err) {
       console.error(err);

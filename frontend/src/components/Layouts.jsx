@@ -4,6 +4,7 @@ import { Home, Mail, Heart, Calendar, Users, UserCircle, Settings, ShieldAlert, 
 import { authState } from '../api/client';
 import { useTenant } from '../context/TenantContext';
 import { Logo } from './Logo';
+import { VerificationWall } from '../pages/VerificationWall';
 
 export function ThemeToggle() {
   const [isDark, setIsDark] = useState(document.documentElement.classList.contains('dark'));
@@ -103,16 +104,26 @@ export function AppLayout() {
     window.location.href = '/login';
   };
 
+  const needsEmailVerify = user.email_verified === false;
+  const needsIdVerify = isSuperAdmin && user.id_verified !== true;
+
+  if (needsEmailVerify || needsIdVerify) {
+    return <VerificationWall user={user} isSuperAdmin={isSuperAdmin} />;
+  }
+
   return (
     <div className="min-h-screen bg-surface-muted flex flex-col md:flex-row">
       
       {/* Mobile Top Navigation */}
       <div className="md:hidden sticky top-0 z-40 bg-surface-default border-b border-border-light px-4 py-3 flex items-center justify-between shadow-sm">
         <Link to="/" onClick={() => window.location.href='/'} className="flex items-center gap-2">
-           <Logo className="w-5 h-5" wrapperClass="w-8 h-8" noText />
+           {user.school_logo ? (
+             <img src={user.school_logo} className="w-8 h-8 rounded shrink-0 object-contain shadow-sm bg-white" alt="School Logo" />
+           ) : (
+             <Logo className="w-5 h-5" wrapperClass="w-8 h-8" noText />
+           )}
            <div className="flex flex-col">
-             <h1 className="text-xl font-bold text-ink-title leading-tight">OSA</h1>
-             {isCustomDomain && <span className="text-[9px] font-bold text-brand-600 uppercase tracking-widest leading-none truncate max-w-[100px]">{tenantName}</span>}
+             <h1 className="text-xl font-bold text-ink-title leading-tight">{(user.old_students_short_name || 'OSA').replace(/\s+[a-f0-9-]{36}$/i, '')}</h1>
            </div>
         </Link>
         <div className="flex items-center gap-3">
@@ -156,11 +167,16 @@ export function AppLayout() {
                           setMobileMenuOpen(false);
                        }}
                     >
-                       {user.role && user.role.includes("Platform") && <option value="all">🌐 All Schools</option>}
-                       <option value="school">🏫 Whole School</option>
-                       {user.year_group_id && <option value="yeargroup">🎓 {user.year_group_nickname || 'My Year Group'}</option>}
-                       {user.house_name && <option value="house">🏠 {user.house_name}</option>}
-                       <option value="club">⭐ My Club</option>
+                       {user.role && user.role.includes("Platform") && <option value="all">All Schools</option>}
+                       <option value="school">Whole School</option>
+                       {user.year_group_id && <option value="yeargroup">{user.year_group_nickname || 'My Year Group'}</option>}
+                       {user.class_group_id && <option value="classgroup">{user.class_group_name || 'My Class Group'}</option>}
+                       {(user.role?.includes("President") || user.role?.includes("Admin") || user.role?.includes("IT")) && (
+                           <option value="exec">Exec/Admin view</option>
+                       )}
+                       {isSuperAdmin && (
+                           <option value="superadmin">Super Admin view</option>
+                       )}
                     </select>
                 </div>
 
@@ -209,13 +225,14 @@ export function AppLayout() {
         {/* Brand Header */}
         <div className={`p-4 flex items-center sticky top-0 bg-surface-default/95 backdrop-blur-md z-20 pb-2 ${isSidebarCollapsed ? 'justify-center mx-auto' : 'justify-between'}`}>
              <Link to="/" onClick={() => window.location.href='/'} className={`flex items-center group ${isSidebarCollapsed ? '' : 'gap-3'}`}>
-               <Logo className="w-6 h-6 transition-transform group-hover:scale-110" wrapperClass="w-10 h-10 shrink-0" noText />
+               {user.school_logo ? (
+                 <img src={user.school_logo} className={`${isSidebarCollapsed ? 'w-10 h-10' : 'w-10 h-10'} rounded shrink-0 object-contain shadow-sm bg-white transition-transform group-hover:scale-105`} alt="School Logo" />
+               ) : (
+                 <Logo className="w-6 h-6 transition-transform group-hover:scale-110" wrapperClass="w-10 h-10 shrink-0" noText />
+               )}
                {!isSidebarCollapsed && (
                  <div className="flex flex-col">
-                   <h1 className="text-[22px] font-bold text-ink-title leading-tight">OSA</h1>
-                   <span className="text-[10px] font-bold text-brand-600 uppercase tracking-widest mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[130px]">
-                      {isCustomDomain ? tenantName : (user.school || 'Aggrey Memorial')}
-                   </span>
+                   <h1 className="text-[22px] font-bold text-ink-title leading-tight">{(user.old_students_short_name || 'OSA').replace(/\s+[a-f0-9-]{36}$/i, '')}</h1>
                  </div>
                )}
              </Link>
@@ -272,11 +289,16 @@ export function AppLayout() {
                   setScope(type, id, label);
                }}
             >
-               {user.role && user.role.includes("Platform") && <option value="all">🌐 All Schools</option>}
-               <option value="school">🏫 Whole School</option>
-               {user.year_group_id && <option value="yeargroup">🎓 {user.year_group_nickname || 'My Year Group'}</option>}
-               {user.house_name && <option value="house">🏠 {user.house_name}</option>}
-               <option value="club">⭐ My Club</option>
+               {user.role && user.role.includes("Platform") && <option value="all">All Schools</option>}
+               <option value="school">Whole School</option>
+               {user.year_group_id && <option value="yeargroup">{user.year_group_nickname || 'My Year Group'}</option>}
+               {user.class_group_id && <option value="classgroup">{user.class_group_name || 'My Class Group'}</option>}
+               {(user.role?.includes("President") || user.role?.includes("Admin") || user.role?.includes("IT")) && (
+                   <option value="exec">Exec/Admin view</option>
+               )}
+               {isSuperAdmin && (
+                   <option value="superadmin">Super Admin view</option>
+               )}
             </select>
         </div>
 

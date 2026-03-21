@@ -96,6 +96,8 @@ export function Register() {
     password: '',
     school_id: isCustomDomain ? schoolId : '',
     new_school_name: '',
+    old_students_full_name: '',
+    old_students_short_name: '',
     new_school_motto: '',
     new_school_cheque_representation: 'N/A',
     new_school_type: 'Mixed',
@@ -404,7 +406,7 @@ export function Register() {
               </div>
 
               <div className="mt-4">
-                 <label className="text-sm font-semibold text-ink-title block mb-2 ml-1">Houses/Halls</label>
+                 <label className="text-sm font-semibold text-ink-title block mb-2 ml-1">Houses/Hostels</label>
                  {dynamicHouses.map((h, i) => (
                     <div key={`h-${i}`} className="flex gap-2 mb-2">
                        <input 
@@ -428,7 +430,7 @@ export function Register() {
                        {i > 0 && <button type="button" onClick={() => setDynamicHouses(dynamicHouses.filter((_, idx) => idx !== i))} className="icon-btn text-danger"><X size={16}/></button>}
                     </div>
                  ))}
-                 <button type="button" onClick={() => setDynamicHouses([...dynamicHouses, {name: "", gender: formData.new_school_type === 'Mixed' ? "Boys" : formData.new_school_type}])} className="text-sm text-brand-600 font-semibold ml-2 hover:underline">+ Add House</button>
+                 <button type="button" onClick={() => setDynamicHouses([...dynamicHouses, {name: "", gender: formData.new_school_type === 'Mixed' ? "Boys" : formData.new_school_type}])} className="text-sm text-brand-600 font-semibold ml-2 hover:underline">+ Add House/Hostel</button>
               </div>
               <p className="text-xs text-ink-muted">Note: New school accounts require manual approval by ICUNI Labs before they become active on the network. Our team will contact you using the email provided above.</p>
            </div>

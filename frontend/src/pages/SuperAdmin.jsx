@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, Button, Badge, Modal, Input } from '../components/ui';
 import { authState, api } from '../api/client';
 import { ShieldAlert, Database, Users, Settings, Activity } from 'lucide-react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
 export function SuperAdmin() {
   const user = authState.getUser();
@@ -11,6 +11,7 @@ export function SuperAdmin() {
   const [isAddSchoolOpen, setIsAddSchoolOpen] = React.useState(false);
   const [newSchoolData, setNewSchoolData] = React.useState({ school_name: '', admin_name: '', admin_email: '' });
   const [submittingSchool, setSubmittingSchool] = React.useState(false);
+  const [features, setFeatures] = React.useState({ fundraising: true, newsletters: true });
 
   const handleAddSchool = async (e) => {
      e.preventDefault();
@@ -57,7 +58,7 @@ export function SuperAdmin() {
            </p>
            <div className="flex justify-between items-center mt-auto pt-2 gap-2">
              <Button size="sm" className="bg-ink-title text-white hover:bg-black font-bold border-none shadow-sm flex-1" onClick={() => setIsAddSchoolOpen(true)}>Add New School</Button>
-             <Button size="sm" variant="ghost" className="font-bold text-ink-muted hover:text-ink-title px-2">View Licenses</Button>
+             <Button size="sm" variant="ghost" className="font-bold text-ink-muted hover:text-ink-title px-2" onClick={() => window.location.href='/app/admin'}>View Licenses</Button>
            </div>
         </Card>
 
@@ -70,8 +71,8 @@ export function SuperAdmin() {
              Assign Platform Executive roles. Manage the IT Department roster. Edit or override fixed member identities across any school.
            </p>
            <div className="flex justify-between items-center mt-auto pt-2 gap-2">
-             <Button size="sm" variant="secondary" className="flex-1 font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title">Manage Executives</Button>
-             <Button size="sm" variant="ghost" className="font-bold text-ink-muted hover:text-ink-title px-2">IT Department</Button>
+             <Button size="sm" variant="secondary" className="flex-1 font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title" onClick={() => window.location.href='/app/members'}>Manage Executives</Button>
+             <Button size="sm" variant="ghost" className="font-bold text-ink-muted hover:text-ink-title px-2" onClick={() => window.location.href='/app/members'}>IT Department</Button>
            </div>
         </Card>
 
@@ -81,8 +82,8 @@ export function SuperAdmin() {
               <h2 className="text-[18px] font-bold flex items-center gap-2 text-ink-title m-0"><Settings className="text-ink-muted" size={22} strokeWidth={2.5}/> Feature Flags</h2>
            </div>
            <div className="flex flex-col gap-2 text-[14px] flex-1">
-             <FeatureToggle label="Fundraising Module" enabled={true} />
-             <FeatureToggle label="Newsletters Module" enabled={true} />
+             <FeatureToggle label="Fundraising Module" enabled={features.fundraising} onClick={() => setFeatures({...features, fundraising: !features.fundraising})} />
+             <FeatureToggle label="Newsletters Module" enabled={features.newsletters} onClick={() => setFeatures({...features, newsletters: !features.newsletters})} />
              <FeatureToggle label="Cross-School Events" enabled={true} />
              <FeatureToggle label="Payment Gateway (v2)" enabled={false} />
              <FeatureToggle label="Admin Approval for Registrations" enabled={false} />
@@ -196,7 +197,7 @@ export function SuperAdmin() {
            </div>
 
            <div className="flex justify-start items-center mt-2 pt-2 gap-2 border-t border-border-light">
-             <Button size="sm" variant="secondary" className="font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title">Review All Petitions</Button>
+             <Button size="sm" variant="secondary" className="font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title" onClick={() => window.location.href='/app/support'}>Review All Petitions</Button>
            </div>
         </Card>
 
@@ -217,6 +218,20 @@ export function SuperAdmin() {
                required 
                value={newSchoolData.school_name}
                onChange={e => setNewSchoolData({...newSchoolData, school_name: e.target.value})}
+            />
+            <Input 
+               label="Old Students Full Name" 
+               placeholder="e.g. Aggrey Memorial Old Students Association"
+               required 
+               value={newSchoolData.old_students_full_name || ''}
+               onChange={e => setNewSchoolData({...newSchoolData, old_students_full_name: e.target.value})}
+            />
+            <Input 
+               label="Old Students Short Name" 
+               placeholder="e.g. AMOSA"
+               required 
+               value={newSchoolData.old_students_short_name || ''}
+               onChange={e => setNewSchoolData({...newSchoolData, old_students_short_name: e.target.value})}
             />
             <Input 
                label="Initial Admin Name" 
@@ -241,9 +256,9 @@ export function SuperAdmin() {
   );
 }
 
-function FeatureToggle({ label, enabled }) {
+function FeatureToggle({ label, enabled, onClick }) {
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg bg-surface-muted border border-border-light hover:border-brand-300 transition-colors">
+    <div className="flex items-center justify-between p-3 rounded-lg bg-surface-muted border border-border-light hover:border-brand-300 transition-colors cursor-pointer" onClick={onClick}>
        <span className="font-bold text-[14px] text-ink-title">{label}</span>
        <div className={`w-11 h-6 rounded-pill relative transition-colors shadow-inner ${enabled ? 'bg-brand-500' : 'bg-[#E4E6EB]'}`}>
           <div className={`absolute top-[2px] w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-300 ${enabled ? 'right-[2px]' : 'left-[2px]'}`} />

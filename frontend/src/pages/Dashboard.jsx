@@ -36,7 +36,7 @@ export function Dashboard() {
     <div className="flex flex-col gap-5 pb-12 overflow-x-hidden">
       
       {/* Pending Action Alert */}
-      {user.role.includes("Admin") && (
+      {user.role.includes("Admin") && data?.stats?.pendingPostsCount > 0 && (
         <div className="bg-amber-50 rounded-[var(--radius-social)] p-4 flex items-center justify-between border border-amber-200">
           <div className="flex items-center gap-3">
              <div className="bg-white p-2 rounded-full shadow-sm">
@@ -46,7 +46,7 @@ export function Dashboard() {
                You have pending newsletter posts awaiting review.
              </span>
           </div>
-          <Button variant="secondary" size="sm" className="bg-white border-none shadow-sm text-ink-title hover:bg-surface-hover">Review</Button>
+          <Button variant="secondary" size="sm" onClick={() => window.location.href='/app/newsletter'} className="bg-white border-none shadow-sm text-ink-title hover:bg-surface-hover">Review</Button>
         </div>
       )}
 

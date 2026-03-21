@@ -277,6 +277,8 @@ function handleAction(action, data, token) {
       return getGroupSettings(user, data);
     case "saveGroupSettings":
       return saveGroupSettings(user, data);
+    case "updateGroupAvatar":
+      return updateGroupAvatar(user, data);
 
     // Tech Support
     case "getTickets":
@@ -1652,8 +1654,9 @@ function seedTestAccount(user, data) {
 }
 
 function getGroupSettings(user, data) {
-    const { scope_type, scope_id } = data;
-    if (!scope_type || !scope_id) return { success: false, error: "Missing scope" };
+    const scope_type = data.scope_type || "yeargroup";
+    const scope_id = data.scope_id || user.year_group_id || user.school;
+    if (!scope_type || !scope_id) return { success: true, data: {} }; // fail gracefully for Dashboard
 
     const rows = getSheetData("group_settings");
     const targetSchool = user.school || "Aggrey Memorial";

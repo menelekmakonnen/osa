@@ -24,7 +24,7 @@ export function TenantProvider({ children }) {
     schoolId: null,
     name: "OSA Directory",
     isCustomDomain: false,
-    activeScope: { type: 'school', id: user?.school || null, label: 'Whole School' } // Tiers: yeargroup, club, house, school, all-schools
+    activeScope: { type: 'yeargroup', id: user?.year_group_id || null, label: user?.year_group_nickname || 'My Year Group' } // Tiers: yeargroup, club, house, school, all-schools
   });
   const [loading, setLoading] = useState(true);
 
