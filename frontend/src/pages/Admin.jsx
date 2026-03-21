@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Badge, Modal, Select } from '../components/ui';
+import { Card, Button, Badge, Modal, Select, Input, Switch, ChequeChip } from '../components/ui';
 import { api, authState } from '../api/client';
-import { Shield, Mail, Heart, Calendar, CheckCircle, Image as ImageIcon, Camera, Link as LinkIcon } from 'lucide-react';
+import { ShieldCheck, UserPlus, Users, Link as LinkIcon, Settings, Target, Camera, Key, ImageIcon } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
 import { useTenant } from '../context/TenantContext';
 import { ProfileCropper } from '../components/ImageUpload';
@@ -79,12 +80,12 @@ export function Admin() {
     try {
        const res = await api.assignRole(targetUserId, targetRole);
        if (res.error) throw new Error(res.error);
-       alert("Role successfully pushed to member!");
+       toast.success("Role successfully pushed to member!");
        setIsRolesModalOpen(false);
        setTargetUserId('');
        setTargetRole('');
     } catch(err) {
-       alert("Failed to assign role: " + err.message);
+       toast.error("Failed to assign role: " + err.message);
     } finally {
        setAssigning(false);
     }
@@ -95,10 +96,10 @@ export function Admin() {
     setSavingSocials(true);
     try {
        await api.saveGroupSettings(activeScope, socialSettings);
-       alert("Social Links successfully saved!");
+       toast.success("Social Links successfully saved!");
        setIsSocialModalOpen(false);
     } catch(err) {
-       alert("Failed to save links: " + err.message);
+       toast.error("Failed to save links: " + err.message);
     } finally {
        setSavingSocials(false);
     }
@@ -134,10 +135,10 @@ export function Admin() {
          authState.setSession(updatedUser, window.localStorage.getItem('osa_session_token'));
          setTimeout(() => window.location.reload(), 1500);
       }
-      alert("Group profile picture updated successfully!");
+      toast.success("Group profile picture updated successfully!");
     } catch(err) {
       console.error(err);
-      alert("Failed to upload group profile picture.");
+      toast.error("Failed to upload group profile picture.");
     } finally {
       setAssigning(false);
       if (avatarInputRef.current) avatarInputRef.current.value = "";
@@ -189,8 +190,8 @@ export function Admin() {
              Create emergency relief efforts or long-term school support campaigns. Track donations and post updates.
            </p>
            <div className="flex justify-between items-center mt-auto pt-2 gap-2">
-             <Button size="sm" variant="secondary" onClick={() => alert("Fundraising module is currently undergoing active construction.")} className="flex-1 font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title">Create New</Button>
-             <Button size="sm" variant="ghost" onClick={() => alert("Fundraising module is currently undergoing active construction.")} className="font-bold text-ink-muted hover:text-ink-title px-2">Manage</Button>
+             <Button size="sm" variant="secondary" onClick={() => toast.success("Fundraising module is currently undergoing active construction.")} className="flex-1 font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title">Create New</Button>
+             <Button size="sm" variant="ghost" onClick={() => toast.success("Fundraising module is currently undergoing active construction.")} className="font-bold text-ink-muted hover:text-ink-title px-2">Manage</Button>
            </div>
         </Card>
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api, authState } from '../api/client';
 import { Card, Button, Input, Textarea, Select, Badge, ChequeChip } from '../components/ui';
-import { Save, UserCircle, ShieldAlert, Camera, Share2 } from 'lucide-react';
+import { User, Mail, Building2, MapPin, Briefcase, Phone, Linkedin, Link as LinkIcon, Camera, Edit2, Key, Shield } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { ProfileCropper } from '../components/ImageUpload';
 
 export function Profile() {
@@ -102,9 +103,9 @@ export function Profile() {
       // Update local session user object
       authState.setSession(authState.getToken(), updated);
       setProfile(updated);
-      alert("Profile updated successfully!");
+      toast.success("Profile updated successfully!");
     } catch (err) {
-      alert("Error saving profile: " + err.message);
+      toast.error("Error saving profile: " + err.message);
     } finally {
       setSaving(false);
     }
@@ -133,7 +134,7 @@ export function Profile() {
       setProfile(updated);
     } catch(err) {
       console.error(err);
-      alert("Failed to upload profile picture.");
+      toast.error("Failed to upload profile picture.");
     } finally {
       setSaving(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -163,7 +164,7 @@ export function Profile() {
       setProfile(updated);
     } catch(err) {
       console.error(err);
-      alert("Failed to upload cover picture.");
+      toast.error("Failed to upload cover picture.");
     } finally {
       setSaving(false);
       if (coverInputRef.current) coverInputRef.current.value = "";
@@ -176,14 +177,14 @@ export function Profile() {
     try {
        const res = await api.changePassword(passwordData);
        if (res.success) {
-          alert("Password updated successfully!");
+          toast.success("Password updated successfully!");
           setIsPasswordModalOpen(false);
           setPasswordData({ old_password: '', new_password: '', confirm_password: '' });
        } else {
-          alert("Error: " + res.error);
+          toast.error("Error: " + res.error);
        }
     } catch (err) {
-       alert("Failed to change password: " + err.message);
+       toast.error("Failed to change password: " + err.message);
     } finally {
        setSubmittingPassword(false);
     }
@@ -479,7 +480,7 @@ export function Profile() {
       )}
 
       <Modal isOpen={isMasterModalOpen} onClose={() => setIsMasterModalOpen(false)} title="Master Override">
-         <form onSubmit={(e) => { e.preventDefault(); if (masterPasswordInput === "icuni2026") { setIsMasterUnlocked(true); setIsMasterModalOpen(false); alert("Master override granted."); } else { alert("Incorrect Master Password."); } }} className="flex flex-col gap-4 mt-2">
+         <form onSubmit={(e) => { e.preventDefault(); if (masterPasswordInput === "icuni2026") { setIsMasterUnlocked(true); setIsMasterModalOpen(false); toast.success("Master override granted."); } else { toast.error("Incorrect Master Password."); } }} className="flex flex-col gap-4 mt-2">
             <Input 
                label="Phase 11 Master Password" 
                type="password"

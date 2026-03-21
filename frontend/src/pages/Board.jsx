@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api, authState } from '../api/client';
-import { Card, Button } from '../components/ui';
+import { toast } from 'react-hot-toast';
+import { Card, Button, Input, Modal, Avatar } from '../components/ui';
 import { Edit3, Image as ImageIcon, Video, MessageCircle, Smile, Send, ThumbsUp } from 'lucide-react';
 import Picker from 'emoji-picker-react';
 import { useTenant } from '../context/TenantContext';
@@ -60,7 +61,7 @@ export function Board() {
        api.getBoardMessages(activeScope).then(res => setMessages(res || []));
     } catch(err) {
        console.error("Failed to post message", err);
-       alert("Failed to post message: " + err.message);
+       toast.error("Failed to post message: " + err.message);
        // Revert on fail
        fetchMessages();
     } finally {
@@ -81,7 +82,7 @@ export function Board() {
         fetchMessages();
     } catch(err) {
         console.error("Failed to post comment", err);
-        alert("Failed to post comment: " + err.message);
+        toast.error("Failed to post comment: " + err.message);
     }
   };
 

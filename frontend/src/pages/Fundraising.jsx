@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { Card, Button, Badge, Modal, Input } from '../components/ui';
 import { Heart, AlertTriangle, Clock, Users, PlusCircle } from 'lucide-react';
 import { authState } from '../api/client';
+import toast from 'react-hot-toast';
 
 export function Fundraising() {
   const [activeFilter, setActiveFilter] = useState('all'); // all, emergency, school_support
@@ -45,9 +46,9 @@ export function Fundraising() {
       setSelectedCampaign(null);
       setDonationAmount('');
       loadData();
-      alert("Pledge recorded successfully! You will receive an email receipt.");
+      toast.success("Pledge recorded successfully! You will receive an email receipt.");
     } catch(err) {
-      alert("Error: " + err.message);
+      toast.error("Error: " + err.message);
     } finally {
       setDonating(false);
     }
@@ -70,7 +71,7 @@ export function Fundraising() {
             </div>
             {isAdmin && (
                 <Button 
-                   onClick={() => alert("Campaign Creation Modal coming in v2!")} 
+                   onClick={() => toast.success("Campaign Creation Modal coming in v2!")} 
                    className="gap-2 shrink-0 bg-surface-muted hover:bg-surface-hover text-ink-title border-none font-semibold text-[14px]"
                 >
                    <PlusCircle size={18} /> Create Campaign

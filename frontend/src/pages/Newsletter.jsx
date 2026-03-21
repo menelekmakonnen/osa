@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api, authState } from '../api/client';
-import { Card, Button, Input, Textarea, Select, Badge, Modal } from '../components/ui';
+import { Card, Button, Input, Textarea, Badge, Avatar } from '../components/ui';
+import { toast } from 'react-hot-toast';
 import { FileText, Send, CheckCircle, XCircle, Edit3, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';
 
@@ -50,9 +51,9 @@ export function Newsletter() {
       setIsSubmitModalOpen(false);
       setSubmitData({ title: '', category: '', content: '' });
       loadPosts();
-      // Toast notification would go here in full app
+      toast.success("Post submitted for review!");
     } catch(err) {
-      alert("Error submitting post: " + err.message);
+      toast.error("Error submitting post: " + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -62,8 +63,9 @@ export function Newsletter() {
     try {
       await api.approvePost(postId);
       loadPosts();
+      toast.success("Post approved!");
     } catch(err){
-      alert("Error approving: " + err.message);
+      toast.error("Error approving: " + err.message);
     }
   };
 
@@ -73,8 +75,9 @@ export function Newsletter() {
       setReturnPostData(null);
       setReturnNote('');
       loadPosts();
+      toast.success("Post returned to author!");
     } catch(err){
-      alert("Error returning: " + err.message);
+      toast.error("Error returning: " + err.message);
     }
   };
 
@@ -83,10 +86,10 @@ export function Newsletter() {
     setLoading(true);
     try {
       await api.dispatchNewsletter();
-      alert("Newsletter Dispatched Successfully!");
+      toast.success("Newsletter Dispatched Successfully!");
       loadPosts();
     } catch(err) {
-      alert("Error dispatching: " + err.message);
+      toast.error("Error dispatching: " + err.message);
     } finally {
       setLoading(false);
     }

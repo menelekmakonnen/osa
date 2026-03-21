@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, Button, Badge, Modal, Input } from '../components/ui';
 import { authState, api } from '../api/client';
+import { toast } from 'react-hot-toast';
 import { ShieldAlert, Database, Users, Settings, Activity } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
@@ -23,10 +24,10 @@ export function SuperAdmin() {
             admin_email: newSchoolData.admin_email,
             admin_password: "TempPassword123!"
         });
-        alert("School registered successfully and automatically APPROVED for Phase 11 Audit workflows.");
+        toast.success("School registered successfully and automatically APPROVED for Phase 11 Audit workflows.");
         setIsAddSchoolOpen(false);
      } catch(err) {
-        alert("Error: " + err.message);
+        toast.error("Error: " + err.message);
      } finally {
         setSubmittingSchool(false);
      }

@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { Card, Button, Badge, Modal } from '../components/ui';
 import { Calendar, MapPin, Video, Users, Link as LinkIcon, CheckCircle, PlusCircle } from 'lucide-react';
 import { authState } from '../api/client';
+import { toast } from 'react-hot-toast';
 
 export function Events() {
   const [activeFilter, setActiveFilter] = useState('all'); // all, virtual, meetup, hangout
@@ -52,7 +53,7 @@ export function Events() {
       }
       
     } catch(err) {
-      alert("Error RSVPing: " + err.message);
+      toast.error("Error RSVPing: " + err.message);
     } finally {
       setRsvping(false);
     }
@@ -75,7 +76,7 @@ export function Events() {
             </div>
             {isAdmin && (
                 <Button 
-                   onClick={() => alert("Event Creation Modal coming in v2!")} 
+                   onClick={() => toast.success("Event Creation Modal coming in v2!")} 
                    className="gap-2 shrink-0 bg-surface-muted hover:bg-surface-hover text-ink-title border-none font-semibold text-[14px]"
                 >
                    <PlusCircle size={18} /> Create Event

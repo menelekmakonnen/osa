@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { api, authState } from '../api/client';
 import { Card, Button, Input, Textarea } from '../components/ui';
+import { toast } from 'react-hot-toast';
 import { Image as ImageIcon, Camera, Loader2, UploadCloud, Folder, Plus, ArrowLeft, X } from 'lucide-react';
 import { compressImage } from '../components/ImageUpload';
 import { useTenant } from '../context/TenantContext';
@@ -77,7 +78,7 @@ export function Gallery() {
           fetchAlbums();
       } catch(err) {
           console.error("Failed to create album", err);
-          alert("Failed to create album");
+          toast.error("Failed to create album");
       } finally {
           setCreatingAlbum(false);
       }
@@ -103,7 +104,7 @@ export function Gallery() {
          else fetchAlbums(); // Though usually they upload *into* an album
      } catch(err) {
          console.error("Upload failed", err);
-         alert("Upload failed. Please try again.");
+         toast.error("Upload failed. Please try again.");
      } finally {
          setUploading(false);
          if (fileInputRef.current) fileInputRef.current.value = "";

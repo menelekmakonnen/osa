@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Card, Button, Input } from '../components/ui';
-import { Mail, ShieldCheck, UploadCloud, CheckCircle2, AlertCircle, LogOut } from 'lucide-react';
-import { authState } from '../api/client';
+import { Mail, ShieldCheck, UploadCloud, CheckCircle2, LogOut, ArrowRight, ShieldAlert } from 'lucide-react';
+import { authState, api } from '../api/client';
+import { toast } from 'react-hot-toast';
 import { Logo } from '../components/Logo';
 
 export function VerificationWall({ user, isSuperAdmin }) {
@@ -32,7 +33,7 @@ export function VerificationWall({ user, isSuperAdmin }) {
   };
 
   const handleResendEmail = () => {
-     alert("Verification email resent to " + user.email);
+      toast.success("Verification email resent to " + user.email);
   };
 
   return (

@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthLayout, AppLayout } from './components/Layouts';
 import { TenantProvider } from './context/TenantContext';
+import { Toaster } from 'react-hot-toast';
 
 // Pages
 import { Login, Register, ForgotPassword } from './pages/Auth';
@@ -28,6 +29,7 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   return (
     <TenantProvider>
+      <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: '#1E293B', color: '#fff', borderRadius: '12px', padding: '16px', fontSize: '14px', fontWeight: 'bold' } }} />
       <BrowserRouter>
         <Routes>
         

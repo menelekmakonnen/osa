@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Badge, Modal, Select, Input, Textarea } from '../components/ui';
 import { api, authState } from '../api/client';
+import { toast } from 'react-hot-toast';
 import { HelpCircle, ArrowUpRight, Clock, CheckCircle } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';
 
@@ -42,9 +43,9 @@ export function Support() {
       setIsSubmitModalOpen(false);
       setSubmitData({ issue_type: '', description: '' });
       loadTickets();
-      alert("Ticket submitted successfully!");
+      toast.success("Ticket submitted successfully!");
     } catch (err) {
-      alert("Error submitting ticket: " + err.message);
+      toast.error("Error submitting ticket: " + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -56,7 +57,7 @@ export function Support() {
       await api.escalateTicket(ticketId);
       loadTickets();
     } catch (err) {
-      alert("Error escalating ticket: " + err.message);
+      toast.error("Error escalating ticket: " + err.message);
     }
   };
 
@@ -67,7 +68,7 @@ export function Support() {
       await api.resolveTicket(ticketId, resolution);
       loadTickets();
     } catch (err) {
-      alert("Error resolving ticket: " + err.message);
+      toast.error("Error resolving ticket: " + err.message);
     }
   };
 
