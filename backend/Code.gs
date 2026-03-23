@@ -115,6 +115,8 @@ function handleAction(action, data, token) {
     return { success: true, message: "PONG" };
   } else if (action === "resendVerificationEmail") {
     return handleResendVerification(data);
+  } else if (action === "verifyEmail") {
+    return handleVerifyEmail(data);
   } else if (action === "sync_schema") {
     INITIALIZE_SHEETS();
     return { success: true, message: "Schema migrated successfully" };
@@ -425,6 +427,7 @@ function handleRegister(data) {
 
   const newRowArray = headers.map(h => newRowObj[h] !== undefined ? newRowObj[h] : "");
   membersSheet.appendRow(newRowArray);
+  const newRowIndex = membersSheet.getLastRow();
   
   // Return user obj without secrets
   delete newRowObj.password;
@@ -432,7 +435,7 @@ function handleRegister(data) {
 
   // Dispatch Verification Email
   try {
-    sendVerificationEmail(newRowObj.email, newRowObj.name);
+    sendVerificationEmail(membersSheet, headers, newRowIndex, newRowObj.email, newRowObj.name);
   } catch (e) {
     console.error("Failed to dispatch verification: ", e);
   }
@@ -545,13 +548,14 @@ function handleOnboardSchool(data) {
 
   const newRowArray = headers.map(h => newRowObj[h] !== undefined ? newRowObj[h] : "");
   membersSheet.appendRow(newRowArray);
+  const newRowIndex = membersSheet.getLastRow();
   
   delete newRowObj.password;
   delete newRowObj.session_token;
 
   // Dispatch Verification Email
   try {
-    sendVerificationEmail(newRowObj.email, newRowObj.name);
+    sendVerificationEmail(membersSheet, headers, newRowIndex, newRowObj.email, newRowObj.name);
   } catch (e) {
     console.error("Failed to dispatch verification: ", e);
   }
@@ -581,7 +585,7 @@ function handleResendVerification(data) {
     const rowObj = rowToObject(rows[i], headers);
     if (rowObj.email && rowObj.email.toLowerCase() === email.toLowerCase()) {
       try {
-        sendVerificationEmail(rowObj.email, rowObj.name);
+        sendVerificationEmail(membersSheet, headers, i + 1, rowObj.email, rowObj.name);
         return { success: true, message: "Verification email sent to " + email };
       } catch (e) {
         console.error("Failed to send verification email: ", e);
@@ -593,41 +597,99 @@ function handleResendVerification(data) {
   return { success: false, error: "Email address not found" };
 }
 
-function sendVerificationEmail(recipientEmail, userName) {
-  const subject = "Verify your email - OSA Platform";
-  
+function handleVerifyEmail(data) {
+  const { token } = data;
+  if (!token) return { success: false, error: "Missing verification token" };
+
+  const membersSheet = getSheet("members");
+  const headers = getHeaders(membersSheet);
+  const rows = membersSheet.getDataRange().getValues();
+
+  // Ensure email_verified column exists
+  let evCol = headers.indexOf("email_verified");
+  if (evCol === -1) {
+    membersSheet.getRange(1, headers.length + 1).setValue("email_verified");
+    headers.push("email_verified");
+    evCol = headers.length - 1;
+  }
+  let vtCol = headers.indexOf("verification_token");
+  if (vtCol === -1) {
+    membersSheet.getRange(1, headers.length + 1).setValue("verification_token");
+    headers.push("verification_token");
+    vtCol = headers.length - 1;
+  }
+
+  for (let i = 1; i < rows.length; i++) {
+    const rowObj = rowToObject(rows[i], headers);
+    if (rowObj.verification_token && rowObj.verification_token === token) {
+      // Mark email as verified
+      membersSheet.getRange(i + 1, evCol + 1).setValue("true");
+      // Clear the token so it can't be reused
+      membersSheet.getRange(i + 1, vtCol + 1).setValue("");
+
+      // Return updated user for frontend session refresh
+      delete rowObj.password;
+      delete rowObj.session_token;
+      rowObj.email_verified = true;
+      return { success: true, data: rowObj };
+    }
+  }
+
+  return { success: false, error: "Invalid or expired verification link" };
+}
+
+function sendVerificationEmail(sheet, headers, rowIndex, recipientEmail, userName) {
+  // Generate a secure token and store it
+  const verifyToken = Utilities.getUuid();
+
+  // Ensure verification_token column exists
+  let vtCol = headers.indexOf("verification_token");
+  if (vtCol === -1) {
+    sheet.getRange(1, headers.length + 1).setValue("verification_token");
+    headers.push("verification_token");
+    vtCol = headers.length - 1;
+  }
+  // Ensure email_verified column exists
+  let evCol = headers.indexOf("email_verified");
+  if (evCol === -1) {
+    sheet.getRange(1, headers.length + 1).setValue("email_verified");
+    headers.push("email_verified");
+    evCol = headers.length - 1;
+  }
+
+  sheet.getRange(rowIndex, vtCol + 1).setValue(verifyToken);
+  sheet.getRange(rowIndex, evCol + 1).setValue("false");
+
+  const verifyUrl = "https://osa.icuni.org/verify?token=" + verifyToken;
+  const subject = "Verify your email \u2014 OSA Platform";
+
   const emailHtml = `
-    <div style="font-family: sans-serif; color: #1E293B; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #E2E8F0; border-radius: 8px;">
-      <h2 style="color: #2D88FF;">Welcome to the OSA Network!</h2>
-      <p>Hello ${userName},</p>
-      <p>Thank you for registering. To ensure the security of the platform, we require all users to verify their email address before granting them administrative network access.</p>
-      <p>Please click the link below to verify your account:</p>
-      <div style="margin: 30px 0;">
-        <a href="https://osa.icuni.org/verify?email=${encodeURIComponent(recipientEmail)}" style="background-color: #2D88FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Verify Email Address</a>
+    <div style="font-family: 'Segoe UI', sans-serif; color: #1E293B; max-width: 600px; margin: 0 auto; padding: 32px; border: 1px solid #E2E8F0; border-radius: 12px; background: #FFFFFF;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h2 style="color: #2D88FF; margin: 0; font-size: 24px;">OSA Platform</h2>
+        <p style="color: #94A3B8; font-size: 13px; margin: 4px 0 0;">Old Students Association Network</p>
       </div>
-      <p>If you did not create this account, please ignore this email.</p>
-      <p>Best regards,<br/>OSA Platform Security</p>
+      <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 16px 0;" />
+      <p style="font-size: 16px;">Hello <strong>${userName}</strong>,</p>
+      <p style="font-size: 14px; line-height: 1.6; color: #475569;">Thank you for registering on the OSA platform. To complete your account setup and gain full access, please verify your email address by clicking the button below.</p>
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${verifyUrl}" style="background-color: #2D88FF; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">Verify Email Address</a>
+      </div>
+      <p style="font-size: 12px; color: #94A3B8; text-align: center;">If the button doesn't work, copy and paste this link into your browser:</p>
+      <p style="font-size: 11px; color: #64748B; text-align: center; word-break: break-all;">${verifyUrl}</p>
+      <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 24px 0;" />
+      <p style="font-size: 12px; color: #94A3B8;">If you did not create this account, please ignore this email.</p>
+      <p style="font-size: 12px; color: #94A3B8; margin-top: 8px;">\u2014 OSA Platform Security &bull; ICUNI Labs</p>
     </div>
   `;
 
-  try {
-    // Must be configured as a 'Send As' alias for the executing Google account
-    GmailApp.sendEmail(recipientEmail, subject, "", {
-      htmlBody: emailHtml,
-      from: "donotreply@icuni.org",
-      name: "OSA Platform"
-    });
-  } catch (e) {
-    // Fallback logic if the current script executor does not yet have the alias properly mapped
-    console.error("Alias send failed, falling back to base MailApp:", e);
-    MailApp.sendEmail({
-      to: recipientEmail,
-      subject: subject,
-      htmlBody: emailHtml,
-      name: "OSA Platform",
-      replyTo: "donotreply@icuni.org"
-    });
-  }
+  MailApp.sendEmail({
+    to: recipientEmail,
+    subject: subject,
+    htmlBody: emailHtml,
+    name: "OSA Platform",
+    replyTo: "donotreply@icuni.org"
+  });
 }
 
 function validateToken(token) {

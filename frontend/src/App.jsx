@@ -17,6 +17,7 @@ import { SuperAdmin } from './pages/SuperAdmin';
 import { Board } from './pages/Board';
 import { Gallery } from './pages/Gallery';
 import { Support } from './pages/Support';
+import { VerifyEmail } from './pages/VerifyEmail';
 
 const ProtectedRoute = ({ children }) => {
   const isAuth = !!window.localStorage.getItem('osa_session_token');
@@ -42,6 +43,9 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
         </Route>
+
+        {/* Public Verify Route (standalone — no auth layout) */}
+        <Route path="/verify" element={<VerifyEmail />} />
 
         {/* Protected Routes (App Layout) */}
         <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
