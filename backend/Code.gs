@@ -296,6 +296,16 @@ function handleAction(action, data, token) {
     case "resolveTicket":
       return resolveTicket(user, data);
 
+    // ICUNI Labs Cockpit
+    case "getSystemOverview":
+      return getSystemOverview(user);
+    case "getStaffRoster":
+      return getStaffRoster(user);
+    case "addStaffMember":
+      return addStaffMember(user, data);
+    case "removeStaffMember":
+      return removeStaffMember(user, data);
+
     default:
       return { success: false, error: "Unknown action" };
   }
@@ -1860,6 +1870,191 @@ function saveGroupSettings(user, data) {
     }
 
     return { success: true, message: "Settings saved successfully" };
+}
+
+// ==========================================
+// ICUNI Labs Cockpit Functions
+// ==========================================
+
+function getSystemOverview(user) {
+  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+
+  const members = getSheetData("members");
+  const schools = getSheetData("schools");
+  const tickets = getSheetData("tickets");
+  const posts = getSheetData("posts");
+
+  const openTickets = tickets.filter(t => t.status !== "Resolved");
+  const escalatedTickets = tickets.filter(t => t.status === "Escalated");
+  const pendingPosts = posts.filter(p => p.status === "Pending");
+
+  // School summaries
+  const schoolSummaries = schools.map(s => {
+    const schoolMembers = members.filter(m => m.school === s.id);
+    const schoolTickets = tickets.filter(t => t.school === s.id && t.status !== "Resolved");
+    return {
+      id: s.id,
+      name: s.name,
+      status: s.status || "Active",
+      memberCount: schoolMembers.length,
+      openTicketCount: schoolTickets.length
+    };
+  });
+
+  // Recent activity (last 10 items from tickets + posts, sorted by date)
+  const recentActivity = [];
+  tickets.slice(-5).reverse().forEach(t => {
+    recentActivity.push({
+      type: "ticket",
+      label: t.issue_type,
+      actor: t.author_name,
+      status: t.status,
+      school: t.school,
+      date: t.created_at
+    });
+  });
+  posts.slice(-5).reverse().forEach(p => {
+    recentActivity.push({
+      type: "post",
+      label: p.title,
+      actor: p.author_name,
+      status: p.status,
+      school: p.school,
+      date: p.submission_date
+    });
+  });
+  recentActivity.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  return {
+    success: true,
+    data: {
+      totalSchools: schools.length,
+      totalMembers: members.length,
+      openTickets: openTickets.length,
+      escalatedTickets: escalatedTickets.length,
+      pendingPosts: pendingPosts.length,
+      staffCount: members.filter(m => m.role === "IT Department").length,
+      schools: schoolSummaries,
+      escalatedTicketsList: escalatedTickets.map(t => ({
+        id: t.id,
+        issue_type: t.issue_type,
+        description: t.description,
+        author_name: t.author_name,
+        school: t.school,
+        current_tier: t.current_tier,
+        status: t.status,
+        created_at: t.created_at
+      })),
+      recentActivity: recentActivity.slice(0, 10)
+    }
+  };
+}
+
+function getStaffRoster(user) {
+  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+
+  const members = getSheetData("members");
+  const staff = members.filter(m => m.role === "IT Department");
+
+  return {
+    success: true,
+    data: staff.map(s => ({
+      id: s.id,
+      name: s.name,
+      email: s.email,
+      role: s.role,
+      date_joined: s.date_joined,
+      profile_pic: s.profile_pic || "",
+      bio: s.bio || "",
+      profession: s.profession || ""
+    }))
+  };
+}
+
+function addStaffMember(user, data) {
+  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+
+  const { name, email, password } = data;
+  if (!name || !email || !password) return { success: false, error: "Missing required fields: name, email, password" };
+
+  const ms = getSheet("members");
+  const mh = getHeaders(ms);
+  const rows = ms.getDataRange().getValues();
+
+  // Check for duplicate email
+  for (let i = 1; i < rows.length; i++) {
+    const row = rowToObject(rows[i], mh);
+    if (row.email && row.email.toLowerCase() === email.toLowerCase()) {
+      return { success: false, error: "A member with this email already exists" };
+    }
+  }
+
+  const schoolsData = getSheetData("schools");
+  const targetSchool = schoolsData.length > 0 ? schoolsData[0].id : "AMOSA";
+  const targetSchoolName = schoolsData.length > 0 ? schoolsData[0].name : "Aggrey Memorial";
+
+  const newId = "staff_" + Utilities.getUuid().substring(0, 8);
+  const now = new Date().toISOString();
+
+  const staffRow = {
+    id: newId,
+    name: name,
+    username: name.toLowerCase().replace(/\s+/g, '.'),
+    email: email,
+    password: password,
+    role: "IT Department",
+    year_group_id: "ADMIN",
+    year_group_nickname: "School Executives",
+    cheque_colour: "#0F172A",
+    school: targetSchool,
+    association: targetSchoolName,
+    date_joined: now,
+    email_verified: "true",
+    id_verified: "true",
+    verification_status: "Approved",
+    bio: "",
+    profession: "",
+    location: "",
+    priv_email: "all",
+    priv_phone: "all",
+    priv_location: "all",
+    priv_profession: "all",
+    priv_linkedin: "all",
+    priv_bio: "all",
+    priv_social: "all"
+  };
+
+  ms.appendRow(mh.map(h => staffRow[h] !== undefined ? staffRow[h] : ""));
+
+  return {
+    success: true,
+    data: { id: newId, name, email, role: "IT Department" }
+  };
+}
+
+function removeStaffMember(user, data) {
+  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+
+  const { userId } = data;
+  if (!userId) return { success: false, error: "Missing userId" };
+
+  // Don't allow self-removal
+  if (userId === user.id) return { success: false, error: "Cannot remove yourself" };
+
+  const ms = getSheet("members");
+  const mh = getHeaders(ms);
+  const rows = ms.getDataRange().getValues();
+  const roleCol = mh.indexOf("role");
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rowToObject(rows[i], mh);
+    if (row.id === userId && row.role === "IT Department") {
+      ms.getRange(i + 1, roleCol + 1).setValue("Member");
+      return { success: true, message: row.name + " has been removed from IT Department" };
+    }
+  }
+
+  return { success: false, error: "Staff member not found" };
 }
 
 // ==========================================

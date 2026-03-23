@@ -205,5 +205,11 @@ export const api = {
   },
   submitTicket: (ticketData) => apiRequest("submitTicket", ticketData),
   escalateTicket: (ticketId) => apiRequest("escalateTicket", { ticket_id: ticketId }),
-  resolveTicket: (ticketId, resolution) => apiRequest("resolveTicket", { ticket_id: ticketId, resolution })
+  resolveTicket: (ticketId, resolution) => apiRequest("resolveTicket", { ticket_id: ticketId, resolution }),
+
+  // ICUNI Labs Cockpit
+  getSystemOverview: () => apiRequest("getSystemOverview"),
+  getStaffRoster: () => apiRequest("getStaffRoster"),
+  addStaffMember: (data) => apiRequest("addStaffMember", data),
+  removeStaffMember: (userId) => apiRequest("removeStaffMember", { userId }),
 };

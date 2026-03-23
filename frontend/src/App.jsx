@@ -18,6 +18,7 @@ import { Board } from './pages/Board';
 import { Gallery } from './pages/Gallery';
 import { Support } from './pages/Support';
 import { VerifyEmail } from './pages/VerifyEmail';
+import { Cockpit } from './pages/Cockpit';
 
 const ProtectedRoute = ({ children }) => {
   const isAuth = !!window.localStorage.getItem('osa_session_token');
@@ -63,6 +64,7 @@ function App() {
           {/* Admin Routes (Secured internally within components) */}
           <Route path="admin" element={<Admin />} />
           <Route path="superadmin" element={<SuperAdmin />} />
+          <Route path="cockpit" element={<Cockpit />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/login" replace />} />

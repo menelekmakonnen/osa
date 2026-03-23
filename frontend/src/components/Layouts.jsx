@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
-import { Home, Mail, Heart, Calendar, Users, UserCircle, Settings, ShieldAlert, LogOut, Menu, X, Sun, Moon, MessageSquare, Image as ImageIcon, HelpCircle } from 'lucide-react';
+import { Home, Mail, Heart, Calendar, Users, UserCircle, Settings, ShieldAlert, LogOut, Menu, X, Sun, Moon, MessageSquare, Image as ImageIcon, HelpCircle, Monitor } from 'lucide-react';
 import { authState } from '../api/client';
 import { useTenant } from '../context/TenantContext';
 import { Logo } from './Logo';
@@ -318,6 +318,9 @@ export function AppLayout() {
           {isYGAdmin && (
             <div className={`mt-4 pt-4 border-t border-border-light ${isSidebarCollapsed ? 'mx-2' : 'mx-4'}`}>
               {!isSidebarCollapsed && <div className="px-2 mb-2 text-[11px] font-bold uppercase tracking-widest text-ink-muted">Administration</div>}
+              {isICUNIStaff && (
+                <NavItem collapsed={isSidebarCollapsed} to="/app/cockpit" icon={Monitor} label="Cockpit" isAdminSection />
+              )}
               <NavItem collapsed={isSidebarCollapsed} to="/app/admin" icon={Settings} label="Admin Panel" isAdminSection />
               {isSuperAdmin && (
                  <NavItem collapsed={isSidebarCollapsed} to="/app/superadmin" icon={ShieldAlert} label="Super Admin" isAdminSection />
