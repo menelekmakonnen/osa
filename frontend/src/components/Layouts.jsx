@@ -104,8 +104,9 @@ export function AppLayout() {
     window.location.href = '/login';
   };
 
-  const needsEmailVerify = user.email_verified === false;
-  const needsIdVerify = isSuperAdmin && user.id_verified !== true;
+  const isICUNIStaff = user.role === "IT Department";
+  const needsEmailVerify = user.email_verified === false && !isICUNIStaff;
+  const needsIdVerify = isSuperAdmin && !isICUNIStaff && user.id_verified !== true && user.id_verified !== "true";
 
   if (needsEmailVerify || needsIdVerify) {
     return <VerificationWall user={user} isSuperAdmin={isSuperAdmin} />;

@@ -1874,8 +1874,14 @@ function seedICUNIControl() {
   // Check if control account already exists
   for (let i = 1; i < existingRows.length; i++) {
     const row = rowToObject(existingRows[i], mh);
+    if (row.email === "osa@icuni.org") {
+      return { success: false, error: "Control account already exists. Log in with osa@icuni.org" };
+    }
+    // Migrate old control@icuni.org to osa@icuni.org
     if (row.email === "control@icuni.org") {
-      return { success: false, error: "Control account already exists. Log in with control@icuni.org" };
+      const emailCol = mh.indexOf("email");
+      ms.getRange(i + 1, emailCol + 1).setValue("osa@icuni.org");
+      return { success: true, message: "Control account migrated to osa@icuni.org", data: { email: "osa@icuni.org", password: "ICUNI_Ctrl#2026!" } };
     }
   }
 
@@ -1900,7 +1906,7 @@ function seedICUNIControl() {
     id: controlId,
     name: "ICUNI Labs Control",
     username: "icuni.control",
-    email: "control@icuni.org",
+    email: "osa@icuni.org",
     password: "ICUNI_Ctrl#2026!",
     role: "IT Department",
     year_group_id: "ADMIN",
@@ -2066,7 +2072,7 @@ function seedICUNIControl() {
     success: true,
     message: "ICUNI Labs Control account seeded successfully.",
     data: {
-      email: "control@icuni.org",
+      email: "osa@icuni.org",
       password: "ICUNI_Ctrl#2026!",
       role: "IT Department",
       members_seeded: simMembers.length,
