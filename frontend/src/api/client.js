@@ -143,6 +143,7 @@ export const api = {
 
   // POST mutations
   onboardSchool: (schoolData) => apiRequest("onboardSchool", schoolData),
+  resendVerificationEmail: (email) => apiRequest("resendVerificationEmail", { email }),
   updateProfile: (profileData) => apiRequest("updateProfile", profileData),
   changePassword: (passwordData) => apiRequest("changePassword", passwordData),
   updateGroupAvatar: (scopeData) => apiRequest("updateGroupAvatar", scopeData),

@@ -32,8 +32,13 @@ export function VerificationWall({ user, isSuperAdmin }) {
     }, 2000);
   };
 
-  const handleResendEmail = () => {
-      toast.success("Verification email resent to " + user.email);
+  const handleResendEmail = async () => {
+      try {
+        await api.resendVerificationEmail(user.email);
+        toast.success("Verification email resent to " + user.email);
+      } catch (e) {
+        toast.error("Failed to send verification email. Please try again.");
+      }
   };
 
   return (

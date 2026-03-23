@@ -113,6 +113,8 @@ function handleAction(action, data, token) {
     return handleResetPassword(data);
   } else if (action === "ping") {
     return { success: true, message: "PONG" };
+  } else if (action === "resendVerificationEmail") {
+    return handleResendVerification(data);
   } else if (action === "sync_schema") {
     INITIALIZE_SHEETS();
     return { success: true, message: "Schema migrated successfully" };
@@ -565,6 +567,30 @@ function handleOnboardSchool(data) {
 
 function handleResetPassword(data) {
    return { success: false, error: "Not implemented in v1 mock" };
+}
+
+function handleResendVerification(data) {
+  const { email } = data;
+  if (!email) return { success: false, error: "Missing email address" };
+
+  const membersSheet = getSheet("members");
+  const headers = getHeaders(membersSheet);
+  const rows = membersSheet.getDataRange().getValues();
+
+  for (let i = 1; i < rows.length; i++) {
+    const rowObj = rowToObject(rows[i], headers);
+    if (rowObj.email && rowObj.email.toLowerCase() === email.toLowerCase()) {
+      try {
+        sendVerificationEmail(rowObj.email, rowObj.name);
+        return { success: true, message: "Verification email sent to " + email };
+      } catch (e) {
+        console.error("Failed to send verification email: ", e);
+        return { success: false, error: "Failed to send verification email. Please try again later." };
+      }
+    }
+  }
+
+  return { success: false, error: "Email address not found" };
 }
 
 function sendVerificationEmail(recipientEmail, userName) {
