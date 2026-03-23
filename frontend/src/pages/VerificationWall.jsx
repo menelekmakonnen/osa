@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Button, Input } from '../components/ui';
-import { Mail, ShieldCheck, UploadCloud, CheckCircle2, LogOut, ArrowRight, ShieldAlert } from 'lucide-react';
+import { Mail, ShieldCheck, UploadCloud, CheckCircle2, LogOut, ArrowRight, ShieldAlert, AlertCircle } from 'lucide-react';
 import { authState, api } from '../api/client';
 import { toast } from 'react-hot-toast';
 import { Logo } from '../components/Logo';
