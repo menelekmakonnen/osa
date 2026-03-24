@@ -2076,7 +2076,7 @@ function seedICUNIControl() {
     if (row.email === "control@icuni.org") {
       const emailCol = mh.indexOf("email");
       ms.getRange(i + 1, emailCol + 1).setValue("osa@icuni.org");
-      return { success: true, message: "Control account migrated to osa@icuni.org", data: { email: "osa@icuni.org", password: "ICUNI_Ctrl#2026!" } };
+      return { success: true, message: "Control account migrated to osa@icuni.org. Password unchanged." };
     }
   }
 
@@ -2102,7 +2102,7 @@ function seedICUNIControl() {
     name: "ICUNI Labs Control",
     username: "icuni.control",
     email: "osa@icuni.org",
-    password: "ICUNI_Ctrl#2026!",
+    password: Utilities.getUuid().substring(0, 12) + "!A1",
     role: "IT Department",
     year_group_id: "ADMIN",
     year_group_nickname: "School Executives",
@@ -2153,7 +2153,7 @@ function seedICUNIControl() {
       name: m.name,
       username: m.username,
       email: m.email,
-      password: "DemoPass123!",
+      password: Utilities.getUuid().substring(0, 10) + "!1",
       role: m.role,
       year_group_id: m.yg,
       year_group_nickname: m.ygn,
@@ -2268,7 +2268,6 @@ function seedICUNIControl() {
     message: "ICUNI Labs Control account seeded successfully.",
     data: {
       email: "osa@icuni.org",
-      password: "ICUNI_Ctrl#2026!",
       role: "IT Department",
       members_seeded: simMembers.length,
       tickets_seeded: 3,
