@@ -447,6 +447,46 @@ function handleRegister(data) {
      yg_nickname = new_yg_nickname;
      // Create the new year group dynamically
      ygSheet.appendRow([actual_yg_id, school_id, new_yg_year, new_yg_nickname, "", cheque_color]);
+
+     // Create Drive Folder Architecture for this Year Group
+     try {
+       const masterSS = getMasterDB();
+       const schoolsRegistry = masterSS.getSheetByName("schools");
+       const shHeaders = getHeaders(schoolsRegistry);
+       const shRows = schoolsRegistry.getDataRange().getValues();
+       let schoolDriveFolderId = null;
+       for (let i = 1; i < shRows.length; i++) {
+         let sRow = rowToObject(shRows[i], shHeaders);
+         if (sRow.id === school_id) {
+            schoolDriveFolderId = sRow.drive_folder_id;
+            break;
+         }
+       }
+
+       if (schoolDriveFolderId) {
+         const schoolFolder = DriveApp.getFolderById(schoolDriveFolderId);
+         let ygBaseFolder;
+         const ygBaseIter = schoolFolder.getFoldersByName("Year Groups");
+         if(ygBaseIter.hasNext()) ygBaseFolder = ygBaseIter.next();
+         else ygBaseFolder = schoolFolder.createFolder("Year Groups");
+
+         const newYGFolder = ygBaseFolder.createFolder(new_yg_year + " - " + new_yg_nickname);
+         newYGFolder.createFolder("Year Group Admins");
+         newYGFolder.createFolder("Year Group Super Admins");
+         newYGFolder.createFolder("Year Group Members");
+         newYGFolder.createFolder("Year Group Gallery");
+         newYGFolder.createFolder("Year Group Events");
+         newYGFolder.createFolder("Year Group Posts");
+
+         // Club Supergroup Architecture container
+         const clubsFolder = newYGFolder.createFolder("Clubs");
+         // Subfolders for specific clubs (e.g., "Science Club -> Admins/Members/Gallery") 
+         // will be generated within this container when a specific club is registered.
+       }
+     } catch (e) {
+       console.error("Failed to build Year Group Drive Architecture: ", e);
+     }
+
   } else {
      for(let i=1; i<ygRows.length; i++) {
         let ygRow = rowToObject(ygRows[i], ygHeaders);
