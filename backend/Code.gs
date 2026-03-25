@@ -1943,12 +1943,14 @@ function INITIALIZE_SHEETS(targetDB = null) {
         "petitions": ["id", "target_sa_id", "target_sa_name", "scope_type", "scope_id", "school", "reason", "signatures", "status", "created_at"],
         "group_settings": ["id", "scope_type", "scope_id", "school", "settings_json", "updated_at"],
         "system_config": ["key", "value"],
-        "logs": ["timestamp", "action", "user", "details"]
+        "logs": ["timestamp", "action", "user", "details"],
+        "privileges": ["id", "account_type", "permissions_json", "description"],
+        "tiers": ["id", "tier_name", "level", "description", "monthly_fee"]
     };
 
     let sheetsToCreate = {};
     if (isMaster) {
-        const masterKeys = ["members", "schools", "system_config", "logs"];
+        const masterKeys = ["members", "schools", "tickets", "events", "newsletters", "privileges", "tiers", "system_config", "logs"];
         masterKeys.forEach(k => { sheetsToCreate[k] = allSheets[k]; });
     } else {
         const schoolKeys = ["members", "year_groups", "posts", "campaigns", "donations", "events", "rsvps", "newsletters", "board_messages", "albums", "galleries", "tickets", "petitions", "group_settings"];
