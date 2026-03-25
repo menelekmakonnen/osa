@@ -168,23 +168,23 @@ export function AppLayout() {
                           setMobileMenuOpen(false);
                        }}
                     >
-                       {user.role && user.role.includes("Platform") && <option value="all">All Schools</option>}
-                       <option value="school">Whole School</option>
-                       {user.year_group_id && <option value="yeargroup">{user.year_group_nickname || 'My Year Group'}</option>}
-                       {user.class_group_id && <option value="classgroup">{user.class_group_name || 'My Class Group'}</option>}
+                       {user.role && user.role.includes("Platform") && <option value="all" style={{backgroundColor:'#fff',color:'#050505'}}>All Schools</option>}
+                       <option value="school" style={{backgroundColor:'#fff',color:'#050505'}}>Whole School</option>
+                       {user.year_group_id && <option value="yeargroup" style={{backgroundColor:'#fff',color:'#050505'}}>{user.year_group_nickname || 'My Year Group'}</option>}
+                       {user.class_group_id && <option value="classgroup" style={{backgroundColor:'#fff',color:'#050505'}}>{user.class_group_name || 'My Class Group'}</option>}
                        {(user.role?.includes("President") || user.role?.includes("Admin") || user.role?.includes("IT")) && (
-                           <option value="exec">Exec/Admin view</option>
+                           <option value="exec" style={{backgroundColor:'#fff',color:'#050505'}}>Exec/Admin view</option>
                        )}
                        {isSuperAdmin && (
-                           <option value="superadmin">Super Admin view</option>
+                           <option value="superadmin" style={{backgroundColor:'#fff',color:'#050505'}}>Super Admin view</option>
                        )}
                     </select>
                 </div>
 
                 <NavItem to="/app/dashboard" icon={Home} label="Dashboard" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/newsletter" icon={Mail} label="Newsletter" onClick={() => setMobileMenuOpen(false)} />
-                {/* <NavItem to="/app/fundraising" icon={Heart} label="Fundraising" onClick={() => setMobileMenuOpen(false)} /> */}
-                {/* <NavItem to="/app/events" icon={Calendar} label="Events" onClick={() => setMobileMenuOpen(false)} /> */}
+                <NavItem to="/app/fundraising" icon={Heart} label="Fundraising" onClick={() => setMobileMenuOpen(false)} />
+                <NavItem to="/app/events" icon={Calendar} label="Events" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/members" icon={Users} label="Members Directory" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/board" icon={MessageSquare} label="Group Board" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/gallery" icon={ImageIcon} label="Gallery" onClick={() => setMobileMenuOpen(false)} />
@@ -290,15 +290,15 @@ export function AppLayout() {
                   setScope(type, id, label);
                }}
             >
-               {user.role && user.role.includes("Platform") && <option value="all">All Schools</option>}
-               <option value="school">Whole School</option>
-               {user.year_group_id && <option value="yeargroup">{user.year_group_nickname || 'My Year Group'}</option>}
-               {user.class_group_id && <option value="classgroup">{user.class_group_name || 'My Class Group'}</option>}
+               {user.role && user.role.includes("Platform") && <option value="all" style={{backgroundColor:'#fff',color:'#050505'}}>All Schools</option>}
+               <option value="school" style={{backgroundColor:'#fff',color:'#050505'}}>Whole School</option>
+               {user.year_group_id && <option value="yeargroup" style={{backgroundColor:'#fff',color:'#050505'}}>{user.year_group_nickname || 'My Year Group'}</option>}
+               {user.class_group_id && <option value="classgroup" style={{backgroundColor:'#fff',color:'#050505'}}>{user.class_group_name || 'My Class Group'}</option>}
                {(user.role?.includes("President") || user.role?.includes("Admin") || user.role?.includes("IT")) && (
-                   <option value="exec">Exec/Admin view</option>
+                   <option value="exec" style={{backgroundColor:'#fff',color:'#050505'}}>Exec/Admin view</option>
                )}
                {isSuperAdmin && (
-                   <option value="superadmin">Super Admin view</option>
+                   <option value="superadmin" style={{backgroundColor:'#fff',color:'#050505'}}>Super Admin view</option>
                )}
             </select>
         </div>
@@ -307,8 +307,8 @@ export function AppLayout() {
         <nav className="flex-1 py-2 flex flex-col gap-1 mt-2">
           <NavItem collapsed={isSidebarCollapsed} to="/app/dashboard" icon={Home} label="Dashboard" />
           <NavItem collapsed={isSidebarCollapsed} to="/app/newsletter" icon={Mail} label="Newsletter" />
-          {/* <NavItem collapsed={isSidebarCollapsed} to="/app/fundraising" icon={Heart} label="Fundraising" /> */}
-          {/* <NavItem collapsed={isSidebarCollapsed} to="/app/events" icon={Calendar} label="Events" /> */}
+          <NavItem collapsed={isSidebarCollapsed} to="/app/fundraising" icon={Heart} label="Fundraising" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/events" icon={Calendar} label="Events" />
           <NavItem collapsed={isSidebarCollapsed} to="/app/members" icon={Users} label="Directory" />
           <NavItem collapsed={isSidebarCollapsed} to="/app/board" icon={MessageSquare} label="Group Board" />
           <NavItem collapsed={isSidebarCollapsed} to="/app/gallery" icon={ImageIcon} label="Gallery" />

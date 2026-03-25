@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthLayout, AppLayout } from './components/Layouts';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { TenantProvider } from './context/TenantContext';
 import { Toaster } from 'react-hot-toast';
 
@@ -33,6 +34,7 @@ function App() {
     <TenantProvider>
       <Toaster position="top-right" toastOptions={{ duration: 4000, style: { background: '#1E293B', color: '#fff', borderRadius: '12px', padding: '16px', fontSize: '14px', fontWeight: 'bold' } }} />
       <BrowserRouter>
+      <ErrorBoundary>
         <Routes>
         
         {/* Public Landing (Redirecting to Login for v1 MVP) */}
@@ -70,6 +72,7 @@ function App() {
         <Route path="*" element={<Navigate to="/login" replace />} />
         
       </Routes>
+    </ErrorBoundary>
     </BrowserRouter>
   </TenantProvider>
 );

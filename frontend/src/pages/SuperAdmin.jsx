@@ -10,22 +10,33 @@ export function SuperAdmin() {
   const isSuperAdmin = user?.role === "Super Admin" || user?.role === "IT Department" || user?.role?.includes("School Administrator");
 
   const [isAddSchoolOpen, setIsAddSchoolOpen] = React.useState(false);
-  const [newSchoolData, setNewSchoolData] = React.useState({ school_name: '', admin_name: '', admin_email: '' });
+  const [newSchoolData, setNewSchoolData] = React.useState({ school_name: '', admin_name: '', admin_email: '', old_students_full_name: '', old_students_short_name: '', school_type: 'Mixed' });
   const [submittingSchool, setSubmittingSchool] = React.useState(false);
-  const [features, setFeatures] = React.useState({ fundraising: true, newsletters: true });
+  const [features, setFeatures] = React.useState({ fundraising: true, newsletters: true, crossSchoolEvents: true, paymentGateway: false, adminApproval: false });
 
   const handleAddSchool = async (e) => {
      e.preventDefault();
      setSubmittingSchool(true);
      try {
+        // Map frontend fields to what the backend handleOnboardSchool expects
+        const adminUsername = newSchoolData.admin_name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z.]/g, '');
         await api.onboardSchool({
-            school_name: newSchoolData.school_name,
-            admin_name: newSchoolData.admin_name,
-            admin_email: newSchoolData.admin_email,
-            admin_password: "TempPassword123!"
+            name: newSchoolData.admin_name,
+            username: adminUsername,
+            email: newSchoolData.admin_email,
+            password: "TempPassword123!",
+            new_school_name: newSchoolData.school_name,
+            new_school_type: newSchoolData.school_type,
+            new_school_admin_id: adminUsername,
+            new_school_motto: "",
+            new_school_colours: [],
+            new_school_cheque_representation: newSchoolData.old_students_short_name || "N/A",
+            new_school_classes: [],
+            new_school_houses: []
         });
-        toast.success("School registered successfully and automatically APPROVED for Phase 11 Audit workflows.");
+        toast.success("School registered successfully!");
         setIsAddSchoolOpen(false);
+        setNewSchoolData({ school_name: '', admin_name: '', admin_email: '', old_students_full_name: '', old_students_short_name: '', school_type: 'Mixed' });
      } catch(err) {
         toast.error("Error: " + err.message);
      } finally {
@@ -85,9 +96,9 @@ export function SuperAdmin() {
            <div className="flex flex-col gap-2 text-[14px] flex-1">
              <FeatureToggle label="Fundraising Module" enabled={features.fundraising} onClick={() => setFeatures({...features, fundraising: !features.fundraising})} />
              <FeatureToggle label="Newsletters Module" enabled={features.newsletters} onClick={() => setFeatures({...features, newsletters: !features.newsletters})} />
-             <FeatureToggle label="Cross-School Events" enabled={true} />
-             <FeatureToggle label="Payment Gateway (v2)" enabled={false} />
-             <FeatureToggle label="Admin Approval for Registrations" enabled={false} />
+             <FeatureToggle label="Cross-School Events" enabled={features.crossSchoolEvents} onClick={() => setFeatures({...features, crossSchoolEvents: !features.crossSchoolEvents})} />
+             <FeatureToggle label="Payment Gateway (v2)" enabled={features.paymentGateway} onClick={() => setFeatures({...features, paymentGateway: !features.paymentGateway})} />
+             <FeatureToggle label="Admin Approval for Registrations" enabled={features.adminApproval} onClick={() => setFeatures({...features, adminApproval: !features.adminApproval})} />
            </div>
         </Card>
 
@@ -220,6 +231,14 @@ export function SuperAdmin() {
                value={newSchoolData.school_name}
                onChange={e => setNewSchoolData({...newSchoolData, school_name: e.target.value})}
             />
+            <div className="mb-3">
+               <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">School Type</label>
+               <select className="social-input" value={newSchoolData.school_type} onChange={e => setNewSchoolData({...newSchoolData, school_type: e.target.value})}>
+                  <option value="Mixed">Mixed</option>
+                  <option value="Boys">Boys</option>
+                  <option value="Girls">Girls</option>
+               </select>
+            </div>
             <Input 
                label="Old Students Full Name" 
                placeholder="e.g. Aggrey Memorial Old Students Association"

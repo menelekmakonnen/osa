@@ -17,6 +17,14 @@ export function Events() {
   const [selectedEvent, setSelectedEvent] = useState(null); // For details modal
   const [rsvping, setRsvping] = useState(false);
 
+  // Create Event modal state
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    title: '', description: '', type: 'virtual', date: '', time: '',
+    venue: '', virtual_link: '', scope: 'yeargroup', max_attendees: ''
+  });
+
   const loadData = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -59,6 +67,26 @@ export function Events() {
     }
   };
 
+  const handleCreateEvent = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      await api.createEvent({
+        ...newEvent,
+        scope_type: newEvent.scope,
+        scope_id: newEvent.scope === 'yeargroup' ? user.year_group_id : user.school
+      });
+      toast.success("Event created successfully!");
+      setIsCreateOpen(false);
+      setNewEvent({ title: '', description: '', type: 'virtual', date: '', time: '', venue: '', virtual_link: '', scope: 'yeargroup', max_attendees: '' });
+      loadData();
+    } catch (err) {
+      toast.error("Error creating event: " + err.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const filteredEvents = events.filter(e => {
     if (activeFilter === 'all') return true;
     return e.type === activeFilter;
@@ -76,8 +104,8 @@ export function Events() {
             </div>
             {isAdmin && (
                 <Button 
-                   onClick={() => toast.success("Event Creation Modal coming in v2!")} 
-                   className="gap-2 shrink-0 bg-surface-muted hover:bg-surface-hover text-ink-title border-none font-semibold text-[14px]"
+                   onClick={() => setIsCreateOpen(true)} 
+                   className="gap-2 shrink-0 font-semibold text-[14px]"
                 >
                    <PlusCircle size={18} /> Create Event
                 </Button>
@@ -97,9 +125,9 @@ export function Events() {
              value={scopeFilter}
              onChange={(e) => setScopeFilter(e.target.value)}
            >
-             <option value="my_yg">My Year Group</option>
-             <option value="my_school">My School</option>
-             <option value="all_schools">All Schools</option>
+             <option value="my_yg" style={{backgroundColor:'#fff',color:'#050505'}}>My Year Group</option>
+             <option value="my_school" style={{backgroundColor:'#fff',color:'#050505'}}>My School</option>
+             <option value="all_schools" style={{backgroundColor:'#fff',color:'#050505'}}>All Schools</option>
            </select>
         </div>
       </div>
@@ -198,6 +226,68 @@ export function Events() {
                </div>
             </div>
          )}
+      </Modal>
+
+      {/* Create Event Modal */}
+      <Modal isOpen={isCreateOpen} onClose={() => !creating && setIsCreateOpen(false)} title="Create New Event">
+        <form onSubmit={handleCreateEvent} className="flex flex-col gap-4 mt-2">
+          <div className="mb-0">
+            <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">Event Title</label>
+            <input className="social-input" required maxLength={120} value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} placeholder="e.g. Annual Reunion Dinner" />
+          </div>
+          <div className="mb-0">
+            <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">Description</label>
+            <textarea className="social-textarea min-h-[80px]" required maxLength={1000} rows={3} value={newEvent.description} onChange={e => setNewEvent({...newEvent, description: e.target.value})} placeholder="What is this event about?" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">Type</label>
+              <select className="social-input" value={newEvent.type} onChange={e => setNewEvent({...newEvent, type: e.target.value})}>
+                <option value="virtual">Virtual</option>
+                <option value="meetup">Meetup</option>
+                <option value="hangout">Hangout</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">Scope</label>
+              <select className="social-input" value={newEvent.scope} onChange={e => setNewEvent({...newEvent, scope: e.target.value})}>
+                <option value="yeargroup">Year Group</option>
+                <option value="school">Whole School</option>
+                <option value="platform">All Schools</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">Date</label>
+              <input type="date" className="social-input" required value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">Time</label>
+              <input type="time" className="social-input" required value={newEvent.time} onChange={e => setNewEvent({...newEvent, time: e.target.value})} />
+            </div>
+          </div>
+          {(newEvent.type === 'meetup') && (
+            <div>
+              <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">Venue / Location</label>
+              <input className="social-input" value={newEvent.venue} onChange={e => setNewEvent({...newEvent, venue: e.target.value})} placeholder="e.g. Cape Coast Community Centre" />
+            </div>
+          )}
+          {(newEvent.type === 'virtual' || newEvent.type === 'hangout') && (
+            <div>
+              <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">Meeting Link (revealed after RSVP)</label>
+              <input type="url" className="social-input" value={newEvent.virtual_link} onChange={e => setNewEvent({...newEvent, virtual_link: e.target.value})} placeholder="https://meet.google.com/..." />
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">Max Attendees (0 = unlimited)</label>
+            <input type="number" className="social-input" min="0" value={newEvent.max_attendees} onChange={e => setNewEvent({...newEvent, max_attendees: e.target.value})} placeholder="0" />
+          </div>
+          <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-border-light">
+            <Button variant="ghost" type="button" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={creating}>{creating ? 'Creating...' : 'Create Event'}</Button>
+          </div>
+        </form>
       </Modal>
 
     </div>

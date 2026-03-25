@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api, authState } from '../api/client';
 import { Card, Button, Input, Textarea, Select, Badge, ChequeChip } from '../components/ui';
-import { User, Mail, Building2, MapPin, Briefcase, Phone, Linkedin, Link as LinkIcon, Camera, Edit2, Key, Shield } from 'lucide-react';
+import { User, Mail, Building2, MapPin, Briefcase, Phone, Linkedin, Link as LinkIcon, Camera, Edit2, Key, Shield, UserCircle, Save, Share2, ShieldAlert } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { ProfileCropper } from '../components/ImageUpload';
 

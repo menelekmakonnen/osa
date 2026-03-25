@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Badge, Modal, Select, Input, Switch, ChequeChip } from '../components/ui';
 import { api, authState } from '../api/client';
-import { ShieldCheck, UserPlus, Users, Link as LinkIcon, Settings, Target, Camera, Key, ImageIcon } from 'lucide-react';
+import { ShieldCheck, UserPlus, Users, Link as LinkIcon, Settings, Target, Camera, Key, ImageIcon, Shield, Mail, Heart, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
 import { useTenant } from '../context/TenantContext';
@@ -30,7 +30,7 @@ const getRolesForScope = (scopeType) => {
 export function Admin() {
   const user = authState.getUser();
   const { activeScope } = useTenant();
-  const isExec = user?.role?.includes("Admin") || user?.role?.includes("President");
+  const isExec = user?.role?.includes("Admin") || user?.role?.includes("President") || user?.role === "IT Department";
 
   const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
   const [members, setMembers] = useState([]);
