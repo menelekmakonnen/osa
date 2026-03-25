@@ -151,7 +151,7 @@ function handleAction(action, data, token) {
     ss.deleteSheet(temp);
     return { success: true, message: "Master DB Scrubbed & Rebuilt for Architecture V3" };
   } else if (action === "unblock_auditor") {
-    const ms = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+    const ms = getSheet("members", CURRENT_SCHOOL_ID);
     const hs = getHeaders(ms);
     const rows = ms.getDataRange().getValues();
     let count = 0;
@@ -169,7 +169,7 @@ function handleAction(action, data, token) {
     }
     
     // Also approve schools
-    const ss = getSheet("schools", typeof user !== 'undefined' ? user.school : null);
+    const ss = getSheet("schools", CURRENT_SCHOOL_ID);
     const s_hs = getHeaders(ss);
     const s_rows = ss.getDataRange().getValues();
     let scount = 0;
@@ -182,7 +182,7 @@ function handleAction(action, data, token) {
     }
     return { success: true, message: `Unblocked ${count} members and ${scount} schools.` };
   } else if (action === "getSchools") {
-      let schools = getSheetData("schools", typeof user !== 'undefined' ? user.school : null);
+      let schools = getSheetData("schools", CURRENT_SCHOOL_ID);
       if (schools.length === 0) {
         // Fallback for empty new instances
         return {
@@ -221,7 +221,9 @@ function handleAction(action, data, token) {
   }
 
   // Set Global Routing State for this execution thread
-  if (user.school) {
+  if ((user.role === "IT Department" || user.role === "ICUNI Staff") && data && data.target_school_id) {
+    CURRENT_SCHOOL_ID = data.target_school_id;
+  } else if (user.school) {
     CURRENT_SCHOOL_ID = user.school;
   }
 
@@ -294,7 +296,7 @@ function handleAction(action, data, token) {
       enforceRoleHierarchy(user, "Member", [1, 2, 3, 4, 5]);
       return getAdminData(user);
     case "fixPendingAccounts":
-      const mSheet = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+      const mSheet = getSheet("members", CURRENT_SCHOOL_ID);
       const mHeaders = getHeaders(mSheet);
       const mRows = mSheet.getDataRange().getValues();
       let patched = 0;
@@ -367,7 +369,7 @@ function handleLogin(data) {
   
   const hash = hashPassword(password);
   const masterSS = getMasterDB();
-  const mSheet = masterSS.getSheetByName("members");
+  const mSheet = masterSS.getSheetByName("staff");
   const headers = getHeaders(mSheet);
   const rows = mSheet.getDataRange().getValues();
   
@@ -427,7 +429,7 @@ function handleRegister(data) {
     return { success: false, error: "Missing required fields" };
   }
 
-  const membersSheet = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+  const membersSheet = getSheet("members", CURRENT_SCHOOL_ID);
   const headers = getHeaders(membersSheet);
   
   // Check if email exists
@@ -439,7 +441,7 @@ function handleRegister(data) {
   }
 
   // Get year group details to attach correct cheque color
-  const ygSheet = getSheet("year_groups", typeof user !== 'undefined' ? user.school : null);
+  const ygSheet = getSheet("year_groups", CURRENT_SCHOOL_ID);
   const ygHeaders = getHeaders(ygSheet);
   const ygRows = ygSheet.getDataRange().getValues();
   let cheque_color = "#1E293B"; // Default slate
@@ -577,7 +579,7 @@ function handleRegister(data) {
           if (year_group_id === "new_yg" && typeof generatedYgFolderId !== "undefined" && generatedYgFolderId) {
              ygFolderId = generatedYgFolderId;
           } else {
-             const ygSheet = getSheet("year_groups", typeof user !== 'undefined' ? user.school : null);
+             const ygSheet = getSheet("year_groups", CURRENT_SCHOOL_ID);
              const yHeaders = getHeaders(ygSheet);
              const yRows = ygSheet.getDataRange().getValues();
              for (let i = 1; i < yRows.length; i++) {
@@ -632,7 +634,7 @@ function changePassword(user, data) {
   if (!old_password || !new_password || !confirm_password) return { success: false, error: "Missing fields" };
   if (new_password !== confirm_password) return { success: false, error: "Passwords do not match" };
 
-  const membersSheet = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+  const membersSheet = getSheet("members", CURRENT_SCHOOL_ID);
   const headers = getHeaders(membersSheet);
   const rows = membersSheet.getDataRange().getValues();
   
@@ -650,13 +652,13 @@ function changePassword(user, data) {
 }
 
 function handleOnboardSchool(data) {
-  const { name, username, email, password, new_school_name, new_school_motto, new_school_colours, new_school_cheque_representation, new_school_type, new_school_admin_id, new_school_classes, new_school_houses } = data;
+  const { name, username, email, password, new_school_name, new_association_name, new_association_short_name, new_school_motto, new_school_colours, new_school_cheque_representation, new_school_type, new_school_admin_id, new_school_classes, new_school_houses } = data;
   if (!name || !username || !email || !password || !new_school_name || !new_school_type || !new_school_admin_id) {
     return { success: false, error: "Missing required fields for school onboarding" };
   }
 
   const masterSS = getMasterDB();
-  const membersSheet = masterSS.getSheetByName("members");
+  const membersSheet = masterSS.getSheetByName("staff");
   const schoolsSheet = masterSS.getSheetByName("schools");
   const headers = getHeaders(membersSheet);
   const sHeaders = getHeaders(schoolsSheet);
@@ -710,6 +712,8 @@ function handleOnboardSchool(data) {
   const schoolRowObj = {
      id: newSchoolId,
      name: new_school_name,
+     association_name: new_association_name || "",
+     association_short_name: new_association_short_name || "",
      motto: new_school_motto || "",
      colours: JSON.stringify(new_school_colours || []),
      cheque_representation: new_school_cheque_representation || "N/A",
@@ -793,7 +797,7 @@ function handleResendVerification(data) {
   const { email } = data;
   if (!email) return { success: false, error: "Missing email address" };
 
-  const membersSheet = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+  const membersSheet = getSheet("members", CURRENT_SCHOOL_ID);
   const headers = getHeaders(membersSheet);
   const rows = membersSheet.getDataRange().getValues();
 
@@ -817,7 +821,7 @@ function handleVerifyEmail(data) {
   const { token } = data;
   if (!token) return { success: false, error: "Missing verification token" };
 
-  const membersSheet = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+  const membersSheet = getSheet("members", CURRENT_SCHOOL_ID);
   const headers = getHeaders(membersSheet);
   const rows = membersSheet.getDataRange().getValues();
 
@@ -910,7 +914,7 @@ function sendVerificationEmail(sheet, headers, rowIndex, recipientEmail, userNam
 
 function validateToken(token) {
   if (!token) return null;
-  const membersSheet = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+  const membersSheet = getSheet("members", CURRENT_SCHOOL_ID);
   const headers = getHeaders(membersSheet);
   const rows = membersSheet.getDataRange().getValues();
   
@@ -981,7 +985,7 @@ function assignTargetRole(user, data) {
      return { success: false, error: err.message };
   }
 
-  const sheet = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+  const sheet = getSheet("members", CURRENT_SCHOOL_ID);
   const headers = getHeaders(sheet);
   const rows = sheet.getDataRange().getValues();
   
@@ -1015,24 +1019,24 @@ function getDashboard(user, data = {}) {
   const scope_id = data.scope_id || user.year_group_id;
   
   // Assemble basic stats based on active scope
-  const ygs = getSheetData("members", typeof user !== 'undefined' ? user.school : null).filter(m => 
+  const ygs = getSheetData("members", CURRENT_SCHOOL_ID).filter(m => 
      (m.school || "Aggrey Memorial") === userSchool && 
      (scope_type === "school" || m.year_group_id === scope_id || m.house_name === scope_id || m.final_class === scope_id)
   );
   
-  const posts = getSheetData("posts", typeof user !== 'undefined' ? user.school : null).filter(p => 
+  const posts = getSheetData("posts", CURRENT_SCHOOL_ID).filter(p => 
      (p.school || "Aggrey Memorial") === userSchool && 
      ((p.scope_type === scope_type && p.scope_id === scope_id) || (scope_type === "yeargroup" && p.year_group_id === scope_id)) && 
      p.status === "Approved"
   );
   
-  const activeCampaigns = getSheetData("campaigns", typeof user !== 'undefined' ? user.school : null).filter(c => 
+  const activeCampaigns = getSheetData("campaigns", CURRENT_SCHOOL_ID).filter(c => 
      (c.school || "Aggrey Memorial") === userSchool && 
      c.status === "active" && 
      (c.scope === "school" || c.scope_id === scope_id)
   );
   
-  const upcomingEvents = getSheetData("events", typeof user !== 'undefined' ? user.school : null).filter(e => {
+  const upcomingEvents = getSheetData("events", CURRENT_SCHOOL_ID).filter(e => {
      if ((e.school || "Aggrey Memorial") !== userSchool) return false;
      let isVisible = (e.scope === "platform" || e.scope === "school" || e.scope_id === scope_id);
      return isVisible && e.status !== "past";
@@ -1060,7 +1064,7 @@ function updateProfile(user, data) {
   const allowedFields = ["name", "username", "bio", "profession", "location", "phone", "linkedin", "social_links", "cover_url", "profile_pic",
                          "priv_bio", "priv_profession", "priv_location", "priv_phone", "priv_linkedin", "priv_email", "priv_social"];
   
-  const sheet = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+  const sheet = getSheet("members", CURRENT_SCHOOL_ID);
   const headers = getHeaders(sheet);
   
   let updatedAny = false;
@@ -1085,7 +1089,7 @@ function getMembers(user, data) {
   const scope_id = data.scope_id || user.year_group_id;
   const targetSchool = user.school || "Aggrey Memorial"; 
   
-  const allMembers = getSheetData("members", typeof user !== 'undefined' ? user.school : null).filter(m => (m.school || "Aggrey Memorial") === targetSchool);
+  const allMembers = getSheetData("members", CURRENT_SCHOOL_ID).filter(m => (m.school || "Aggrey Memorial") === targetSchool);
 
   let filteredMembers = [];
   
@@ -1105,7 +1109,7 @@ function getMembers(user, data) {
     filteredMembers = allMembers.filter(m => m.school === scope_id);
   } else if (scope_type === "all") {
     if (user.role.includes("Platform")) {
-        filteredMembers = getSheetData("members", typeof user !== 'undefined' ? user.school : null);
+        filteredMembers = getSheetData("members", CURRENT_SCHOOL_ID);
     }
   }
 
@@ -1187,10 +1191,10 @@ function getPosts(user, data) {
   const scope_type = data.scope_type || "yeargroup";
   const scope_id = data.scope_id || user.year_group_id;
 
-  const allPosts = getSheetData("posts", typeof user !== 'undefined' ? user.school : null).filter(p => (p.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
+  const allPosts = getSheetData("posts", CURRENT_SCHOOL_ID).filter(p => (p.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
   
   // Author filtering mapping caching
-  const allMembers = getSheetData("members", typeof user !== 'undefined' ? user.school : null);
+  const allMembers = getSheetData("members", CURRENT_SCHOOL_ID);
   const memMap = {};
   allMembers.forEach(m => memMap[m.id] = m);
 
@@ -1226,7 +1230,7 @@ function submitPost(user, data) {
   const { title, category, content } = data;
   if (!title || !category || !content) return { success: false, error: "Missing fields" };
 
-  const sheet = getSheet("posts", typeof user !== 'undefined' ? user.school : null);
+  const sheet = getSheet("posts", CURRENT_SCHOOL_ID);
   const headers = getHeaders(sheet);
   
   const scope_type = data.scope_type || "yeargroup";
@@ -1254,7 +1258,7 @@ function submitPost(user, data) {
 
 function updatePostStatus(user, action, data) {
   const { post_id, note } = data;
-  const sheet = getSheet("posts", typeof user !== 'undefined' ? user.school : null);
+  const sheet = getSheet("posts", CURRENT_SCHOOL_ID);
   const headers = getHeaders(sheet);
   const rows = sheet.getDataRange().getValues();
   
@@ -1277,7 +1281,7 @@ function updatePostStatus(user, action, data) {
            let proposedMonth = year + "-" + String(month).padStart(2,'0');
            
            // Check if this month is already dispatched
-           const nlSheet = getSheet("newsletters", typeof user !== 'undefined' ? user.school : null);
+           const nlSheet = getSheet("newsletters", CURRENT_SCHOOL_ID);
            const nlHeaders = getHeaders(nlSheet);
            const nlRows = nlSheet.getDataRange().getValues();
            let isDispatched = false;
@@ -1320,7 +1324,7 @@ function dispatchNewsletter(user, data) {
   const currentMonth = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0');
   
   // 1. Get Approved posts for the current month in this YG
-  const postSheet = getSheet("posts", typeof user !== 'undefined' ? user.school : null);
+  const postSheet = getSheet("posts", CURRENT_SCHOOL_ID);
   const pHeaders = getHeaders(postSheet);
   const pRows = postSheet.getDataRange().getValues();
   
@@ -1340,7 +1344,7 @@ function dispatchNewsletter(user, data) {
   }
 
   // 2. Get all members of the Year Group
-  const memberRows = getSheetData("members", typeof user !== 'undefined' ? user.school : null);
+  const memberRows = getSheetData("members", CURRENT_SCHOOL_ID);
   const recipients = memberRows
      .filter(m => m.year_group_id === user.year_group_id && m.email)
      .map(m => m.email);
@@ -1399,7 +1403,7 @@ function dispatchNewsletter(user, data) {
   });
 
   // 6. Log Newsletter Record
-  const nlSheet = getSheet("newsletters", typeof user !== 'undefined' ? user.school : null);
+  const nlSheet = getSheet("newsletters", CURRENT_SCHOOL_ID);
   nlSheet.appendRow([
       Utilities.getUuid(),
       currentMonth,
@@ -1421,9 +1425,9 @@ function getCampaigns(user, data) {
   const scopeFilter = data.scope || "all"; // my_school, all
   const userSchool = user.school || "Aggrey Memorial";
   
-  const allCampaigns = getSheetData("campaigns", typeof user !== 'undefined' ? user.school : null).filter(c => (c.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
+  const allCampaigns = getSheetData("campaigns", CURRENT_SCHOOL_ID).filter(c => (c.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
   
-  const allMembers = getSheetData("members", typeof user !== 'undefined' ? user.school : null);
+  const allMembers = getSheetData("members", CURRENT_SCHOOL_ID);
   const memMap = {};
   allMembers.forEach(m => memMap[m.id] = m);
 
@@ -1450,7 +1454,7 @@ function handleDonation(user, data) {
    if(!amount || isNaN(amount)) return { success: false, error: "Invalid amount" };
 
    // Log donation
-   const sheet = getSheet("donations", typeof user !== 'undefined' ? user.school : null);
+   const sheet = getSheet("donations", CURRENT_SCHOOL_ID);
    const headers = getHeaders(sheet);
    sheet.appendRow(headers.map(h => {
        if(h==="id") return Utilities.getUuid();
@@ -1462,7 +1466,7 @@ function handleDonation(user, data) {
    }));
    
    // Update campaign totals
-   const campSheet = getSheet("campaigns", typeof user !== 'undefined' ? user.school : null);
+   const campSheet = getSheet("campaigns", CURRENT_SCHOOL_ID);
    const cHeaders = getHeaders(campSheet);
    const rows = campSheet.getDataRange().getValues();
    for(let i=1; i<rows.length; i++) {
@@ -1487,9 +1491,9 @@ function getEvents(user, data) {
   const scopeFilter = data.scope || "all";
   const userSchool = user.school || "Aggrey Memorial";
   
-  const events = getSheetData("events", typeof user !== 'undefined' ? user.school : null).filter(e => (e.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
+  const events = getSheetData("events", CURRENT_SCHOOL_ID).filter(e => (e.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
   
-  const allMembers = getSheetData("members", typeof user !== 'undefined' ? user.school : null);
+  const allMembers = getSheetData("members", CURRENT_SCHOOL_ID);
   const memMap = {};
   allMembers.forEach(m => memMap[m.id] = m);
 
@@ -1504,7 +1508,7 @@ function getEvents(user, data) {
   });
 
   // Check RSVPs
-  const rsvps = getSheetData("rsvps", typeof user !== 'undefined' ? user.school : null).filter(r => r.user_id === user.id);
+  const rsvps = getSheetData("rsvps", CURRENT_SCHOOL_ID).filter(r => r.user_id === user.id);
   const myRsvpIds = rsvps.map(r => r.event_id);
 
   visible.forEach(e => {
@@ -1522,9 +1526,9 @@ function rsvpToEvent(user, data) {
    const { event_id } = data;
    
    // Check if already 
-   const rsvps = getSheetData("rsvps", typeof user !== 'undefined' ? user.school : null);
+   const rsvps = getSheetData("rsvps", CURRENT_SCHOOL_ID);
    let found = rsvps.find(r => r.event_id === event_id && r.user_id === user.id);
-   const sheet = getSheet("rsvps", typeof user !== 'undefined' ? user.school : null);
+   const sheet = getSheet("rsvps", CURRENT_SCHOOL_ID);
 
    if (found) {
      // Currently we don't have a remove row logic helper, typically you'd clear row or filter
@@ -1541,7 +1545,7 @@ function rsvpToEvent(user, data) {
    }));
    
    // If it has a virtual link, return it
-   const evts = getSheetData("events", typeof user !== 'undefined' ? user.school : null);
+   const evts = getSheetData("events", CURRENT_SCHOOL_ID);
    let evt = evts.find(e => e.id === event_id);
    return { success: true, data: { virtual_link: evt ? evt.virtual_link : "" } };
 }
@@ -1594,7 +1598,7 @@ function uploadImage(user, data) {
 
       // Log the upload in the gallery if it's not a profile or group picture
       if (group_id !== "profile_pics" && group_id !== "profile_covers" && group_id !== "group_avatars") {
-        const gSheet = getSheet("galleries", typeof user !== 'undefined' ? user.school : null);
+        const gSheet = getSheet("galleries", CURRENT_SCHOOL_ID);
         const headers = getHeaders(gSheet);
         gSheet.appendRow(headers.map(h => {
           if(h==="id") return Utilities.getUuid();
@@ -1665,11 +1669,11 @@ function getAlbums(user, data) {
     const scope_type = data.scope_type || "yeargroup";
     const scope_id = data.scope_id || user.year_group_id;
 
-    const allMembers = getSheetData("members", typeof user !== 'undefined' ? user.school : null);
+    const allMembers = getSheetData("members", CURRENT_SCHOOL_ID);
     const memMap = {};
     allMembers.forEach(m => memMap[m.id] = m);
 
-    const albums = getSheetData("albums", typeof user !== 'undefined' ? user.school : null).filter(a => {
+    const albums = getSheetData("albums", CURRENT_SCHOOL_ID).filter(a => {
        if ((a.school || "Aggrey Memorial") !== userSchool) return false;
        if (!((a.scope_type === scope_type && a.scope_id === scope_id) || a.group_id === scope_id)) return false;
        
@@ -1687,7 +1691,7 @@ function createAlbum(user, data) {
     const { group_id, name, description } = data;
     if (!name) return { success: false, error: "Name required" };
     
-    const sheet = getSheet("albums", typeof user !== 'undefined' ? user.school : null);
+    const sheet = getSheet("albums", CURRENT_SCHOOL_ID);
     const headers = getHeaders(sheet);
     let id = Utilities.getUuid();
     sheet.appendRow(headers.map(h => {
@@ -1711,11 +1715,11 @@ function getGalleryItems(user, data) {
     const scope_type = data.scope_type || "yeargroup";
     const scope_id = data.scope_id || user.year_group_id;
 
-    const allMembers = getSheetData("members", typeof user !== 'undefined' ? user.school : null);
+    const allMembers = getSheetData("members", CURRENT_SCHOOL_ID);
     const memMap = {};
     allMembers.forEach(m => memMap[m.id] = m);
 
-    let images = getSheetData("galleries", typeof user !== 'undefined' ? user.school : null).filter(g => {
+    let images = getSheetData("galleries", CURRENT_SCHOOL_ID).filter(g => {
        if ((g.school || "Aggrey Memorial") !== userSchool) return false;
        if (!((g.scope_type === scope_type && g.scope_id === scope_id) || g.group_id === scope_id)) return false;
        
@@ -1737,11 +1741,11 @@ function getBoardMessages(user, data) {
     const scope_id = data.scope_id || data.group_id || user.year_group_id;
     const userSchool = user.school || "Aggrey Memorial";
 
-    const allMembers = getSheetData("members", typeof user !== 'undefined' ? user.school : null);
+    const allMembers = getSheetData("members", CURRENT_SCHOOL_ID);
     const memMap = {};
     allMembers.forEach(m => memMap[m.id] = m);
 
-    let msgs = getSheetData("board_messages", typeof user !== 'undefined' ? user.school : null).filter(m => {
+    let msgs = getSheetData("board_messages", CURRENT_SCHOOL_ID).filter(m => {
        if ((m.school || "Aggrey Memorial") !== userSchool) return false;
        if (!((m.scope_type === scope_type && m.scope_id === scope_id) || m.group_id === scope_id)) return false;
        
@@ -1764,7 +1768,7 @@ function postBoardMessage(user, data) {
     const { group_id, content } = data;
     if(!content) return { success: false, error: "Content empty" };
 
-    const sheet = getSheet("board_messages", typeof user !== 'undefined' ? user.school : null);
+    const sheet = getSheet("board_messages", CURRENT_SCHOOL_ID);
     const headers = getHeaders(sheet);
     let msgId = Utilities.getUuid();
     sheet.appendRow(headers.map(h => {
@@ -1786,7 +1790,7 @@ function postBoardMessage(user, data) {
 
 function addBoardComment(user, data) {
     const { message_id, content } = data;
-    const sheet = getSheet("board_messages", typeof user !== 'undefined' ? user.school : null);
+    const sheet = getSheet("board_messages", CURRENT_SCHOOL_ID);
     const headers = getHeaders(sheet);
     const rows = sheet.getDataRange().getValues();
 
@@ -1809,7 +1813,7 @@ function addBoardComment(user, data) {
 
 function reactBoardMessage(user, data) {
     const { message_id, emoji } = data;
-    const sheet = getSheet("board_messages", typeof user !== 'undefined' ? user.school : null);
+    const sheet = getSheet("board_messages", CURRENT_SCHOOL_ID);
     const headers = getHeaders(sheet);
     const rows = sheet.getDataRange().getValues();
 
@@ -1866,8 +1870,11 @@ function getDB(schoolId) {
   return master;
 }
 
-function getSheet(name, schoolId) {
+function getSheet(name, schoolId = CURRENT_SCHOOL_ID) {
   let db = getDB(schoolId);
+  if (db.getId() === MASTER_DB_ID && name === "members") {
+      name = "staff";
+  }
   let sheet = db.getSheetByName(name);
   if (!sheet) {
       console.log("Sheet " + name + " not found in DB " + db.getId() + ". Auto-initializing schema.");
@@ -1882,8 +1889,8 @@ function getHeaders(sheet) {
   return sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).toLowerCase().replace(/\s+/g, '_'));
 }
 
-function getSheetData(name) {
-  const sheet = getSheet(name);
+function getSheetData(name, schoolId = CURRENT_SCHOOL_ID) {
+  const sheet = getSheet(name, schoolId);
   if (!sheet) return [];
   const headers = getHeaders(sheet);
   const rows = sheet.getDataRange().getValues();
@@ -1913,7 +1920,7 @@ function safeJsonParse(str, defaultVal) {
 }
 
 function getYearGroupsData() {
-   let rows = getSheetData("year_groups", typeof user !== 'undefined' ? user.school : null);
+   let rows = getSheetData("year_groups", CURRENT_SCHOOL_ID);
    let map = {};
    rows.forEach(r => map[r.id] = r);
    return map;
@@ -1927,7 +1934,7 @@ function INITIALIZE_SHEETS(targetDB = null) {
     const isMaster = ss.getId() === MASTER_DB_ID;
 
     const allSheets = {
-        "schools": ["id", "name", "motto", "colours", "cheque_representation", "type", "classes", "houses", "status", "admin_id", "avatar", "spreadsheet_id", "drive_folder_id"],
+        "schools": ["id", "name", "association_name", "association_short_name", "motto", "colours", "cheque_representation", "type", "classes", "houses", "status", "admin_id", "avatar", "spreadsheet_id", "drive_folder_id"],
         "year_groups": ["id", "school", "year", "nickname", "house_name", "cheque_colour", "avatar", "drive_folder_id"],
         "members": ["id", "name", "username", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "priv_social", "bio", "profession", "location", "phone", "linkedin", "social_links", "profile_pic", "cover_url", "school_admin_id", "verification_status", "drive_folder_id"],
         "posts": ["id", "title", "category", "content", "author_id", "author_name", "scope_type", "scope_id", "school", "submission_date", "status", "newsletter_month", "rejection_note"],
@@ -1945,15 +1952,15 @@ function INITIALIZE_SHEETS(targetDB = null) {
         "system_config": ["key", "value"],
         "logs": ["timestamp", "action", "user", "details"],
         "privileges": ["id", "account_type", "permissions_json", "description"],
-        "tiers": ["id", "tier_name", "level", "description", "monthly_fee"]
+        "tiers": ["id", "tier_name", "features_json"]
     };
 
     let sheetsToCreate = {};
     if (isMaster) {
-        const masterKeys = ["members", "schools", "tickets", "events", "newsletters", "privileges", "tiers", "system_config", "logs"];
+        const masterKeys = ["staff", "schools", "tickets", "events", "newsletters", "privileges", "tiers", "system_config", "logs"];
         masterKeys.forEach(k => { sheetsToCreate[k] = allSheets[k]; });
     } else {
-        const schoolKeys = ["members", "year_groups", "posts", "campaigns", "donations", "events", "rsvps", "newsletters", "board_messages", "albums", "galleries", "tickets", "petitions", "group_settings"];
+        const schoolKeys = ["members", "year_groups", "posts", "campaigns", "donations", "events", "rsvps", "newsletters", "board_messages", "albums", "galleries", "tickets", "petitions", "group_settings", "logs"];
         schoolKeys.forEach(k => { sheetsToCreate[k] = allSheets[k]; });
     }
 
@@ -1966,6 +1973,21 @@ function INITIALIZE_SHEETS(targetDB = null) {
             // Auditor Hotfix: Seed Initial Year Group
             if (s === "year_groups") {
                 sheet.appendRow(["yg-2012", "Aggrey Memorial", "2012", "The Pioneers", "Aggrey House", "#22c55e"]);
+            }
+            if (s === "privileges") {
+                sheet.appendRow(["priv_sys", "IT Department", JSON.stringify({ "all": true }), "Unrestricted Global Platform Access"]);
+                sheet.appendRow(["priv_staff", "ICUNI Staff", JSON.stringify({ "view_all_schools": true, "manage_tickets": true }), "Global Read-Only + Support Access"]);
+                sheet.appendRow(["priv_sch_admin", "School Administrator", JSON.stringify({ "manage_school": true }), "Full control over a specific school"]);
+            }
+            if (s === "tiers") {
+                sheet.appendRow(["tier_1", "Member", JSON.stringify({ "base_features": true })]);
+                sheet.appendRow(["tier_2", "Club", JSON.stringify({ "base_features": true })]);
+                sheet.appendRow(["tier_3", "Execs/Admins", JSON.stringify({ "manage_group": true })]);
+                sheet.appendRow(["tier_4", "Super Admins", JSON.stringify({ "manage_school": true })]);
+                sheet.appendRow(["tier_5", "Staff Members", JSON.stringify({ "manage_system": true })]);
+            }
+            if (s === "system_config") {
+                sheet.appendRow(["feature_flags", JSON.stringify({ "maintenance_mode": false, "registration_open": true })]);
             }
         } else {
             // Schema Migration: Check if the sheet is missing new headers
@@ -1994,7 +2016,7 @@ function INITIALIZE_SHEETS(targetDB = null) {
 
 function getTickets(user, data) {
     const userSchool = user.school || "Aggrey Memorial";
-    let tickets = getSheetData("tickets", typeof user !== 'undefined' ? user.school : null).filter(t => (t.school || "Aggrey Memorial") === userSchool);
+    let tickets = getSheetData("tickets", CURRENT_SCHOOL_ID).filter(t => (t.school || "Aggrey Memorial") === userSchool);
     
     // Admins see tickets queued for them based on activeScope from UI, but typical dashboard needs to sort out "my tickets" vs "admin queue"
     // For now, return all school tickets and let frontend segment them
@@ -2005,7 +2027,7 @@ function submitTicket(user, data) {
     const { issue_type, description, initial_tier } = data;
     if (!description || !issue_type) return { success: false, error: "Missing fields" };
 
-    const sheet = getSheet("tickets", typeof user !== 'undefined' ? user.school : null);
+    const sheet = getSheet("tickets", CURRENT_SCHOOL_ID);
     const headers = getHeaders(sheet);
     let id = Utilities.getUuid();
     
@@ -2029,7 +2051,7 @@ function submitTicket(user, data) {
 
 function escalateTicket(user, data) {
     const { ticket_id } = data;
-    const sheet = getSheet("tickets", typeof user !== 'undefined' ? user.school : null);
+    const sheet = getSheet("tickets", CURRENT_SCHOOL_ID);
     const headers = getHeaders(sheet);
     const rows = sheet.getDataRange().getValues();
 
@@ -2055,7 +2077,7 @@ function escalateTicket(user, data) {
 
 function resolveTicket(user, data) {
     const { ticket_id, resolution } = data;
-    const sheet = getSheet("tickets", typeof user !== 'undefined' ? user.school : null);
+    const sheet = getSheet("tickets", CURRENT_SCHOOL_ID);
     const headers = getHeaders(sheet);
     const rows = sheet.getDataRange().getValues();
 
@@ -2097,7 +2119,7 @@ function migrateImages(user, data) {
 }
 
 function seedTestAccount(user, data) {
-    const sheet = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+    const sheet = getSheet("members", CURRENT_SCHOOL_ID);
     const headers = getHeaders(sheet);
     const newId = "usr_tester_seed_" + new Date().getTime();
     const newMember = {
@@ -2115,7 +2137,7 @@ function seedTestAccount(user, data) {
     };
     sheet.appendRow(headers.map(h => newMember[h] !== undefined ? newMember[h] : ""));
 
-    const ticketsSheet = getSheet("tickets", typeof user !== 'undefined' ? user.school : null);
+    const ticketsSheet = getSheet("tickets", CURRENT_SCHOOL_ID);
     if (ticketsSheet) {
         const tHeaders = getHeaders(ticketsSheet);
         const newTicket = {
@@ -2141,7 +2163,7 @@ function getGroupSettings(user, data) {
     const scope_id = data.scope_id || user.year_group_id || user.school;
     if (!scope_type || !scope_id) return { success: true, data: {} }; // fail gracefully for Dashboard
 
-    const rows = getSheetData("group_settings", typeof user !== 'undefined' ? user.school : null);
+    const rows = getSheetData("group_settings", CURRENT_SCHOOL_ID);
     const targetSchool = user.school || "Aggrey Memorial";
 
     const match = rows.find(r => 
@@ -2166,7 +2188,7 @@ function saveGroupSettings(user, data) {
        return { success: false, error: "Unauthorized. Must be an admin/exec." };
     }
 
-    const sheet = getSheet("group_settings", typeof user !== 'undefined' ? user.school : null);
+    const sheet = getSheet("group_settings", CURRENT_SCHOOL_ID);
     const headers = getHeaders(sheet);
     const rows = sheet.getDataRange().getValues();
     const targetSchool = user.school || "Aggrey Memorial";
@@ -2211,10 +2233,10 @@ function saveGroupSettings(user, data) {
 function getSystemOverview(user) {
   if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
 
-  const members = getSheetData("members", typeof user !== 'undefined' ? user.school : null);
-  const schools = getSheetData("schools", typeof user !== 'undefined' ? user.school : null);
-  const tickets = getSheetData("tickets", typeof user !== 'undefined' ? user.school : null);
-  const posts = getSheetData("posts", typeof user !== 'undefined' ? user.school : null);
+  const members = getSheetData("members", CURRENT_SCHOOL_ID);
+  const schools = getSheetData("schools", CURRENT_SCHOOL_ID);
+  const tickets = getSheetData("tickets", CURRENT_SCHOOL_ID);
+  const posts = getSheetData("posts", CURRENT_SCHOOL_ID);
 
   const openTickets = tickets.filter(t => t.status !== "Resolved");
   const escalatedTickets = tickets.filter(t => t.status === "Escalated");
@@ -2285,7 +2307,7 @@ function getSystemOverview(user) {
 function getStaffRoster(user) {
   if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
 
-  const members = getSheetData("members", typeof user !== 'undefined' ? user.school : null);
+  const members = getSheetData("members", CURRENT_SCHOOL_ID);
   const staff = members.filter(m => m.role === "IT Department");
 
   return {
@@ -2309,7 +2331,7 @@ function addStaffMember(user, data) {
   const { name, email, password } = data;
   if (!name || !email || !password) return { success: false, error: "Missing required fields: name, email, password" };
 
-  const ms = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+  const ms = getSheet("members", CURRENT_SCHOOL_ID);
   const mh = getHeaders(ms);
   const rows = ms.getDataRange().getValues();
 
@@ -2321,7 +2343,7 @@ function addStaffMember(user, data) {
     }
   }
 
-  const schoolsData = getSheetData("schools", typeof user !== 'undefined' ? user.school : null);
+  const schoolsData = getSheetData("schools", CURRENT_SCHOOL_ID);
   const targetSchool = schoolsData.length > 0 ? schoolsData[0].id : "AMOSA";
   const targetSchoolName = schoolsData.length > 0 ? schoolsData[0].name : "Aggrey Memorial";
 
@@ -2373,7 +2395,7 @@ function removeStaffMember(user, data) {
   // Don't allow self-removal
   if (userId === user.id) return { success: false, error: "Cannot remove yourself" };
 
-  const ms = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+  const ms = getSheet("members", CURRENT_SCHOOL_ID);
   const mh = getHeaders(ms);
   const rows = ms.getDataRange().getValues();
   const roleCol = mh.indexOf("role");
@@ -2398,7 +2420,7 @@ function removeSchool(user, data) {
   const { schoolId } = data;
   if (!schoolId) return { success: false, error: "Missing schoolId" };
 
-  const ss = getSheet("schools", typeof user !== 'undefined' ? user.school : null);
+  const ss = getSheet("schools", CURRENT_SCHOOL_ID);
   const sh = getHeaders(ss);
   const rows = ss.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
@@ -2469,7 +2491,7 @@ function overrideMember(user, data) {
   const allowedOverrides = ["role", "verification_status", "email_verified", "id_verified", "year_group_id", "year_group_nickname", "school", "name", "email", "house_name", "final_class", "gender", "cheque_colour"];
   if (allowedOverrides.indexOf(field) === -1) return { success: false, error: "Field not allowed for override: " + field };
 
-  const ms = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+  const ms = getSheet("members", CURRENT_SCHOOL_ID);
   const mh = getHeaders(ms);
   const rows = ms.getDataRange().getValues();
   const colIdx = mh.indexOf(field);
@@ -2491,7 +2513,7 @@ function saveFeatureFlags(user, data) {
   if (!flags) return { success: false, error: "Missing flags object" };
 
   // Upsert into system_config sheet
-  let sheet = getSheet("system_config", typeof user !== 'undefined' ? user.school : null);
+  let sheet = getSheet("system_config", CURRENT_SCHOOL_ID);
   if (!sheet) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     sheet = ss.insertSheet("system_config");
@@ -2518,7 +2540,7 @@ function saveFeatureFlags(user, data) {
 function getFeatureFlags(user) {
   if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
   let sheet;
-  try { sheet = getSheet("system_config", typeof user !== 'undefined' ? user.school : null); } catch(e) { return { success: true, data: {} }; }
+  try { sheet = getSheet("system_config", CURRENT_SCHOOL_ID); } catch(e) { return { success: true, data: {} }; }
   if (!sheet) return { success: true, data: {} };
   const headers = getHeaders(sheet);
   const rows = sheet.getDataRange().getValues();
@@ -2535,7 +2557,7 @@ function getFeatureFlags(user) {
 // ==========================================
 
 function seedICUNIControl() {
-  const ms = getSheet("members", typeof user !== 'undefined' ? user.school : null);
+  const ms = getSheet("members", CURRENT_SCHOOL_ID);
   const mh = getHeaders(ms);
   const existingRows = ms.getDataRange().getValues();
 
@@ -2554,12 +2576,12 @@ function seedICUNIControl() {
   }
 
   // Resolve a school to attach to
-  const schoolsData = getSheetData("schools", typeof user !== 'undefined' ? user.school : null);
+  const schoolsData = getSheetData("schools", CURRENT_SCHOOL_ID);
   const targetSchool = schoolsData.length > 0 ? schoolsData[0].id : "AMOSA";
   const targetSchoolName = schoolsData.length > 0 ? schoolsData[0].name : "Aggrey Memorial";
 
   // Resolve a year group
-  const ygData = getSheetData("year_groups", typeof user !== 'undefined' ? user.school : null);
+  const ygData = getSheetData("year_groups", CURRENT_SCHOOL_ID);
   const targetYG = ygData.length > 0 ? ygData[0].id : "ADMIN";
   const targetYGName = ygData.length > 0 ? (ygData[0].nickname || "Class of " + ygData[0].year) : "School Executives";
 
@@ -2660,7 +2682,7 @@ function seedICUNIControl() {
   });
 
   // ── 3. Support Tickets ──
-  const ts = getSheet("tickets", typeof user !== 'undefined' ? user.school : null);
+  const ts = getSheet("tickets", CURRENT_SCHOOL_ID);
   if (ts) {
     const th = getHeaders(ts);
     const tickets = [
@@ -2687,7 +2709,7 @@ function seedICUNIControl() {
   }
 
   // ── 4. Newsletter Posts ──
-  const ps = getSheet("posts", typeof user !== 'undefined' ? user.school : null);
+  const ps = getSheet("posts", CURRENT_SCHOOL_ID);
   if (ps) {
     const ph = getHeaders(ps);
     const posts = [
@@ -2717,7 +2739,7 @@ function seedICUNIControl() {
   }
 
   // ── 5. Board Message ──
-  const bs = getSheet("board_messages", typeof user !== 'undefined' ? user.school : null);
+  const bs = getSheet("board_messages", CURRENT_SCHOOL_ID);
   if (bs) {
     const bh = getHeaders(bs);
     const bRow = {
@@ -2787,3 +2809,4 @@ function rotateLogs() {
 function MANUAL_SCRUB_MASTER_DB() {
   handleAction('force_reset_db', {}, 'admin');
 }
+
