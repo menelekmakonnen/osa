@@ -1923,8 +1923,10 @@ function getYearGroupsData() {
  * Utility to run once to setup sheets schema manually if empty.
  */
 function INITIALIZE_SHEETS(targetDB = null) {
-    const ss = targetDB || getDB();
-    const sheetsToCreate = {
+    const ss = targetDB || getDB(null);
+    const isMaster = ss.getId() === MASTER_DB_ID;
+
+    const allSheets = {
         "schools": ["id", "name", "motto", "colours", "cheque_representation", "type", "classes", "houses", "status", "admin_id", "avatar", "spreadsheet_id", "drive_folder_id"],
         "year_groups": ["id", "school", "year", "nickname", "house_name", "cheque_colour", "avatar", "drive_folder_id"],
         "members": ["id", "name", "username", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "priv_social", "bio", "profession", "location", "phone", "linkedin", "social_links", "profile_pic", "cover_url", "school_admin_id", "verification_status", "drive_folder_id"],
@@ -1939,8 +1941,19 @@ function INITIALIZE_SHEETS(targetDB = null) {
         "galleries": ["id", "scope_type", "scope_id", "school", "album_id", "uploaded_by_id", "uploaded_by_name", "url", "timestamp"],
         "tickets": ["id", "author_id", "author_name", "school", "issue_type", "description", "status", "current_tier", "created_at", "last_escalated_at", "resolution"],
         "petitions": ["id", "target_sa_id", "target_sa_name", "scope_type", "scope_id", "school", "reason", "signatures", "status", "created_at"],
-        "group_settings": ["id", "scope_type", "scope_id", "school", "settings_json", "updated_at"]
+        "group_settings": ["id", "scope_type", "scope_id", "school", "settings_json", "updated_at"],
+        "system_config": ["key", "value"],
+        "logs": ["timestamp", "action", "user", "details"]
     };
+
+    let sheetsToCreate = {};
+    if (isMaster) {
+        const masterKeys = ["members", "schools", "system_config", "logs"];
+        masterKeys.forEach(k => { sheetsToCreate[k] = allSheets[k]; });
+    } else {
+        const schoolKeys = ["members", "year_groups", "posts", "campaigns", "donations", "events", "rsvps", "newsletters", "board_messages", "albums", "galleries", "tickets", "petitions", "group_settings"];
+        schoolKeys.forEach(k => { sheetsToCreate[k] = allSheets[k]; });
+    }
 
     for (let s in sheetsToCreate) {
         let sheet = ss.getSheetByName(s);
@@ -2767,3 +2780,8 @@ function rotateLogs() {
   console.log("Exported " + (rows.length - 1) + " logs to " + archiveName);
 }
 
+
+
+function MANUAL_SCRUB_MASTER_DB() {
+  handleAction('force_reset_db', {}, 'admin');
+}
