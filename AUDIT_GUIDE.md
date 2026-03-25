@@ -1,39 +1,116 @@
-# ICUNI Labs OSA - Auditor & Tester Guide
+# ICUNI Labs OSA — Auditor & Tester Guide
 
-Welcome to the OSA (Old Students Association) Platform! This guide provides an overview of the platform's architecture, testing procedures, and the specific features available to staff members at all hierarchical levels.
+## Who You Are
 
-## 1. Introduction to OSA
-The OSA Platform is a comprehensive management and engagement tool designed for alumni associations. It allows schools, year groups, houses, and clubs to manage memberships, process event RSVPs, execute fundraising campaigns, dispatch newsletters, and share updates seamlessly.
+You are testing as an **ICUNI Labs Staff Member** — the **seniormost authority** on the entire OSA platform. You sit at **Tier 5 (IT Department)**, which is above every school's Super Admin (Tier 4), Year Group executives (Tier 1), and all other administrators.
 
-## 2. Staff & Administrative Features
-For the purpose of this audit, your account has been provisioned with `"IT Department"` or `"Super Admin"` privileges. This top-tier authorization grants you unrestricted access to all platform features, bypassing branch-level limitations.
+**Your role can do everything. No feature is off-limits.**
 
-**Key Features & Workflows to Test:**
-- **ICUNI Labs Cockpit:** Verify that the global system overview aggregates metrics from various schools down to individual year groups accurately.
-- **Governance & Role Assignments:** Test appointing and modifying leadership roles across the 5-tier architecture (from Tier 1: Year Group up to Tier 5: Platform Admin). Ensure scope validations strictly hold.
-- **Post & Newsletter Moderation:** Test the approval, rejection, and final dispatch workflow for newsletters in different association scopes.
-- **Fundraising Campaigns:** Create campaigns and review the contribution simulation workflows to ensure transactional states update properly.
-- **Ticketing & Support Desk:** Review the escalation and resolution workflow for submitted user support tickets.
-- **Event Management:** Deploy events with multi-tier visibility (e.g., School-wide versus single Year Group).
+---
 
-## 3. Login Instructions
-Your specific login credentials have been securely provisioned and provided to you independently by the system administrator. 
+## Login Credentials
 
-To log in:
-1. Navigate to the OSA Platform portal.
-2. Enter the secure Email and Password given to you privately. 
-*(Note: For strict security and compliance reasons, login credentials or default seeds are intentionally omitted from this repository's documentation.)*
-3. Once authenticated, your dashboard will automatically adapt to reflect your global administration scope.
+Your credentials have been provided to you privately by the system administrator. Navigate to the portal, enter your email and password, and you will be authenticated directly into the system with full IT Department authority.
 
-## 4. Testing & Feedback Expectations
-We strongly encourage a rigorous, comprehensive audit of the platform.
+*(Credentials are never stored in the repository for security compliance.)*
 
-While discovering and reporting bugs or functional regressions is a primary goal, we equally value your insights beyond just what is "broken". **Please also suggest improvements in the following areas:**
-- **UX/UI Improvements:** How can navigation, responsiveness, or aesthetics be modernized and streamlined?
-- **Architectural Enhancements:** Do you identify any potential performance bottlenecks or technical debt in the current foundation?
-- **Security & Authorization:** Are there any permission escalations or strict validation flaws across the role tiers?
-- **Feature Enhancements:** What additional capabilities would transform the platform experience for end-users, moderators, and the executive staff?
+---
 
-Please document your architectural suggestions and user-experience improvements directly alongside your standard bug reports.
+## Your Exclusive Interface: The Cockpit
+
+Unlike regular members who see a Dashboard, and unlike school Super Admins who see the Super Admin panel, you have access to the **ICUNI Labs Cockpit** — a completely separate engineering control centre only visible to IT Department staff.
+
+Access it from the sidebar: **Administration → Cockpit**
+
+### Cockpit Features to Test
+
+The Cockpit has **5 tabs**. Test every one:
+
+#### 1. Overview
+- **KPI Strip:** Verify total Schools, Members, Open Tickets, Pending Posts aggregate correctly.
+- **Escalated Tickets:** Confirm tickets that reached the highest tier appear here.
+- **Staff Roster:** Add a new IT Department staff member. Try removing one (not yourself).
+- **Recent Activity:** Confirm the latest platform activity appears chronologically.
+
+#### 2. Schools
+- **Add a School:** Click "Add School", fill in the form, submit. Verify the new school appears in the registry.
+- **Remove a School:** Click the trash icon next to a school. Confirm destructive action prompt. Verify it disappears.
+- **Status Badges:** Check that school status (Active/Pending/Approved) renders correctly.
+
+#### 3. Member Override
+- **Search:** Enter a name or email. Results should pull from the entire platform, not just your school.
+- **Override:** Select a member, choose a field (e.g. "role"), enter a new value (e.g. "School Administrator"), and click "Apply Override". Verify the change persists.
+- **Fields available:** role, verification_status, email_verified, id_verified, year_group_id, year_group_nickname, school, name, email, house_name, final_class, gender.
+
+#### 4. Spreadsheet (Raw Data Access)
+- **Sheet Selector:** Switch between all 12 sheets (members, posts, campaigns, events, tickets, schools, year_groups, donations, rsvps, newsletters, board_messages, group_settings).
+- **Filter:** Type in the search box to filter rows by any column value.
+- **Cell Edit:** Click any cell to open the edit modal. Change the value and save. Verify the change is written through to the backend.
+- **Sensitive fields** (password, session_token) are masked with `••••••` and blocked from direct editing.
+
+#### 5. Feature Flags
+- **Toggle each flag** on/off:
+  - Fundraising Module
+  - Newsletters Module
+  - Cross-School Events
+  - Payment Gateway (v2)
+  - Admin Approval for Registrations
+- **Save to Backend:** Click "Save to Backend". Verify a success toast appears.
+- **Persistence:** Reload the page. Confirm flags retain their saved state.
+
+---
+
+## User View Mode
+
+From the Cockpit, click the **"User View"** button. This switches your interface to look exactly like a regular member's Dashboard — but with a **Tier Switcher** bar at the top.
+
+Use the Tier buttons (T1–T5) to simulate what different role-levels see. Test:
+- T1 (Year Group) — see year-group-scoped content
+- T2 (Club) — see club-scoped content
+- T3 (House) — see house-scoped content
+- T4 (School) — see school-wide content
+- T5 (Platform) — see all-school content
+
+Click "Cockpit" to return to the engineering view.
+
+---
+
+## Other Pages You Have Full Access To
+
+Since IT Department is the highest authority, you also have access to:
+
+| Page | What to Test |
+|------|-------------|
+| **Dashboard** | Posting, metrics, scope switching |
+| **Newsletter** | Post submission, approval, rejection, dispatch |
+| **Fundraising** | Campaign listing, donation flow |
+| **Events** | Event listing, RSVP, Create Event modal (admin only) |
+| **Members Directory** | Search, privacy filters, profile viewing |
+| **Group Board** | Posting messages, reactions, comments |
+| **Gallery** | Album creation, image uploads |
+| **Tech Support** | Ticket submission, escalation, resolution |
+| **Admin Panel** | Role assignment, social links, group avatar upload |
+| **Super Admin** | School onboarding, feature flags (original), accountability tracker, petitions |
+| **Profile** | Edit personal info, master override, password change, profile picture |
+
+---
+
+## What We Want From You
+
+### 1. Bug Reports
+Report anything that doesn't work — broken buttons, blank pages, errors, failed API calls, incorrect data.
+
+### 2. Permission Testing
+- Verify that you (IT Department) can access **everything**.
+- Verify that lower tiers **cannot** access higher-tier features (test via User View tier switching).
+
+### 3. Improvement Suggestions
+Go beyond bugs. Suggest:
+- **UX/UI improvements** — better navigation, responsive issues, accessibility gaps
+- **Missing features** — what would make this platform more powerful?
+- **Security concerns** — any authorization bypass or data exposure risks
+- **Architecture** — performance bottlenecks, technical debt observations
+
+---
 
 *Thank you for helping us elevate the ICUNI Labs OSA Platform!*

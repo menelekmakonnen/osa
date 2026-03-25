@@ -305,6 +305,18 @@ function handleAction(action, data, token) {
       return addStaffMember(user, data);
     case "removeStaffMember":
       return removeStaffMember(user, data);
+    case "removeSchool":
+      return removeSchool(user, data);
+    case "getSheetDataRaw":
+      return getSheetDataRaw(user, data);
+    case "updateSheetCell":
+      return updateSheetCell(user, data);
+    case "overrideMember":
+      return overrideMember(user, data);
+    case "saveFeatureFlags":
+      return saveFeatureFlags(user, data);
+    case "getFeatureFlags":
+      return getFeatureFlags(user);
 
     default:
       return { success: false, error: "Unknown action" };
@@ -2055,6 +2067,147 @@ function removeStaffMember(user, data) {
   }
 
   return { success: false, error: "Staff member not found" };
+}
+
+// ==========================================
+// ICUNI Labs — Extended Platform Control
+// ==========================================
+
+function removeSchool(user, data) {
+  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  const { schoolId } = data;
+  if (!schoolId) return { success: false, error: "Missing schoolId" };
+
+  const ss = getSheet("schools");
+  const sh = getHeaders(ss);
+  const rows = ss.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const row = rowToObject(rows[i], sh);
+    if (row.id === schoolId) {
+      ss.deleteRow(i + 1);
+      return { success: true, message: "School '" + row.name + "' removed successfully." };
+    }
+  }
+  return { success: false, error: "School not found" };
+}
+
+function getSheetDataRaw(user, data) {
+  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  const { sheetName, limit } = data;
+  if (!sheetName) return { success: false, error: "Missing sheetName" };
+
+  const allowed = ["members", "posts", "campaigns", "events", "tickets", "schools", "year_groups", "donations", "rsvps", "newsletters", "board_messages", "group_settings", "system_config"];
+  if (allowed.indexOf(sheetName) === -1) return { success: false, error: "Sheet not allowed: " + sheetName };
+
+  const sheet = getSheet(sheetName);
+  if (!sheet) return { success: false, error: "Sheet not found" };
+  const headers = getHeaders(sheet);
+  const allRows = sheet.getDataRange().getValues();
+  const maxRows = limit ? Math.min(parseInt(limit), allRows.length) : allRows.length;
+  const result = [];
+  for (let i = 1; i < maxRows; i++) {
+    let obj = {};
+    for (let j = 0; j < headers.length; j++) {
+      // Mask passwords in output
+      if (headers[j] === "password" || headers[j] === "session_token") {
+        obj[headers[j]] = "••••••";
+      } else {
+        obj[headers[j]] = allRows[i][j];
+      }
+    }
+    obj._rowIndex = i + 1;
+    result.push(obj);
+  }
+  return { success: true, data: { headers: headers, rows: result, totalRows: allRows.length - 1 } };
+}
+
+function updateSheetCell(user, data) {
+  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  const { sheetName, rowIndex, columnName, value } = data;
+  if (!sheetName || !rowIndex || !columnName) return { success: false, error: "Missing required fields" };
+
+  // Block editing password and session_token for safety
+  if (columnName === "password" || columnName === "session_token" || columnName === "token_expiry") {
+    return { success: false, error: "Cannot directly edit " + columnName + ". Use the Override panel." };
+  }
+
+  const sheet = getSheet(sheetName);
+  if (!sheet) return { success: false, error: "Sheet not found" };
+  const headers = getHeaders(sheet);
+  const colIdx = headers.indexOf(columnName);
+  if (colIdx === -1) return { success: false, error: "Column not found: " + columnName };
+
+  sheet.getRange(parseInt(rowIndex), colIdx + 1).setValue(value);
+  return { success: true, message: "Cell updated: " + sheetName + "[" + rowIndex + "][" + columnName + "] = " + value };
+}
+
+function overrideMember(user, data) {
+  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  const { memberId, field, value } = data;
+  if (!memberId || !field) return { success: false, error: "Missing memberId or field" };
+
+  const allowedOverrides = ["role", "verification_status", "email_verified", "id_verified", "year_group_id", "year_group_nickname", "school", "name", "email", "house_name", "final_class", "gender", "cheque_colour"];
+  if (allowedOverrides.indexOf(field) === -1) return { success: false, error: "Field not allowed for override: " + field };
+
+  const ms = getSheet("members");
+  const mh = getHeaders(ms);
+  const rows = ms.getDataRange().getValues();
+  const colIdx = mh.indexOf(field);
+  if (colIdx === -1) return { success: false, error: "Column not found" };
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rowToObject(rows[i], mh);
+    if (row.id === memberId) {
+      ms.getRange(i + 1, colIdx + 1).setValue(value);
+      return { success: true, message: row.name + "'s " + field + " updated to " + value };
+    }
+  }
+  return { success: false, error: "Member not found" };
+}
+
+function saveFeatureFlags(user, data) {
+  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  const { flags } = data;
+  if (!flags) return { success: false, error: "Missing flags object" };
+
+  // Upsert into system_config sheet
+  let sheet = getSheet("system_config");
+  if (!sheet) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    sheet = ss.insertSheet("system_config");
+    sheet.appendRow(["key", "value", "updated_at", "updated_by"]);
+  }
+  const headers = getHeaders(sheet);
+  const rows = sheet.getDataRange().getValues();
+  let found = false;
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][headers.indexOf("key")] === "feature_flags") {
+      sheet.getRange(i + 1, headers.indexOf("value") + 1).setValue(JSON.stringify(flags));
+      sheet.getRange(i + 1, headers.indexOf("updated_at") + 1).setValue(new Date().toISOString());
+      sheet.getRange(i + 1, headers.indexOf("updated_by") + 1).setValue(user.name);
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    sheet.appendRow(["feature_flags", JSON.stringify(flags), new Date().toISOString(), user.name]);
+  }
+  return { success: true, message: "Feature flags saved" };
+}
+
+function getFeatureFlags(user) {
+  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  let sheet;
+  try { sheet = getSheet("system_config"); } catch(e) { return { success: true, data: {} }; }
+  if (!sheet) return { success: true, data: {} };
+  const headers = getHeaders(sheet);
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][headers.indexOf("key")] === "feature_flags") {
+      return { success: true, data: safeJsonParse(rows[i][headers.indexOf("value")], {}) };
+    }
+  }
+  return { success: true, data: {} };
 }
 
 // ==========================================

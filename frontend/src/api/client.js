@@ -212,4 +212,12 @@ export const api = {
   getStaffRoster: () => apiRequest("getStaffRoster"),
   addStaffMember: (data) => apiRequest("addStaffMember", data),
   removeStaffMember: (userId) => apiRequest("removeStaffMember", { userId }),
+
+  // ICUNI Labs — Extended Platform Control
+  removeSchool: (schoolId) => apiRequest("removeSchool", { schoolId }),
+  getSheetDataRaw: (sheetName, limit) => apiRequest("getSheetDataRaw", { sheetName, limit }),
+  updateSheetCell: (sheetName, rowIndex, columnName, value) => apiRequest("updateSheetCell", { sheetName, rowIndex, columnName, value }),
+  overrideMember: (memberId, field, value) => apiRequest("overrideMember", { memberId, field, value }),
+  saveFeatureFlags: (flags) => apiRequest("saveFeatureFlags", { flags }),
+  getFeatureFlags: () => apiRequest("getFeatureFlags"),
 };
