@@ -23,6 +23,24 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type"
 };
 
+// ==========================================
+// CORE INFRASTRUCTURE: MULTI-SHEET ROUTING & SECURITY
+// ==========================================
+
+let CURRENT_SCHOOL_ID = "ICUNI_LABS"; // Execution-scoped global state
+
+const MASTER_DB_ID = "1mXY-MoxvTiUcDOtOYkDoG2PtaE2-aN0JpvpCrDA2Jcc";
+const MASTER_FOLDER_ID = "1rqI7YHf7Z1pvSkUVgbx2d_Uj4JZbPpFO";
+
+/**
+ * SHA-256 Password Hashing Helper
+ */
+function hashPassword(password) {
+  const salt = "ICUNI_OSA_SALT_2026";
+  const signature = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password + salt);
+  return signature.map(byte => (byte < 0 ? byte + 256 : byte).toString(16).padStart(2, '0')).join('');
+}
+
 /**
  * Handle HTTP OPTIONS request for CORS preflight
  */
@@ -192,6 +210,11 @@ function handleAction(action, data, token) {
     return { success: false, error: "Invalid or expired token", code: 401 };
   }
 
+  // Set Global Routing State for this execution thread
+  if (user.school) {
+    CURRENT_SCHOOL_ID = user.school;
+  }
+
     // Protected actions
   switch (action) {
     case "getDashboard":
@@ -330,40 +353,66 @@ function handleAction(action, data, token) {
 function handleLogin(data) {
   const { email, password } = data;
   if (!email || !password) return { success: false, error: "Missing credentials" };
+  const hash = hashPassword(password);
 
-  const membersSheet = getSheet("members");
-  const headers = getHeaders(membersSheet);
-  const rows = membersSheet.getDataRange().getValues();
+  const masterSS = getMasterDB();
+  let mSheet = masterSS.getSheetByName("members");
+  if (!mSheet) return { success: false, error: "Backend uninitialized" };
+  const headers = getHeaders(mSheet);
+  const rows = mSheet.getDataRange().getValues();
   
+  // 1. Check Master DB (ICUNI Staff & Built-in Execs)
   for (let i = 1; i < rows.length; i++) {
     const rowObj = rowToObject(rows[i], headers);
-    if (rowObj.email.toLowerCase() === email.toLowerCase()) {
-      // Basic check (In a real app, use bcrypt hashing)
-      if (rowObj.password === password) {
-        // Create session token
-        const token = Utilities.getUuid();
-        const expiry = new Date();
-        expiry.setDate(expiry.getDate() + 7); // 7 day expiry
-        
-        // Update token in sheet
-        let rowToUpdate = i + 1;
-        membersSheet.getRange(rowToUpdate, headers.indexOf("session_token") + 1).setValue(token);
-        membersSheet.getRange(rowToUpdate, headers.indexOf("token_expiry") + 1).setValue(expiry.toISOString());
-        
-        // Return safe user object
-        delete rowObj.password;
-        delete rowObj.session_token;
-        return { 
-          success: true, 
-          data: { 
-            token: token, 
-            user: applyPrivacyFilters(rowObj, rowObj) // Self can see everything
-          } 
-        };
+    if (String(rowObj.email).toLowerCase() === email.toLowerCase()) {
+      if (rowObj.password === hash || rowObj.password === password) { // Legacy fallback
+        return finalizeLogin(mSheet, i + 1, headers, rowObj);
       }
+      return { success: false, error: "Invalid email or password." };
     }
   }
+
+  // 2. Iterate Distributed School DBs
+  const sSheet = masterSS.getSheetByName("schools");
+  if (!sSheet) return { success: false, error: "Invalid email or password" };
+  const sHeaders = getHeaders(sSheet);
+  const sRows = sSheet.getDataRange().getValues();
+  
+  for(let j=1; j<sRows.length; j++){
+      let sRow = rowToObject(sRows[j], sHeaders);
+      if(!sRow.spreadsheet_id) continue;
+      try {
+         const schoolSS = SpreadsheetApp.openById(sRow.spreadsheet_id);
+         const schoolMSheet = schoolSS.getSheetByName("members");
+         if(!schoolMSheet) continue;
+         let smHeaders = getHeaders(schoolMSheet);
+         let smRows = schoolMSheet.getDataRange().getValues();
+         for(let k=1; k<smRows.length; k++){
+            let uRow = rowToObject(smRows[k], smHeaders);
+            if(String(uRow.email).toLowerCase() === email.toLowerCase()) {
+               if(uRow.password === hash || uRow.password === password) {
+                  return finalizeLogin(schoolMSheet, k + 1, smHeaders, uRow);
+               } else {
+                  return { success: false, error: "Invalid email or password" };
+               }
+            }
+         }
+      } catch(e) {
+         // School DB access failed or was deleted; skip
+      }
+  }
   return { success: false, error: "Invalid email or password" };
+}
+
+function finalizeLogin(sheet, rowIndex, headers, rowObj) {
+    const token = Utilities.getUuid();
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + 7); // 7 day expiry
+    sheet.getRange(rowIndex, headers.indexOf("session_token") + 1).setValue(token);
+    sheet.getRange(rowIndex, headers.indexOf("token_expiry") + 1).setValue(expiry.toISOString());
+    delete rowObj.password;
+    delete rowObj.session_token;
+    return { success: true, data: { token: token, user: applyPrivacyFilters(rowObj, rowObj) } };
 }
 
 function handleRegister(data) {
@@ -419,7 +468,7 @@ function handleRegister(data) {
     name: name,
     username: username,
     email: email.toLowerCase(),
-    password: password, // In prod, hash this
+    password: hashPassword(password),
     role: "Member",
     year_group_id: actual_yg_id,
     year_group_nickname: yg_nickname,
@@ -485,10 +534,10 @@ function changePassword(user, data) {
   for (let i = 1; i < rows.length; i++) {
     const rowObj = rowToObject(rows[i], headers);
     if (rowObj.id === user.id) {
-      if (rowObj.password !== old_password) {
+      if (rowObj.password !== hashPassword(old_password) && rowObj.password !== old_password) {
          return { success: false, error: "Incorrect old password" };
       }
-      membersSheet.getRange(i + 1, headers.indexOf("password") + 1).setValue(new_password);
+      membersSheet.getRange(i + 1, headers.indexOf("password") + 1).setValue(hashPassword(new_password));
       return { success: true, message: "Password updated successfully" };
     }
   }
@@ -501,16 +550,17 @@ function handleOnboardSchool(data) {
     return { success: false, error: "Missing required fields for school onboarding" };
   }
 
-  const membersSheet = getSheet("members");
-  const schoolsSheet = getSheet("schools");
+  const masterSS = getMasterDB();
+  const membersSheet = masterSS.getSheetByName("members");
+  const schoolsSheet = masterSS.getSheetByName("schools");
   const headers = getHeaders(membersSheet);
   const sHeaders = getHeaders(schoolsSheet);
   
-  // Check if email exists
+  // Check if email exists in Master
   const rows = membersSheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][headers.indexOf("email")].toLowerCase() === email.toLowerCase()) {
-      return { success: false, error: "Email already registered" };
+      return { success: false, error: "Email already registered in Master" };
     }
   }
 
@@ -519,6 +569,31 @@ function handleOnboardSchool(data) {
   const expiry = new Date();
   expiry.setDate(expiry.getDate() + 7);
   const newSchoolId = Utilities.getUuid();
+
+  // 1. Build Google Drive Folder Architecture
+  const masterFolder = DriveApp.getFolderById(MASTER_FOLDER_ID);
+  let schoolsBaseFolder;
+  const schoolsIter = masterFolder.getFoldersByName("Schools");
+  if(schoolsIter.hasNext()) {
+    schoolsBaseFolder = schoolsIter.next();
+  } else {
+    schoolsBaseFolder = masterFolder.createFolder("Schools");
+  }
+
+  const schoolFolder = schoolsBaseFolder.createFolder(new_school_name + " [" + newSchoolId.substring(0,8) + "]");
+  schoolFolder.createFolder("School_Info");
+  schoolFolder.createFolder("Admins");
+  schoolFolder.createFolder("Year Groups");
+
+  // 2. Generate Standalone School Spreadsheet
+  const newSS = SpreadsheetApp.create(new_school_name + " Database");
+  const ssId = newSS.getId();
+  DriveApp.getFileById(ssId).moveTo(schoolFolder); // Move to School Folder
+  
+  // 3. Initialize Schema on the new School DB
+  INITIALIZE_SHEETS(newSS);
+
+  // 4. Save to Master Registry
   const schoolRowObj = {
      id: newSchoolId,
      name: new_school_name,
@@ -528,17 +603,21 @@ function handleOnboardSchool(data) {
      type: new_school_type,
      classes: JSON.stringify(new_school_classes || []),
      houses: JSON.stringify(new_school_houses || []),
-     status: "Approved", // Auto-approved to unblock testing
-     admin_id: newId
+     status: "Approved", // Auto-approved
+     admin_id: newId,
+     spreadsheet_id: ssId,
+     drive_folder_id: schoolFolder.getId()
   };
   schoolsSheet.appendRow(sHeaders.map(h => schoolRowObj[h] !== undefined ? schoolRowObj[h] : ""));
 
+  // 5. Save Admin User to the NEW School DB
+  const schoolMembersSheet = newSS.getSheetByName("members");
   const newRowObj = {
     id: newId,
     name: name,
     username: username,
     email: email.toLowerCase(),
-    password: password, // In prod, hash this
+    password: hashPassword(password),
     role: "School Administrator", // Pending Super Admin
     year_group_id: "ADMIN",
     year_group_nickname: "School Executives",
@@ -552,16 +631,15 @@ function handleOnboardSchool(data) {
     session_token: token,
     token_expiry: expiry.toISOString(),
     school_admin_id: new_school_admin_id,
-    verification_status: "Approved", // Auto-approved for MVP
-    // Privacy defaults
-    priv_email: "all", // Admins usually public
+    verification_status: "Approved", // Auto-approved
+    priv_email: "all",
     priv_phone: "all",
     priv_location: "all",
     priv_profession: "all",
     priv_linkedin: "all",
     priv_bio: "all",
     priv_social: "all",
-    bio: `School Administrator (Approved)`,
+    bio: "School Administrator (Approved)",
     profession: "",
     location: "",
     phone: "",
@@ -570,9 +648,10 @@ function handleOnboardSchool(data) {
     cover_url: ""
   };
 
-  const newRowArray = headers.map(h => newRowObj[h] !== undefined ? newRowObj[h] : "");
-  membersSheet.appendRow(newRowArray);
-  const newRowIndex = membersSheet.getLastRow();
+  const smHeaders = getHeaders(schoolMembersSheet);
+  const newRowArray = smHeaders.map(h => newRowObj[h] !== undefined ? newRowObj[h] : "");
+  schoolMembersSheet.appendRow(newRowArray);
+  const newRowIndex = schoolMembersSheet.getLastRow();
   
   delete newRowObj.password;
   delete newRowObj.session_token;
@@ -1556,9 +1635,33 @@ function reactBoardMessage(user, data) {
 // DB Utility Helpers
 // ==========================================
 
+function getMasterDB() {
+  return SpreadsheetApp.openById(MASTER_DB_ID);
+}
+
 function getDB() {
-  // Bound to the official OSA Database Spreadsheet
-  return SpreadsheetApp.openById("1mXY-MoxvTiUcDOtOYkDoG2PtaE2-aN0JpvpCrDA2Jcc");
+  if (CURRENT_SCHOOL_ID === "ICUNI_LABS") return getMasterDB();
+  
+  // Use ScriptCache to avoid heavy iterative reading per execution
+  const cache = CacheService.getScriptCache();
+  const cachedId = cache.get("school_db_" + CURRENT_SCHOOL_ID);
+  if (cachedId) return SpreadsheetApp.openById(cachedId);
+
+  // Fallback map: Fetch from master schools registry
+  const master = getMasterDB();
+  const schoolsSheet = master.getSheetByName("schools");
+  if (!schoolsSheet) return master;
+  
+  const headers = getHeaders(schoolsSheet);
+  const rows = schoolsSheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+     let row = rowToObject(rows[i], headers);
+     if (row.id === CURRENT_SCHOOL_ID && row.spreadsheet_id) {
+         cache.put("school_db_" + CURRENT_SCHOOL_ID, row.spreadsheet_id, 21600);
+         return SpreadsheetApp.openById(row.spreadsheet_id);
+     }
+  }
+  return master; // Failsafe fallback
 }
 
 function getSheet(name) {
@@ -1617,10 +1720,10 @@ function getYearGroupsData() {
 /**
  * Utility to run once to setup sheets schema manually if empty.
  */
-function INITIALIZE_SHEETS() {
-    const ss = getDB();
+function INITIALIZE_SHEETS(targetDB = null) {
+    const ss = targetDB || getDB();
     const sheetsToCreate = {
-        "schools": ["id", "name", "motto", "colours", "cheque_representation", "type", "classes", "houses", "status", "admin_id", "avatar"],
+        "schools": ["id", "name", "motto", "colours", "cheque_representation", "type", "classes", "houses", "status", "admin_id", "avatar", "spreadsheet_id", "drive_folder_id"],
         "year_groups": ["id", "school", "year", "nickname", "house_name", "cheque_colour", "avatar"],
         "members": ["id", "name", "username", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "priv_social", "bio", "profession", "location", "phone", "linkedin", "social_links", "profile_pic", "cover_url", "school_admin_id", "verification_status"],
         "posts": ["id", "title", "category", "content", "author_id", "author_name", "scope_type", "scope_id", "school", "submission_date", "status", "newsletter_month", "rejection_note"],
@@ -2428,4 +2531,36 @@ function seedICUNIControl() {
       board_messages_seeded: 1
     }
   };
+}
+
+// ==========================================
+// Log Rotation (Run via Weekly Cron Trigger)
+// ==========================================
+function rotateLogs() {
+  const masterSS = getMasterDB();
+  const logsSheet = masterSS.getSheetByName("logs");
+  if (!logsSheet) return;
+
+  const rows = logsSheet.getDataRange().getValues();
+  if (rows.length <= 1) return; // Only headers or empty
+
+  const masterFolder = DriveApp.getFolderById(MASTER_FOLDER_ID);
+  let archiveFolder;
+  const archiveIter = masterFolder.getFoldersByName("Logs_Archive");
+  if (archiveIter.hasNext()) {
+     archiveFolder = archiveIter.next();
+  } else {
+     archiveFolder = masterFolder.createFolder("Logs_Archive");
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const archiveName = "Logs_Archive_" + timestamp + ".csv";
+  
+  // Convert to CSV
+  const csvContent = rows.map(r => r.map(cell => '"' + String(cell).replace(/"/g, '""') + '"').join(",")).join("\\n");
+  archiveFolder.createFile(archiveName, csvContent, "text/csv");
+
+  // Clear logs sheet (keep headers)
+  logsSheet.getRange(2, 1, rows.length - 1, logsSheet.getLastColumn()).clearContent();
+  console.log("Exported " + (rows.length - 1) + " logs to " + archiveName);
 }
