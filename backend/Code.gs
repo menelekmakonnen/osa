@@ -445,10 +445,10 @@ function handleRegister(data) {
   if (year_group_id === "new_yg" && new_yg_year && new_yg_nickname) {
      actual_yg_id = Utilities.getUuid();
      yg_nickname = new_yg_nickname;
-     // Create the new year group dynamically
-     ygSheet.appendRow([actual_yg_id, school_id, new_yg_year, new_yg_nickname, "", cheque_color]);
+     
+     let generatedYgFolderId = "";
 
-     // Create Drive Folder Architecture for this Year Group
+     // Create Drive Folder Architecture for this Year Group FIRST
      try {
        const masterSS = getMasterDB();
        const schoolsRegistry = masterSS.getSheetByName("schools");
@@ -471,12 +471,14 @@ function handleRegister(data) {
          else ygBaseFolder = schoolFolder.createFolder("Year Groups");
 
          const newYGFolder = ygBaseFolder.createFolder(new_yg_year + " - " + new_yg_nickname);
+         generatedYgFolderId = newYGFolder.getId();
          newYGFolder.createFolder("Year Group Admins");
          newYGFolder.createFolder("Year Group Super Admins");
          newYGFolder.createFolder("Year Group Members");
          newYGFolder.createFolder("Year Group Gallery");
          newYGFolder.createFolder("Year Group Events");
          newYGFolder.createFolder("Year Group Posts");
+         newYGFolder.createFolder("Deleted");
 
          // Club Supergroup Architecture container
          const clubsFolder = newYGFolder.createFolder("Clubs");
@@ -486,6 +488,9 @@ function handleRegister(data) {
      } catch (e) {
        console.error("Failed to build Year Group Drive Architecture: ", e);
      }
+
+     // Create the new year group dynamically in DB
+     ygSheet.appendRow([actual_yg_id, school_id, new_yg_year, new_yg_nickname, "", cheque_color, "", generatedYgFolderId]);
 
   } else {
      for(let i=1; i<ygRows.length; i++) {
@@ -541,6 +546,54 @@ function handleRegister(data) {
   const newRowArray = headers.map(h => newRowObj[h] !== undefined ? newRowObj[h] : "");
   membersSheet.appendRow(newRowArray);
   const newRowIndex = membersSheet.getLastRow();
+  
+  // --- Create Member Personal Drive Folder ---
+  try {
+      const masterFolder = DriveApp.getFolderById(MASTER_FOLDER_ID);
+      let memberFolder = null;
+      const userRole = newRowObj.role || "Member";
+
+      if (userRole === "IT Department") {
+          let staffBase;
+          const staffIter = masterFolder.getFoldersByName("Staff");
+          if(staffIter.hasNext()) staffBase = staffIter.next();
+          else staffBase = masterFolder.createFolder("Staff");
+          memberFolder = staffBase.createFolder(newRowObj.name + " [" + newId.substring(0,8) + "]");
+      } else {
+          // Normal Member: Locate their Year Group's "Year Group Members" folder
+          let ygFolderId = null;
+          if (year_group_id === "new_yg" && typeof generatedYgFolderId !== "undefined" && generatedYgFolderId) {
+             ygFolderId = generatedYgFolderId;
+          } else {
+             const ygSheet = getSheet("year_groups");
+             const yHeaders = getHeaders(ygSheet);
+             const yRows = ygSheet.getDataRange().getValues();
+             for (let i = 1; i < yRows.length; i++) {
+                let yRow = rowToObject(yRows[i], yHeaders);
+                if (yRow.id === actual_yg_id) {
+                   ygFolderId = yRow.drive_folder_id;
+                   break;
+                }
+             }
+          }
+
+          if (ygFolderId) {
+             const ygFolder = DriveApp.getFolderById(ygFolderId);
+             let membersContainer;
+             const memIter = ygFolder.getFoldersByName("Year Group Members");
+             if (memIter.hasNext()) membersContainer = memIter.next();
+             else membersContainer = ygFolder.createFolder("Year Group Members");
+
+             memberFolder = membersContainer.createFolder(newRowObj.name + " [" + newId.substring(0,8) + "]");
+          }
+      }
+
+      if (memberFolder) {
+          membersSheet.getRange(newRowIndex, headers.indexOf("drive_folder_id") + 1).setValue(memberFolder.getId());
+      }
+  } catch (e) {
+      console.error("Failed to generate Member Drive folder: ", e);
+  }
   
   // Return user obj without secrets
   delete newRowObj.password;
@@ -622,8 +675,11 @@ function handleOnboardSchool(data) {
 
   const schoolFolder = schoolsBaseFolder.createFolder(new_school_name + " [" + newSchoolId.substring(0,8) + "]");
   schoolFolder.createFolder("School_Info");
-  schoolFolder.createFolder("Admins");
+  const adminsF = schoolFolder.createFolder("Admins");
+  adminsF.createFolder("Global Super Admins");
+  adminsF.createFolder("Global Admins");
   schoolFolder.createFolder("Year Groups");
+  schoolFolder.createFolder("Donations");
 
   // 2. Generate Standalone School Spreadsheet
   const newSS = SpreadsheetApp.create(new_school_name + " Database");
@@ -1764,8 +1820,8 @@ function INITIALIZE_SHEETS(targetDB = null) {
     const ss = targetDB || getDB();
     const sheetsToCreate = {
         "schools": ["id", "name", "motto", "colours", "cheque_representation", "type", "classes", "houses", "status", "admin_id", "avatar", "spreadsheet_id", "drive_folder_id"],
-        "year_groups": ["id", "school", "year", "nickname", "house_name", "cheque_colour", "avatar"],
-        "members": ["id", "name", "username", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "priv_social", "bio", "profession", "location", "phone", "linkedin", "social_links", "profile_pic", "cover_url", "school_admin_id", "verification_status"],
+        "year_groups": ["id", "school", "year", "nickname", "house_name", "cheque_colour", "avatar", "drive_folder_id"],
+        "members": ["id", "name", "username", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "priv_social", "bio", "profession", "location", "phone", "linkedin", "social_links", "profile_pic", "cover_url", "school_admin_id", "verification_status", "drive_folder_id"],
         "posts": ["id", "title", "category", "content", "author_id", "author_name", "scope_type", "scope_id", "school", "submission_date", "status", "newsletter_month", "rejection_note"],
         "campaigns": ["id", "title", "type", "description", "target_amount", "currency", "deadline", "scope", "scope_type", "scope_id", "school", "status", "raised_amount", "donor_count", "updates", "created_by"],
         "donations": ["id", "campaign_id", "donor_id", "amount", "timestamp", "payment_method"],
