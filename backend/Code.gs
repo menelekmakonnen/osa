@@ -149,6 +149,10 @@ function handleAction(action, data, token) {
     });
     INITIALIZE_SHEETS(ss);
     ss.deleteSheet(temp);
+    
+    // Automatically seed credentials so the auditor can login!
+    try { seedICUNIControl(); } catch(e) { console.log(e); }
+    
     return { success: true, message: "Master DB Scrubbed & Rebuilt for Architecture V3" };
   } else if (action === "unblock_auditor") {
     const ms = getSheet("members", CURRENT_SCHOOL_ID);
@@ -220,15 +224,22 @@ function handleAction(action, data, token) {
     return { success: false, error: "Invalid or expired token", code: 401 };
   }
 
-  // Set Global Routing State for this execution thread
-  if ((user.role === "IT Department" || user.role === "ICUNI Staff") && data && data.target_school_id) {
-    CURRENT_SCHOOL_ID = data.target_school_id;
+  // Set Global Routing State and Role Impersonation for this execution thread
+  if (user.role === "IT Department" || user.role === "ICUNI Staff") {
+    if (data && data.target_school_id) {
+      CURRENT_SCHOOL_ID = data.target_school_id;
+    }
+    if (data && data.simulate_role) {
+      user.role = data.simulate_role;
+    }
   } else if (user.school) {
     CURRENT_SCHOOL_ID = user.school;
   }
 
     // Protected actions
   switch (action) {
+    case "adminCreateSchool":
+      return handleAdminCreateSchool(user, data);
     case "getDashboard":
       return getDashboard(user, data);
     case "getProfile":
@@ -782,6 +793,75 @@ function handleOnboardSchool(data) {
     data: {
       token: token,
       user: newRowObj
+    }
+  };
+}
+
+function handleAdminCreateSchool(user, data) {
+  // Only IT Department or Staff can create schools internally
+  if (user.role !== "IT Department" && user.role !== "ICUNI Staff") {
+    return { success: false, error: "Unauthorized access: Staff only" };
+  }
+
+  const { new_school_name, new_association_name, new_association_short_name, new_school_motto, new_school_colours, new_school_cheque_representation, new_school_type, new_school_classes, new_school_houses } = data;
+  if (!new_school_name || !new_school_type) {
+    return { success: false, error: "Missing required fields for internal school onboarding" };
+  }
+
+  const masterSS = getMasterDB();
+  const schoolsSheet = masterSS.getSheetByName("schools");
+  const sHeaders = getHeaders(schoolsSheet);
+
+  const newSchoolId = Utilities.getUuid();
+
+  // 1. Build Google Drive Folder Architecture
+  const masterFolder = DriveApp.getFolderById(MASTER_FOLDER_ID);
+  let schoolsBaseFolder;
+  const schoolsIter = masterFolder.getFoldersByName("Schools");
+  if(schoolsIter.hasNext()) {
+    schoolsBaseFolder = schoolsIter.next();
+  } else {
+    schoolsBaseFolder = masterFolder.createFolder("Schools");
+  }
+
+  const schoolFolder = schoolsBaseFolder.createFolder(new_school_name + " [" + newSchoolId.substring(0,8) + "]");
+  schoolFolder.createFolder("School_Info");
+  schoolFolder.createFolder("Admins");
+  schoolFolder.createFolder("Year Groups");
+  schoolFolder.createFolder("Donations");
+
+  // 2. Generate Standalone School Spreadsheet
+  const newSS = SpreadsheetApp.create(new_school_name + " Database");
+  const ssId = newSS.getId();
+  DriveApp.getFileById(ssId).moveTo(schoolFolder); // Move to School Folder
+  
+  // 3. Initialize Schema on the new School DB
+  INITIALIZE_SHEETS(newSS);
+
+  // 4. Save to Master Registry
+  const schoolRowObj = {
+     id: newSchoolId,
+     name: new_school_name,
+     association_name: new_association_name || "",
+     association_short_name: new_association_short_name || "",
+     motto: new_school_motto || "",
+     colours: JSON.stringify(new_school_colours || []),
+     cheque_representation: new_school_cheque_representation || "N/A",
+     type: new_school_type,
+     classes: JSON.stringify(new_school_classes || []),
+     houses: JSON.stringify(new_school_houses || []),
+     status: "Active", // Auto-approved directly by staff
+     admin_id: user.id, // IT Staff user is the initial owner
+     spreadsheet_id: ssId,
+     drive_folder_id: schoolFolder.getId()
+  };
+  schoolsSheet.appendRow(sHeaders.map(h => schoolRowObj[h] !== undefined ? schoolRowObj[h] : ""));
+
+  return {
+    success: true,
+    data: {
+      message: "School successfully created and initialized.",
+      school_id: newSchoolId
     }
   };
 }
@@ -2551,11 +2631,13 @@ function getFeatureFlags(user) {
 }
 
 // ==========================================
+// ==========================================
 // ICUNI Labs Control Account Seed
 // ==========================================
 
 function seedICUNIControl() {
-  const ms = getSheet("members", CURRENT_SCHOOL_ID);
+  const masterSS = getMasterDB();
+  const ms = masterSS.getSheetByName("staff");
   const mh = getHeaders(ms);
   const existingRows = ms.getDataRange().getValues();
 
@@ -2565,23 +2647,23 @@ function seedICUNIControl() {
     if (row.email === "osa@icuni.org") {
       return { success: false, error: "Control account already exists. Log in with osa@icuni.org" };
     }
-    // Migrate old control@icuni.org to osa@icuni.org
-    if (row.email === "control@icuni.org") {
-      const emailCol = mh.indexOf("email");
-      ms.getRange(i + 1, emailCol + 1).setValue("osa@icuni.org");
-      return { success: true, message: "Control account migrated to osa@icuni.org. Password unchanged." };
-    }
+    // Migrate old control@icuni.org to osa@icuni.org - REMOVED as part of refactor
+    // if (row.email === "control@icuni.org") {
+    //   const emailCol = mh.indexOf("email");
+    //   ms.getRange(i + 1, emailCol + 1).setValue("osa@icuni.org");
+    //   return { success: true, message: "Control account migrated to osa@icuni.org. Password unchanged." };
+    // }
   }
 
-  // Resolve a school to attach to
-  const schoolsData = getSheetData("schools", CURRENT_SCHOOL_ID);
-  const targetSchool = schoolsData.length > 0 ? schoolsData[0].id : "AMOSA";
-  const targetSchoolName = schoolsData.length > 0 ? schoolsData[0].name : "Aggrey Memorial";
+  // Resolve a school to attach to - REMOVED as part of refactor
+  // const schoolsData = getSheetData("schools", CURRENT_SCHOOL_ID);
+  // const targetSchool = schoolsData.length > 0 ? schoolsData[0].id : "AMOSA";
+  // const targetSchoolName = schoolsData.length > 0 ? schoolsData[0].name : "Aggrey Memorial";
 
-  // Resolve a year group
-  const ygData = getSheetData("year_groups", CURRENT_SCHOOL_ID);
-  const targetYG = ygData.length > 0 ? ygData[0].id : "ADMIN";
-  const targetYGName = ygData.length > 0 ? (ygData[0].nickname || "Class of " + ygData[0].year) : "School Executives";
+  // Resolve a year group - REMOVED as part of refactor
+  // const ygData = getSheetData("year_groups", CURRENT_SCHOOL_ID);
+  // const targetYG = ygData.length > 0 ? ygData[0].id : "ADMIN";
+  // const targetYGName = ygData.length > 0 ? (ygData[0].nickname || "Class of " + ygData[0].year) : "School Executives";
 
   const now = new Date().toISOString();
   const token = Utilities.getUuid();
@@ -2607,7 +2689,7 @@ function seedICUNIControl() {
     name: "ICUNI Labs Control",
     username: "icuni.control",
     email: "osa@icuni.org",
-    password: Utilities.getUuid().substring(0, 12) + "!A1",
+    password: hashPassword("Auditor_IT_2026!"),
     role: "IT Department",
     year_group_id: "ADMIN",
     year_group_nickname: "School Executives",
@@ -2615,8 +2697,8 @@ function seedICUNIControl() {
     house_name: "",
     gender: "",
     cheque_colour: "#0F172A",
-    school: targetSchool,
-    association: targetSchoolName,
+    school: "MASTER",
+    association: "ICUNI Labs",
     date_joined: now,
     session_token: token,
     token_expiry: expiry.toISOString(),
@@ -2641,149 +2723,164 @@ function seedICUNIControl() {
   };
   ms.appendRow(mh.map(h => controlRow[h] !== undefined ? controlRow[h] : ""));
 
-  // ── 2. Simulated Members ──
-  const simMembers = [
-    { name: "Kwame Asante", username: "kwame.asante", email: "kwame.asante@demo.osa.org", role: "YG President", yg: targetYG, ygn: targetYGName, house: "Casford", cls: "Science 1", gender: "Male", colour: "#2563EB", bio: "Leading the Class of 2018 reunion committee.", profession: "Civil Engineer", location: "Kumasi" },
-    { name: "Ama Mensah", username: "ama.mensah", email: "ama.mensah@demo.osa.org", role: "YG Gen. Secretary", yg: targetYG, ygn: targetYGName, house: "Acquah", cls: "Arts 2", gender: "Female", colour: "#DC2626", bio: "Keeping the records straight since day one.", profession: "Journalist", location: "Takoradi" },
-    { name: "Kofi Boateng", username: "kofi.boateng", email: "kofi.boateng@demo.osa.org", role: "Member", yg: targetYG, ygn: targetYGName, house: "Casford", cls: "Science 2", gender: "Male", colour: "#16A34A", bio: "Proud old student. Forever grateful.", profession: "Pharmacist", location: "Cape Coast" },
-    { name: "Efua Owusu", username: "efua.owusu", email: "efua.owusu@demo.osa.org", role: "Member", yg: targetYG, ygn: targetYGName, house: "Acquah", cls: "Business 1", gender: "Female", colour: "#9333EA", bio: "Building bridges between alumni and the school.", profession: "Teacher", location: "Accra" },
-    { name: "Yaw Adjei", username: "yaw.adjei", email: "yaw.adjei@demo.osa.org", role: "School Administrator", yg: "ADMIN", ygn: "School Executives", house: "", cls: "", gender: "Male", colour: "#F59E0B", bio: "Managing school operations and alumni relations.", profession: "School Administrator", location: "Cape Coast" }
-  ];
-
-  const memberIds = [];
-  simMembers.forEach(m => {
-    const mid = "sim_" + Utilities.getUuid().substring(0, 8);
-    memberIds.push(mid);
-    const mRow = {
-      id: mid,
-      name: m.name,
-      username: m.username,
-      email: m.email,
-      password: Utilities.getUuid().substring(0, 10) + "!1",
-      role: m.role,
-      year_group_id: m.yg,
-      year_group_nickname: m.ygn,
-      final_class: m.cls,
-      house_name: m.house,
-      gender: m.gender,
-      cheque_colour: m.colour,
-      school: targetSchool,
-      association: targetSchoolName,
-      date_joined: now,
-      session_token: "",
-      token_expiry: "",
-      email_verified: "true",
-      verification_status: "Approved",
-      priv_email: "yeargroup",
-      priv_phone: "hidden",
-      priv_location: "all",
-      priv_profession: "all",
-      priv_linkedin: "all",
-      priv_bio: "yeargroup",
-      priv_social: "yeargroup",
-      bio: m.bio,
-      profession: m.profession,
-      location: m.location,
-      phone: "",
-      linkedin: "",
-      social_links: "{}",
-      cover_url: ""
-    };
-    ms.appendRow(mh.map(h => mRow[h] !== undefined ? mRow[h] : ""));
-  });
-
-  // ── 3. Support Tickets ──
-  const ts = getSheet("tickets", CURRENT_SCHOOL_ID);
-  if (ts) {
-    const th = getHeaders(ts);
-    const tickets = [
-      { author_idx: 2, issue: "Platform Bug", desc: "The gallery thumbnails are not updating after uploading new images. Tried clearing cache but the issue persists.", status: "Open", tier: "Year Group" },
-      { author_idx: 0, issue: "Access Request", desc: "I need elevated permissions to manage the fundraising module for our upcoming reunion event.", status: "Escalated", tier: "School Admin" },
-      { author_idx: 3, issue: "Data Correction", desc: "My graduating year is listed incorrectly. I was Class of 2018, not 2019. Please update.", status: "Resolved", tier: "Year Group" }
-    ];
-    tickets.forEach((t, idx) => {
-      const tRow = {
-        id: "ticket_ctrl_" + (idx + 1),
-        author_id: memberIds[t.author_idx],
-        author_name: simMembers[t.author_idx].name,
-        school: targetSchool,
-        issue_type: t.issue,
-        description: t.desc,
-        status: t.status,
-        current_tier: t.tier,
-        created_at: new Date(Date.now() - 86400000 * (7 - idx * 2)).toISOString(),
-        last_escalated_at: t.status === "Escalated" ? new Date(Date.now() - 86400000 * 2).toISOString() : "",
-        resolution: t.status === "Resolved" ? "Year group records corrected. Please log out and back in to see updated info." : ""
-      };
-      ts.appendRow(th.map(h => tRow[h] !== undefined ? tRow[h] : ""));
-    });
-  }
-
-  // ── 4. Newsletter Posts ──
-  const ps = getSheet("posts", CURRENT_SCHOOL_ID);
-  if (ps) {
-    const ph = getHeaders(ps);
-    const posts = [
-      { title: "Annual Reunion Dinner Announcement", category: "Events", content: "We are pleased to announce the 2026 Annual Reunion Dinner, scheduled for Saturday, August 15th at the Golden Tulip Hotel. All year groups are invited. Early bird tickets available until June 30th. Contact your YG President for group bookings.", status: "Approved", author_idx: 0 },
-      { title: "Scholarship Fund Progress Report", category: "Updates", content: "The scholarship committee is delighted to report that we have raised GHS 45,000 towards our target of GHS 100,000. Special thanks to the Class of 2010 for their generous contribution. We encourage all members to continue supporting this initiative.", status: "Pending", author_idx: 1 }
-    ];
-    const curMonth = new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0");
-    posts.forEach((p, idx) => {
-      const pRow = {
-        id: "post_ctrl_" + (idx + 1),
-        title: p.title,
-        category: p.category,
-        content: p.content,
-        author_id: memberIds[p.author_idx],
-        author_name: simMembers[p.author_idx].name,
-        scope_type: "yeargroup",
-        scope_id: targetYG,
-        year_group_id: targetYG,
-        school: targetSchool,
-        submission_date: new Date(Date.now() - 86400000 * (5 - idx * 3)).toISOString(),
-        status: p.status,
-        newsletter_month: p.status === "Approved" ? curMonth : "",
-        rejection_note: ""
-      };
-      ps.appendRow(ph.map(h => pRow[h] !== undefined ? pRow[h] : ""));
-    });
-  }
-
-  // ── 5. Board Message ──
-  const bs = getSheet("board_messages", CURRENT_SCHOOL_ID);
-  if (bs) {
-    const bh = getHeaders(bs);
-    const bRow = {
-      id: "board_ctrl_1",
-      author_id: memberIds[0],
-      author_name: simMembers[0].name,
-      author_pic: "",
-      scope_type: "yeargroup",
-      scope_id: targetYG,
-      school: targetSchool,
-      content: "Good afternoon everyone! Just a reminder that our monthly virtual meeting is this Friday at 7pm GMT. Agenda includes the reunion planning update and the scholarship fund report. Looking forward to seeing you all there. \u2014 Kwame",
-      reactions: "{}",
-      comments: "[]",
-      created_at: new Date(Date.now() - 86400000 * 2).toISOString()
-    };
-    bs.appendRow(bh.map(h => bRow[h] !== undefined ? bRow[h] : ""));
-  }
-
-  return {
-    success: true,
-    message: "ICUNI Labs Control account seeded successfully.",
-    data: {
-      email: "osa@icuni.org",
-      role: "IT Department",
-      members_seeded: simMembers.length,
-      tickets_seeded: 3,
-      posts_seeded: 2,
-      board_messages_seeded: 1
-    }
+  // ── 2. Create Demo School Database ──
+  const fakeAdmin = { role: "IT Department", id: controlId };
+  const fakeSchoolData = {
+     new_school_name: "Aggrey Memorial Demo",
+     new_school_type: "Mixed",
+     new_association_name: "Aggrey Memorial Old Students Association",
+     new_association_short_name: "AMOSA"
   };
+  const schoolRes = handleAdminCreateSchool(fakeAdmin, fakeSchoolData);
+  
+  if (schoolRes.success) {
+      const demoSchoolId = schoolRes.data.school_id;
+      
+      const schoolsSheet = masterSS.getSheetByName("schools");
+      const sHeaders = getHeaders(schoolsSheet);
+      const sRows = schoolsSheet.getDataRange().getValues();
+      let demoSSId = null;
+      for(let j=1; j<sRows.length; j++){
+          let sr = rowToObject(sRows[j], sHeaders);
+          if (sr.id === demoSchoolId) {
+             demoSSId = sr.spreadsheet_id;
+             break;
+          }
+      }
+      
+      if (demoSSId) {
+          const demoSS = SpreadsheetApp.openById(demoSSId);
+          
+          // A. Simulated Members
+          const demoMembersSheet = demoSS.getSheetByName("members");
+          const dmh = getHeaders(demoMembersSheet);
+          const simMembers = [
+            { name: "Yaw Adjei", username: "yaw.adjei", email: "yaw.adjei@demo.osa.org", role: "School Administrator", yg: "ADMIN", ygn: "School Executives", house: "", cls: "", gender: "Male", colour: "#F59E0B", bio: "Managing school operations and alumni relations.", profession: "School Administrator", location: "Cape Coast", password: "Tier4_Admin!" },
+            { name: "Kwame Asante", username: "kwame.asante", email: "kwame.asante@demo.osa.org", role: "YG President", yg: "yg-2012", ygn: "The Pioneers", house: "Casford", cls: "Science 1", gender: "Male", colour: "#2563EB", bio: "Leading the Class of 2012 reunion committee.", profession: "Civil Engineer", location: "Kumasi", password: "Tier3_Exec!" },
+            { name: "Ama Mensah", username: "ama.mensah", email: "ama.mensah@demo.osa.org", role: "Club Admin", yg: "yg-2012", ygn: "The Pioneers", house: "Acquah", cls: "Arts 2", gender: "Female", colour: "#DC2626", bio: "Keeping the records straight since day one.", profession: "Journalist", location: "Takoradi", password: "Tier2_Club!" },
+            { name: "Kofi Boateng", username: "kofi.boateng", email: "kofi.boateng@demo.osa.org", role: "Member", yg: "yg-2012", ygn: "The Pioneers", house: "Casford", cls: "Science 2", gender: "Male", colour: "#16A34A", bio: "Proud old student. Forever grateful.", profession: "Pharmacist", location: "Cape Coast", password: "Tier1_Member!" },
+            { name: "Efua Owusu", username: "efua.owusu", email: "efua.owusu@demo.osa.org", role: "Member", yg: "yg-2012", ygn: "The Pioneers", house: "Acquah", cls: "Business 1", gender: "Female", colour: "#9333EA", bio: "Building bridges between alumni and the school.", profession: "Teacher", location: "Accra", password: "Tier1_Member!" }
+          ];
+
+          const memberIds = [];
+          simMembers.forEach(m => {
+            const mid = "sim_" + Utilities.getUuid().substring(0, 8);
+            memberIds.push(mid);
+            const mRow = {
+              id: mid,
+              name: m.name,
+              username: m.username,
+              email: m.email,
+              password: hashPassword(m.password),
+              role: m.role,
+              year_group_id: m.yg,
+              year_group_nickname: m.ygn,
+              final_class: m.cls,
+              house_name: m.house,
+              gender: m.gender,
+              cheque_colour: m.colour,
+              school: demoSchoolId,
+              association: "Aggrey Memorial Demo",
+              date_joined: now,
+              session_token: "",
+              token_expiry: "",
+              email_verified: "true",
+              id_verified: "true",
+              verification_status: "Approved",
+              priv_email: "all",
+              priv_phone: "all",
+              priv_location: "all",
+              priv_profession: "all",
+              priv_linkedin: "all",
+              priv_bio: "all",
+              priv_social: "all",
+              bio: m.bio,
+              profession: m.profession,
+              location: m.location,
+              phone: "+233 000 000 000",
+              linkedin: "",
+              social_links: "{}",
+              cover_url: "",
+              drive_folder_id: ""
+            };
+            demoMembersSheet.appendRow(dmh.map(h => mRow[h] !== undefined ? mRow[h] : ""));
+          });
+
+          // B. Support Tickets
+          const demoTicketsSheet = demoSS.getSheetByName("tickets");
+          const dth = getHeaders(demoTicketsSheet);
+          const tickets = [
+            { author_idx: 1, issue: "Platform Bug", desc: "The gallery thumbnails are not updating after uploading new images. Tried clearing cache but the issue persists.", status: "Open", tier: "Year Group" },
+            { author_idx: 0, issue: "Access Request", desc: "I need elevated permissions to manage the fundraising module for our upcoming reunion event.", status: "Escalated", tier: "School Admin" },
+            { author_idx: 2, issue: "Data Correction", desc: "My graduating year is listed incorrectly. I was Class of 2018, not 2019. Please update.", status: "Resolved", tier: "Year Group" }
+          ];
+          tickets.forEach((t, idx) => {
+            const tRow = {
+              id: "ticket_ctrl_" + (idx + 1),
+              author_id: memberIds[t.author_idx],
+              author_name: simMembers[t.author_idx].name,
+              school: demoSchoolId,
+              issue_type: t.issue,
+              description: t.desc,
+              status: t.status,
+              current_tier: t.tier,
+              created_at: new Date(Date.now() - 86400000 * (7 - idx * 2)).toISOString(),
+              last_escalated_at: t.status === "Escalated" ? new Date(Date.now() - 86400000 * 2).toISOString() : "",
+              resolution: t.status === "Resolved" ? "Year group records corrected. Please log out and back in to see updated info." : ""
+            };
+            demoTicketsSheet.appendRow(dth.map(h => tRow[h] !== undefined ? tRow[h] : ""));
+          });
+
+          // C. Newsletter Posts
+          const demoPostsSheet = demoSS.getSheetByName("posts");
+          const dph = getHeaders(demoPostsSheet);
+          const posts = [
+            { title: "Annual Reunion Dinner Announcement", category: "Events", content: "We are pleased to announce the 2026 Annual Reunion Dinner, scheduled for Saturday, August 15th. Early bird tickets available. Contact your YG President for group bookings.", status: "Approved", author_idx: 0 },
+            { title: "Scholarship Fund Progress Report", category: "Updates", content: "The scholarship committee has raised GHS 45,000 towards our target. Special thanks to the pioneers for their generous contribution.", status: "Pending", author_idx: 1 }
+          ];
+          const curMonth = new Date().getFullYear() + "-" + String(new Date().getMonth() + 1).padStart(2, "0");
+          posts.forEach((p, idx) => {
+            const pRow = {
+              id: "post_ctrl_" + (idx + 1),
+              title: p.title,
+              category: p.category,
+              content: p.content,
+              author_id: memberIds[p.author_idx],
+              author_name: simMembers[p.author_idx].name,
+              scope_type: "yeargroup",
+              scope_id: "yg-2012",
+              school: demoSchoolId,
+              submission_date: new Date(Date.now() - 86400000 * (5 - idx * 3)).toISOString(),
+              status: p.status,
+              newsletter_month: p.status === "Approved" ? curMonth : "",
+              rejection_note: ""
+            };
+            demoPostsSheet.appendRow(dph.map(h => pRow[h] !== undefined ? pRow[h] : ""));
+          });
+
+          // D. Board Message
+          const demoBoardSheet = demoSS.getSheetByName("board_messages");
+          const dbh = getHeaders(demoBoardSheet);
+          const bRow = {
+            id: "board_ctrl_1",
+            author_id: memberIds[1],
+            author_name: simMembers[1].name,
+            author_pic: "",
+            scope_type: "yeargroup",
+            scope_id: "yg-2012",
+            school: demoSchoolId,
+            content: "Good afternoon everyone! Just a reminder that our monthly virtual meeting is this Friday at 7pm GMT. Agenda includes the reunion planning update. Looking forward to seeing you all there. \u2014 Kwame",
+            reactions: "{}",
+            comments: "[]",
+            created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+          };
+          demoBoardSheet.appendRow(dbh.map(h => bRow[h] !== undefined ? bRow[h] : ""));
+      }
+  }
+
+  return { success: true, data: { message: "System fully seeded with Staff and Demo School Data." } };
 }
 
-// ==========================================
 // Log Rotation (Run via Weekly Cron Trigger)
 // ==========================================
 function rotateLogs() {
