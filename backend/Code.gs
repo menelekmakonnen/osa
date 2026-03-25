@@ -691,11 +691,8 @@ function handleOnboardSchool(data) {
   schoolFolder.createFolder("School_Info");
   const adminsF = schoolFolder.createFolder("Admins");
   
-  const gsaF = adminsF.createFolder("Global Super Admins");
-  gsaF.createFolder("Deleted");
-  
-  const gaF = adminsF.createFolder("Global Admins");
-  gaF.createFolder("Deleted");
+  // Create the initial admin folder as per architectural plan
+  adminsF.createFolder(name + " [" + newId.substring(0,8) + "]");
   
   schoolFolder.createFolder("Year Groups");
   schoolFolder.createFolder("Donations");
@@ -1934,6 +1931,7 @@ function INITIALIZE_SHEETS(targetDB = null) {
     const isMaster = ss.getId() === MASTER_DB_ID;
 
     const allSheets = {
+        "staff": ["id", "name", "username", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "priv_social", "bio", "profession", "location", "phone", "linkedin", "social_links", "profile_pic", "cover_url", "school_admin_id", "verification_status", "drive_folder_id"],
         "schools": ["id", "name", "association_name", "association_short_name", "motto", "colours", "cheque_representation", "type", "classes", "houses", "status", "admin_id", "avatar", "spreadsheet_id", "drive_folder_id"],
         "year_groups": ["id", "school", "year", "nickname", "house_name", "cheque_colour", "avatar", "drive_folder_id"],
         "members": ["id", "name", "username", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "priv_social", "bio", "profession", "location", "phone", "linkedin", "social_links", "profile_pic", "cover_url", "school_admin_id", "verification_status", "drive_folder_id"],
@@ -2590,6 +2588,18 @@ function seedICUNIControl() {
   const expiry = new Date();
   expiry.setDate(expiry.getDate() + 30);
 
+  // 0. Build Master Drive Folder Architecture for Staff
+  const masterFolder = DriveApp.getFolderById(MASTER_FOLDER_ID);
+  let staffBaseFolder;
+  const staffIter = masterFolder.getFoldersByName("Staff (App Owners)");
+  if(staffIter.hasNext()) {
+    staffBaseFolder = staffIter.next();
+  } else {
+    staffBaseFolder = masterFolder.createFolder("Staff (App Owners)");
+  }
+  const existingSelfIt = staffBaseFolder.getFoldersByName("ICUNI Labs Control");
+  let selfFolder = existingSelfIt.hasNext() ? existingSelfIt.next() : staffBaseFolder.createFolder("ICUNI Labs Control");
+
   // ── 1. Control Account ──
   const controlId = "icuni_ctrl_" + Utilities.getUuid().substring(0, 8);
   const controlRow = {
@@ -2626,7 +2636,8 @@ function seedICUNIControl() {
     phone: "+233 000 000 000",
     linkedin: "",
     social_links: "{}",
-    cover_url: ""
+    cover_url: "",
+    drive_folder_id: selfFolder.getId()
   };
   ms.appendRow(mh.map(h => controlRow[h] !== undefined ? controlRow[h] : ""));
 
