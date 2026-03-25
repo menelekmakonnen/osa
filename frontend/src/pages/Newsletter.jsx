@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api, authState } from '../api/client';
-import { Card, Button, Input, Textarea, Badge, Avatar } from '../components/ui';
+import { Card, Button, Input, Textarea, Badge } from '../components/ui';
 import { toast } from 'react-hot-toast';
 import { FileText, Send, CheckCircle, XCircle, Edit3, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';
@@ -26,10 +26,15 @@ export function Newsletter() {
   const loadPosts = async () => {
     setLoading(true);
     try {
-      const data = await api.getPosts(activeScope);
+      // Unpack scope so the backend receives scope_type + scope_id strings, not an object
+      const data = await api.getPosts({
+        scope_type: activeScope?.type || 'yeargroup',
+        scope_id: activeScope?.id || user?.year_group_id || ''
+      });
       setPosts(data || []);
     } catch (e) {
-      console.error(e);
+      console.error('Newsletter load error:', e);
+      setPosts([]);
     } finally {
       setLoading(false);
     }
@@ -37,7 +42,8 @@ export function Newsletter() {
 
   useEffect(() => {
     loadPosts();
-  }, [activeTab]); // Reload on tab switch
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, activeScope]); // Reload on tab or scope switch
 
   const handleSubmitPost = async (e) => {
     e.preventDefault();
@@ -45,8 +51,8 @@ export function Newsletter() {
     try {
       await api.submitPost({
           ...submitData,
-          scope_type: activeScope.type,
-          scope_id: activeScope.id
+          scope_type: activeScope?.type || 'yeargroup',
+          scope_id: activeScope?.id || user?.year_group_id || ''
       });
       setIsSubmitModalOpen(false);
       setSubmitData({ title: '', category: '', content: '' });
@@ -105,9 +111,9 @@ export function Newsletter() {
     { value: 'Other', label: 'Other' },
   ];
 
-  // Derived filtered lists
+  // Derived filtered lists — guard against null user
   const feedPosts = posts.filter(p => p.status === "Approved");
-  const myPosts = posts.filter(p => p.author_id === user.id);
+  const myPosts = posts.filter(p => p.author_id === user?.id);
   const pendingPosts = posts.filter(p => p.status === "Pending");
 
   return (

@@ -7,7 +7,8 @@ import { useTenant } from '../context/TenantContext';
 
 export function Support() {
   const user = authState.getUser();
-  const { activeScope } = useTenant(); // We may need this later, but for now just comment or ignore. Actually I'll just remove it.
+  // activeScope available if needed for future scope-filtered tickets
+  useTenant();
   
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,13 +38,15 @@ export function Support() {
 
   const handleSubmitTicket = async (e) => {
     e.preventDefault();
+    if (submitting) return; // guard against double submission
     setSubmitting(true);
     try {
       await api.submitTicket(submitData);
+      // Close the modal BEFORE the reload so the form doesn't stick open
       setIsSubmitModalOpen(false);
       setSubmitData({ issue_type: '', description: '' });
-      loadTickets();
       toast.success("Ticket submitted successfully!");
+      loadTickets();
     } catch (err) {
       toast.error("Error submitting ticket: " + err.message);
     } finally {
@@ -55,7 +58,11 @@ export function Support() {
     if(!window.confirm("Escalate this ticket to the next governance tier?")) return;
     try {
       await api.escalateTicket(ticketId);
-      loadTickets();
+      // Optimistically update local state
+      setTickets(prev => prev.map(t =>
+        t.id === ticketId ? { ...t, status: 'Escalated', current_tier: String(parseInt(t.current_tier || '1') + 1) } : t
+      ));
+      toast.success("Ticket escalated to next tier");
     } catch (err) {
       toast.error("Error escalating ticket: " + err.message);
     }
@@ -66,7 +73,11 @@ export function Support() {
     if (resolution === null) return; // cancelled
     try {
       await api.resolveTicket(ticketId, resolution);
-      loadTickets();
+      // Optimistically update local state
+      setTickets(prev => prev.map(t =>
+        t.id === ticketId ? { ...t, status: 'Resolved', resolution } : t
+      ));
+      toast.success("Ticket marked as resolved");
     } catch (err) {
       toast.error("Error resolving ticket: " + err.message);
     }

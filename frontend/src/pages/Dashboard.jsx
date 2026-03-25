@@ -32,6 +32,31 @@ export function Dashboard() {
     </div>
   );
 
+  // T2 (club) and T3 (house) scopes have no seeded data — show a graceful empty state
+  const scopeType = activeScope?.type;
+  const isUnsupportedScope = scopeType === 'club' || scopeType === 'house' ||
+    (scopeType === 'all' && (!data?.stats?.ygMembersCount && !data?.recentPosts?.length));
+
+  if (isUnsupportedScope) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+        <div className="p-5 bg-surface-muted rounded-full">
+          <Users size={36} className="text-ink-muted" />
+        </div>
+        <h3 className="text-[18px] font-bold text-ink-title">
+          {scopeType === 'club' ? 'Club Scope' : scopeType === 'house' ? 'House Scope' : 'Platform Scope'}
+        </h3>
+        <p className="text-[14px] text-ink-muted max-w-[320px] leading-relaxed">
+          {scopeType === 'club'
+            ? 'Club-scoped data is available in Phase 2. Switch to Year Group or School to see content.'
+            : scopeType === 'house'
+            ? 'House-scoped data is available in Phase 2. Switch to Year Group or School to see content.'
+            : 'Platform-wide aggregate data is only visible from the Cockpit overview.'}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-5 pb-12 overflow-x-hidden">
       

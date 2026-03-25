@@ -108,16 +108,27 @@ export const api = {
     window.dispatchEvent(new Event("osa-auth-expired"));
   },
 
-  // GET endpoints
-  getDashboard: (scope) => apiRequest("getDashboard", scope ? { scope_type: scope.type, scope_id: scope.id } : {}),
-  getPosts: async (scope) => {
-    let posts = await apiRequest("getPosts", scope ? { scope_type: scope.type, scope_id: scope.id } : {}) || [];
+  // GET endpoints — normalise scope: accepts {type,id} or raw {scope_type,scope_id}
+  getDashboard: (scope = {}) => {
+    const d = scope?.type ? { scope_type: scope.type, scope_id: scope.id } : scope;
+    return apiRequest("getDashboard", d);
+  },
+  getPosts: async (scope = {}) => {
+    const d = scope?.type ? { scope_type: scope.type, scope_id: scope.id } : scope;
+    let posts = await apiRequest("getPosts", d) || [];
     return posts.map(p => localActionedPosts[p.id] ? { ...p, status: localActionedPosts[p.id] } : p);
   },
-  getCampaigns: (scope) => apiRequest("getCampaigns", scope ? { scope_type: scope.type, scope_id: scope.id } : {}),
-  getEvents: (scope) => apiRequest("getEvents", scope ? { scope_type: scope.type, scope_id: scope.id } : {}),
-  getMembers: async (scope) => {
-    let members = await apiRequest("getMembers", scope ? { scope_type: scope.type, scope_id: scope.id } : {}) || [];
+  getCampaigns: (scope = {}) => {
+    const d = scope?.type ? { scope_type: scope.type, scope_id: scope.id } : (typeof scope === 'string' ? { scope } : scope);
+    return apiRequest("getCampaigns", d);
+  },
+  getEvents: (scope = {}) => {
+    const d = scope?.type ? { scope_type: scope.type, scope_id: scope.id } : (typeof scope === 'string' ? { scope } : scope);
+    return apiRequest("getEvents", d);
+  },
+  getMembers: async (scope = {}) => {
+    const d = scope?.type ? { scope_type: scope.type, scope_id: scope.id } : scope;
+    let members = await apiRequest("getMembers", d) || [];
     if (!members.find(m => m.name === "Test Executive")) {
        members.push({
           id: "dummy-test-exec",
@@ -148,33 +159,24 @@ export const api = {
   updateProfile: (profileData) => apiRequest("updateProfile", profileData),
   changePassword: (passwordData) => apiRequest("changePassword", passwordData),
   updateGroupAvatar: (scopeData) => apiRequest("updateGroupAvatar", scopeData),
-  getGroupSettings: (scope) => apiRequest("getGroupSettings", { scope_type: scope.type, scope_id: scope.id }),
+  getGroupSettings: (scopeOrData = {}) => {
+    const d = scopeOrData?.type
+      ? { scope_type: scopeOrData.type, scope_id: scopeOrData.id }
+      : scopeOrData;
+    return apiRequest("getGroupSettings", d);
+  },
   saveGroupSettings: (scope, settings) => apiRequest("saveGroupSettings", { scope_type: scope.type, scope_id: scope.id, settings }),
   assignRole: (targetUserId, newRole) => apiRequest("assignRole", { target_user_id: targetUserId, new_role: newRole }),
-  submitPost: (postData) => apiRequest("submitPost", postData),
-  approvePost: async (postId) => {
-    try {
-       return await apiRequest("approvePost", { post_id: postId });
-    } catch(err) {
-       console.warn("Bypassing server permission error for post approval.");
-       localActionedPosts[postId] = 'Approved';
-       return { success: true };
-    }
-  },
-  returnPost: async (postId, note) => {
-    try {
-       return await apiRequest("returnPost", { post_id: postId, note });
-    } catch(err) {
-       console.warn("Bypassing server permission error for post return.");
-       localActionedPosts[postId] = 'Rejected';
-       return { success: true };
-    }
-  },
-  dispatchNewsletter: () => apiRequest("dispatchNewsletter"),
-  createCampaign: (campaignData) => apiRequest("createCampaign", campaignData),
-  donate: (campaignId, amount) => apiRequest("donate", { campaign_id: campaignId, amount }),
-  createEvent: (eventData) => apiRequest("createEvent", eventData),
-  rsvp: (eventId) => apiRequest("rsvp", { event_id: eventId }),
+  submitPost: (data) => apiRequest("submitPost", data),
+  approvePost: (postId) => apiRequest("approvePost", { postId }),
+  returnPost: (postId, note) => apiRequest("returnPost", { postId, note }),
+  dispatchNewsletter: (data = {}) => apiRequest("dispatchNewsletter", data),
+
+  createCampaign: (data) => apiRequest("createCampaign", data),
+  donate: (data) => apiRequest("donate", data),
+
+  createEvent: (data) => apiRequest("createEvent", data),
+  rsvp: (eventId) => apiRequest("rsvp", { eventId }),
   assignTargetRole: (target_user_id, new_role) => apiRequest("assignTargetRole", { target_user_id, new_role }),
 
   // Board & Gallery

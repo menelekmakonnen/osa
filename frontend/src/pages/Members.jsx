@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, authState } from '../api/client';
-import { Card, Button, Input, Select, Badge, Avatar, ChequeChip, Modal } from '../components/ui';
+import { Card, Button, Input, Select, Badge, ChequeChip, Modal } from '../components/ui';
 import { toast } from 'react-hot-toast';
 import { Search, MapPin, Briefcase, Mail, Phone, Linkedin, Lock, Instagram, Twitter, Facebook, Share2, MessageCircle, Edit, AlertTriangle } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';

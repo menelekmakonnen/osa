@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api, authState } from '../api/client';
 import { toast } from 'react-hot-toast';
-import { Card, Button, Input, Modal, Avatar } from '../components/ui';
+import { Card, Button, Input, Modal } from '../components/ui';
 import { Edit3, Image as ImageIcon, Video, MessageCircle, Smile, Send, ThumbsUp } from 'lucide-react';
 import Picker from 'emoji-picker-react';
 import { useTenant } from '../context/TenantContext';

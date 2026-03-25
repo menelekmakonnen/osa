@@ -19,6 +19,11 @@ export function Fundraising() {
   const [donationAmount, setDonationAmount] = useState('');
   const [donating, setDonating] = useState(false);
 
+  // Create Campaign Modal
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newCampaign, setNewCampaign] = useState({ title: '', description: '', type: 'emergency', target_amount: '', currency: 'GHS', deadline: '' });
+  const [creating, setCreating] = useState(false);
+
   const loadData = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -39,10 +44,10 @@ export function Fundraising() {
     e.preventDefault();
     setDonating(true);
     try {
-      if(!donationAmount || isNaN(donationAmount) || donationAmount <= 0) {
+      if(!donationAmount || isNaN(donationAmount) || parseFloat(donationAmount) <= 0) {
           throw new Error("Please enter a valid amount.");
       }
-      await api.donate(selectedCampaign.id, parseFloat(donationAmount));
+      await api.donate({ campaign_id: selectedCampaign.id, amount: parseFloat(donationAmount) });
       setSelectedCampaign(null);
       setDonationAmount('');
       loadData();
@@ -51,6 +56,27 @@ export function Fundraising() {
       toast.error("Error: " + err.message);
     } finally {
       setDonating(false);
+    }
+  };
+
+  const handleCreateCampaign = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      await api.createCampaign({
+        ...newCampaign,
+        target_amount: parseFloat(newCampaign.target_amount),
+        scope_type: 'school',
+        scope_id: user?.school || ''
+      });
+      toast.success("Campaign created successfully!");
+      setIsCreateOpen(false);
+      setNewCampaign({ title: '', description: '', type: 'emergency', target_amount: '', currency: 'GHS', deadline: '' });
+      loadData();
+    } catch(err) {
+      toast.error("Error: " + err.message);
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -71,7 +97,7 @@ export function Fundraising() {
             </div>
             {isAdmin && (
                 <Button 
-                   onClick={() => toast.success("Campaign Creation Modal coming in v2!")} 
+                   onClick={() => setIsCreateOpen(true)} 
                    className="gap-2 shrink-0 bg-surface-muted hover:bg-surface-hover text-ink-title border-none font-semibold text-[14px]"
                 >
                    <PlusCircle size={18} /> Create Campaign
@@ -167,6 +193,40 @@ export function Fundraising() {
                </div>
             </form>
          )}
+      </Modal>
+
+      {/* Create Campaign Modal */}
+      <Modal isOpen={isCreateOpen} onClose={() => !creating && setIsCreateOpen(false)} title="Create Campaign">
+        <form onSubmit={handleCreateCampaign} className="flex flex-col gap-4 mt-2">
+          <Input label="Campaign Title" required value={newCampaign.title} onChange={e => setNewCampaign({...newCampaign, title: e.target.value})} placeholder="e.g. Emergency Food Fund 2026" />
+          <div>
+            <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">Campaign Type</label>
+            <select className="social-input" value={newCampaign.type} onChange={e => setNewCampaign({...newCampaign, type: e.target.value})}>
+              <option value="emergency">Emergency</option>
+              <option value="school_support">School Support</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="Target Amount" type="number" required min="1" value={newCampaign.target_amount} onChange={e => setNewCampaign({...newCampaign, target_amount: e.target.value})} placeholder="e.g. 5000" />
+            <div>
+              <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">Currency</label>
+              <select className="social-input" value={newCampaign.currency} onChange={e => setNewCampaign({...newCampaign, currency: e.target.value})}>
+                <option value="GHS">GHS</option>
+                <option value="USD">USD</option>
+                <option value="GBP">GBP</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">Description</label>
+            <textarea className="social-input min-h-[80px] resize-none" required value={newCampaign.description} onChange={e => setNewCampaign({...newCampaign, description: e.target.value})} placeholder="Describe the purpose and impact of this campaign..." />
+          </div>
+          <Input label="Deadline (optional)" type="date" value={newCampaign.deadline} onChange={e => setNewCampaign({...newCampaign, deadline: e.target.value})} />
+          <div className="flex justify-end gap-2 mt-2">
+            <Button type="button" variant="ghost" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={creating}>{creating ? 'Creating...' : 'Launch Campaign'}</Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

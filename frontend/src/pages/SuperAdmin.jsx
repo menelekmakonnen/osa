@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, Button, Badge, Modal, Input } from '../components/ui';
 import { authState, api } from '../api/client';
 import { toast } from 'react-hot-toast';
-import { ShieldAlert, Database, Users, Settings, Activity } from 'lucide-react';
+import { ShieldAlert, Database, Users, Settings, Activity, Save } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
 export function SuperAdmin() {
@@ -13,6 +13,30 @@ export function SuperAdmin() {
   const [newSchoolData, setNewSchoolData] = React.useState({ school_name: '', admin_name: '', admin_email: '', old_students_full_name: '', old_students_short_name: '', school_type: 'Mixed' });
   const [submittingSchool, setSubmittingSchool] = React.useState(false);
   const [features, setFeatures] = React.useState({ fundraising: true, newsletters: true, crossSchoolEvents: true, paymentGateway: false, adminApproval: false });
+  const [savingFlags, setSavingFlags] = React.useState(false);
+
+  // Load persisted feature flags on mount
+  useEffect(() => {
+    if (user?.role === "IT Department" || user?.role === "Super Admin") {
+      api.getFeatureFlags().then(flags => {
+        if (flags && Object.keys(flags).length > 0) setFeatures(flags);
+      }).catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSaveFlags = async () => {
+    setSavingFlags(true);
+    try {
+      await api.saveFeatureFlags(features);
+      toast.success("Feature flags saved");
+    } catch (err) {
+      toast.error("Error saving flags: " + err.message);
+    } finally {
+      setSavingFlags(false);
+    }
+  };
+
 
   const handleAddSchool = async (e) => {
      e.preventDefault();
@@ -92,6 +116,9 @@ export function SuperAdmin() {
         <Card className="flex flex-col gap-4 border-amber-200 shadow-social-card hover:border-amber-400 transition-colors">
            <div className="flex items-center justify-between border-b border-border-light pb-3">
               <h2 className="text-[18px] font-bold flex items-center gap-2 text-ink-title m-0"><Settings className="text-ink-muted" size={22} strokeWidth={2.5}/> Feature Flags</h2>
+              <Button size="sm" onClick={handleSaveFlags} disabled={savingFlags} className="flex items-center gap-1.5 font-bold shadow-sm">
+                <Save size={14} /> {savingFlags ? 'Saving...' : 'Save Flags'}
+              </Button>
            </div>
            <div className="flex flex-col gap-2 text-[14px] flex-1">
              <FeatureToggle label="Fundraising Module" enabled={features.fundraising} onClick={() => setFeatures({...features, fundraising: !features.fundraising})} />
