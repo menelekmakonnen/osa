@@ -54,8 +54,8 @@ const regexDB = /function getDB\(\)[\s\S]*?(?=function getHeaders)/m;
 code = code.replace(regexDB, dbHelpers + "\\n");
 
 // Fix calls
-code = code.replace(/getSheet\("([^"]+)"\)/g, "getSheet(\\"$1\\", typeof user !== 'undefined' ? user.school : null)");
-code = code.replace(/getSheetData\("([^"]+)"\)/g, "getSheetData(\\"$1\\", typeof user !== 'undefined' ? user.school : null)");
+code = code.replace(/getSheet\("([^"]+)"\)/g, `getSheet("$1", typeof user !== 'undefined' ? user.school : null)`);
+code = code.replace(/getSheetData\("([^"]+)"\)/g, `getSheetData("$1", typeof user !== 'undefined' ? user.school : null)`);
 
 // Remove old handleLogin and replace with multi-sheet
 const newLogin = `
