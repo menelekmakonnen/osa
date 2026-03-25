@@ -140,6 +140,16 @@ function handleAction(action, data, token) {
     return { success: true, message: "Schema migrated successfully" };
   } else if (action === "seedICUNIControl") {
     return seedICUNIControl();
+  } else if (action === "force_reset_db") {
+    const ss = getMasterDB();
+    const sheets = ss.getSheets();
+    const temp = ss.insertSheet("WIPING");
+    sheets.forEach(sh => {
+        try { ss.deleteSheet(sh); } catch(e) {}
+    });
+    INITIALIZE_SHEETS(ss);
+    ss.deleteSheet(temp);
+    return { success: true, message: "Master DB Scrubbed & Rebuilt for Architecture V3" };
   } else if (action === "unblock_auditor") {
     const ms = getSheet("members");
     const hs = getHeaders(ms);
@@ -472,13 +482,19 @@ function handleRegister(data) {
 
          const newYGFolder = ygBaseFolder.createFolder(new_yg_year + " - " + new_yg_nickname);
          generatedYgFolderId = newYGFolder.getId();
-         newYGFolder.createFolder("Year Group Admins");
-         newYGFolder.createFolder("Year Group Super Admins");
-         newYGFolder.createFolder("Year Group Members");
+         const ygsaF = newYGFolder.createFolder("Year Group Super Admins");
+         ygsaF.createFolder("Deleted");
+
+         const ygmF = newYGFolder.createFolder("Year Group Members");
+         ygmF.createFolder("Deleted");
+
+         const ygaF = newYGFolder.createFolder("Year Group Admins");
+         ygaF.createFolder("Deleted");
+
          newYGFolder.createFolder("Year Group Gallery");
          newYGFolder.createFolder("Year Group Events");
          newYGFolder.createFolder("Year Group Posts");
-         newYGFolder.createFolder("Deleted");
+         newYGFolder.createFolder("Donations");
 
          // Club Supergroup Architecture container
          const clubsFolder = newYGFolder.createFolder("Clubs");
@@ -676,8 +692,13 @@ function handleOnboardSchool(data) {
   const schoolFolder = schoolsBaseFolder.createFolder(new_school_name + " [" + newSchoolId.substring(0,8) + "]");
   schoolFolder.createFolder("School_Info");
   const adminsF = schoolFolder.createFolder("Admins");
-  adminsF.createFolder("Global Super Admins");
-  adminsF.createFolder("Global Admins");
+  
+  const gsaF = adminsF.createFolder("Global Super Admins");
+  gsaF.createFolder("Deleted");
+  
+  const gaF = adminsF.createFolder("Global Admins");
+  gaF.createFolder("Deleted");
+  
   schoolFolder.createFolder("Year Groups");
   schoolFolder.createFolder("Donations");
 
@@ -1075,7 +1096,11 @@ function getMembers(user, data) {
   if (scope_type === "yeargroup") {
     filteredMembers = allMembers.filter(m => m.year_group_id === scope_id);
   } else if (scope_type === "club") {
-    // Phase 2 extension hook
+    filteredMembers = allMembers.filter(m => {
+        let clubs = safeJsonParse(m.clubs, []);
+        if (!clubs.includes(scope_id)) return false;
+        return checkSupergroup(user.year_group_id, m.year_group_id);
+    });
   } else if (scope_type === "house") {
     filteredMembers = allMembers.filter(m => m.house_name === scope_id);
   } else if (scope_type === "class") {
@@ -1146,6 +1171,18 @@ function applyPrivacyFilters(targetMember, viewerUser) {
 
 
 // ==========================================
+// Centralized Supergroup Validation Hook
+// ==========================================
+function checkSupergroup(baseYgId, targetYgId) {
+    if (!baseYgId || !targetYgId) return true; // Allow defaults if data is malformed
+    const ygData = getYearGroupsData();
+    let y1 = ygData[baseYgId] ? parseInt(ygData[baseYgId].year) : 0;
+    let y2 = ygData[targetYgId] ? parseInt(ygData[targetYgId].year) : 0;
+    if (y1 > 0 && y2 > 0) return Math.abs(y1 - y2) <= 2;
+    return false; // Strict fallback since clubs are entirely Supergroup locked
+}
+
+// ==========================================
 // Newsletter & Posts
 // ==========================================
 
@@ -1156,11 +1193,25 @@ function getPosts(user, data) {
 
   const allPosts = getSheetData("posts").filter(p => (p.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
   
-  // Backwards compatibility migration map check
-  let userPosts = allPosts.filter(p => 
-      (p.scope_type === scope_type && p.scope_id === scope_id) ||
-      (scope_type === "yeargroup" && p.year_group_id === scope_id)
-  );
+  // Author filtering mapping caching
+  const allMembers = getSheetData("members");
+  const memMap = {};
+  allMembers.forEach(m => memMap[m.id] = m);
+
+  let userPosts = [];
+  if (scope_type === "club") {
+      userPosts = allPosts.filter(p => {
+         if (p.scope_type !== "club" || p.scope_id !== scope_id) return false;
+         let author = memMap[p.author_id];
+         if (!author) return true;
+         return checkSupergroup(user.year_group_id, author.year_group_id);
+      });
+  } else {
+      userPosts = allPosts.filter(p => 
+          (p.scope_type === scope_type && p.scope_id === scope_id) ||
+          (scope_type === "yeargroup" && p.year_group_id === scope_id)
+      );
+  }
   
   // If not admin, only show Approved + own drafts
   let isYGAdmin = user.role.includes("Admin") || user.role.includes("President");
@@ -1375,9 +1426,21 @@ function getCampaigns(user, data) {
   const userSchool = user.school || "Aggrey Memorial";
   
   const allCampaigns = getSheetData("campaigns").filter(c => (c.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
+  
+  const allMembers = getSheetData("members");
+  const memMap = {};
+  allMembers.forEach(m => memMap[m.id] = m);
+
   const visible = allCampaigns.filter(c => {
-     if(c.scope === "yeargroup" && c.year_group_id !== user.year_group_id) return false;
      if(scopeFilter === "my_school" && c.school !== user.school) return false;
+     
+     if (c.scope_type === "club") {
+         let creator = memMap[c.created_by];
+         if (!creator) return true;
+         return checkSupergroup(user.year_group_id, creator.year_group_id);
+     }
+     
+     if(c.scope === "yeargroup" && c.year_group_id !== user.year_group_id) return false;
      return true;
   });
   
@@ -1429,7 +1492,17 @@ function getEvents(user, data) {
   const userSchool = user.school || "Aggrey Memorial";
   
   const events = getSheetData("events").filter(e => (e.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
+  
+  const allMembers = getSheetData("members");
+  const memMap = {};
+  allMembers.forEach(m => memMap[m.id] = m);
+
   const visible = events.filter(e => {
+     if (e.scope_type === "club") {
+         let creator = memMap[e.created_by];
+         if (!creator) return true;
+         return checkSupergroup(user.year_group_id, creator.year_group_id);
+     }
      if(e.scope === "yeargroup" && e.year_group_id !== user.year_group_id && user.role !== "Super Admin") return false;
      return true;
   });
@@ -1596,10 +1669,21 @@ function getAlbums(user, data) {
     const scope_type = data.scope_type || "yeargroup";
     const scope_id = data.scope_id || user.year_group_id;
 
-    const albums = getSheetData("albums").filter(a => 
-       (a.school || "Aggrey Memorial") === userSchool && 
-       ((a.scope_type === scope_type && a.scope_id === scope_id) || a.group_id === scope_id)
-    ); 
+    const allMembers = getSheetData("members");
+    const memMap = {};
+    allMembers.forEach(m => memMap[m.id] = m);
+
+    const albums = getSheetData("albums").filter(a => {
+       if ((a.school || "Aggrey Memorial") !== userSchool) return false;
+       if (!((a.scope_type === scope_type && a.scope_id === scope_id) || a.group_id === scope_id)) return false;
+       
+       if (scope_type === "club") {
+           let creator = memMap[a.created_by_id];
+           if (!creator) return true;
+           return checkSupergroup(user.year_group_id, creator.year_group_id);
+       }
+       return true;
+    }); 
     return { success: true, data: albums.reverse() };
 }
 
@@ -1631,10 +1715,21 @@ function getGalleryItems(user, data) {
     const scope_type = data.scope_type || "yeargroup";
     const scope_id = data.scope_id || user.year_group_id;
 
-    let images = getSheetData("galleries").filter(g => 
-       (g.school || "Aggrey Memorial") === userSchool && 
-       ((g.scope_type === scope_type && g.scope_id === scope_id) || g.group_id === scope_id)
-    );
+    const allMembers = getSheetData("members");
+    const memMap = {};
+    allMembers.forEach(m => memMap[m.id] = m);
+
+    let images = getSheetData("galleries").filter(g => {
+       if ((g.school || "Aggrey Memorial") !== userSchool) return false;
+       if (!((g.scope_type === scope_type && g.scope_id === scope_id) || g.group_id === scope_id)) return false;
+       
+       if (scope_type === "club") {
+           let uploader = memMap[g.uploaded_by_id];
+           if (!uploader) return true;
+           return checkSupergroup(user.year_group_id, uploader.year_group_id);
+       }
+       return true;
+    });
     if (data.album_id) {
         images = images.filter(g => g.album_id === data.album_id);
     }
@@ -1646,10 +1741,21 @@ function getBoardMessages(user, data) {
     const scope_id = data.scope_id || data.group_id || user.year_group_id;
     const userSchool = user.school || "Aggrey Memorial";
 
-    let msgs = getSheetData("board_messages").filter(m => 
-       (m.school || "Aggrey Memorial") === userSchool && 
-       ((m.scope_type === scope_type && m.scope_id === scope_id) || m.group_id === scope_id)
-    ); 
+    const allMembers = getSheetData("members");
+    const memMap = {};
+    allMembers.forEach(m => memMap[m.id] = m);
+
+    let msgs = getSheetData("board_messages").filter(m => {
+       if ((m.school || "Aggrey Memorial") !== userSchool) return false;
+       if (!((m.scope_type === scope_type && m.scope_id === scope_id) || m.group_id === scope_id)) return false;
+       
+       if (scope_type === "club") {
+           let author = memMap[m.author_id];
+           if (!author) return true;
+           return checkSupergroup(user.year_group_id, author.year_group_id);
+       }
+       return true;
+    }); 
     msgs.forEach(m => {
         m.comments = safeJsonParse(m.comments, []);
         m.reactions = safeJsonParse(m.reactions, []);
