@@ -2187,19 +2187,22 @@ function uploadImage(user, data) {
       if (group_id !== "profile_pics" && group_id !== "profile_covers" && group_id !== "group_avatars") {
         const gSheet = getSheet("galleries", CURRENT_SCHOOL_ID);
         const headers = getHeaders(gSheet);
-        gSheet.appendRow(headers.map(h => {
-          if(h==="id") return Utilities.getUuid();
-          if(h==="scope_type") return data.scope_type || "yeargroup";
-          if(h==="scope_id") return data.scope_id || group_id;
-          if(h==="group_id") return group_id; // legacy 
-          if(h==="album_id") return album_id || "";
-          if(h==="uploaded_by_id") return user.id;
-          if(h==="uploaded_by_name") return user.name;
-          if(h==="url") return url;
-          if(h==="timestamp") return new Date().toISOString();
-          if(h==="school") return user.school; // P0 FIX: Data Isolation
-          return "";
-        }));
+        
+        const newImageObj = {
+          id: Utilities.getUuid(),
+          scope_type: data.scope_type || "yeargroup",
+          scope_id: data.scope_id || group_id,
+          group_id: group_id, // legacy 
+          album_id: album_id || "",
+          uploaded_by_id: user.id,
+          uploaded_by_name: user.name,
+          url: url,
+          timestamp: new Date().toISOString(),
+          school: user.school // P0 FIX: Data Isolation
+        };
+        
+        gSheet.appendRow(headers.map(h => newImageObj[h] !== undefined ? newImageObj[h] : ""));
+        return { success: true, data: newImageObj };
       }
 
       return { success: true, data: { url: url } };
@@ -2281,20 +2284,20 @@ function createAlbum(user, data) {
     const sheet = getSheet("albums", CURRENT_SCHOOL_ID);
     const headers = getHeaders(sheet);
     let id = Utilities.getUuid();
-    sheet.appendRow(headers.map(h => {
-        if(h==="id") return id;
-        if(h==="scope_type") return data.scope_type || "yeargroup";
-        if(h==="scope_id") return data.scope_id || data.group_id;
-        if(h==="group_id") return data.group_id || ""; // legacy hook
-        if(h==="school") return user.school; // P0: Tenant Isolation
-        if(h==="name") return name;
-        if(h==="description") return description || "";
-        if(h==="created_by_id") return user.id;
-        if(h==="created_by_name") return user.name;
-        if(h==="timestamp") return new Date().toISOString();
-        return "";
-    }));
-    return { success: true, data: { id, name, description } };
+    const newAlbumObj = {
+        id: id,
+        scope_type: data.scope_type || "yeargroup",
+        scope_id: data.scope_id || data.group_id,
+        group_id: data.group_id || "", // legacy hook
+        school: user.school, // P0: Tenant Isolation
+        name: name,
+        description: description || "",
+        created_by_id: user.id,
+        created_by_name: user.name,
+        timestamp: new Date().toISOString()
+    };
+    sheet.appendRow(headers.map(h => newAlbumObj[h] !== undefined ? newAlbumObj[h] : ""));
+    return { success: true, data: newAlbumObj };
 }
 
 function getGalleryItems(user, data) {

@@ -108,17 +108,17 @@ export function Dashboard() {
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
          <div className="min-w-[140px] flex-1 bg-surface-default border border-border-light p-4 rounded-[var(--radius-social)] shadow-social-card flex flex-col items-center justify-center gap-1 snap-start">
             <div className="p-2.5 bg-brand-50 rounded-full text-brand-600 mb-1"><Users size={24} strokeWidth={2.5}/></div>
-            <span className="text-xl font-bold text-ink-title leading-none">{data.stats.ygMembersCount || '-'}</span>
+            <span className="text-xl font-bold text-ink-title leading-none">{data?.stats?.ygMembersCount || '-'}</span>
             <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Members</span>
          </div>
          <div className="min-w-[140px] flex-1 bg-surface-default border border-border-light p-4 rounded-[var(--radius-social)] shadow-social-card flex flex-col items-center justify-center gap-1 snap-start">
             <div className="p-2.5 bg-red-50 rounded-full text-red-500 mb-1"><Heart size={24} strokeWidth={2.5}/></div>
-            <span className="text-xl font-bold text-ink-title leading-none">{data.stats.activeCampaignsCount || '-'}</span>
+            <span className="text-xl font-bold text-ink-title leading-none">{data?.stats?.activeCampaignsCount || '-'}</span>
             <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Campaigns</span>
          </div>
          <div className="min-w-[140px] flex-1 bg-surface-default border border-border-light p-4 rounded-[var(--radius-social)] shadow-social-card flex flex-col items-center justify-center gap-1 snap-start">
             <div className="p-2.5 bg-blue-50 rounded-full text-blue-500 mb-1"><Calendar size={24} strokeWidth={2.5}/></div>
-            <span className="text-xl font-bold text-ink-title leading-none">{data.stats.upcomingEventsCount || '-'}</span>
+            <span className="text-xl font-bold text-ink-title leading-none">{data?.stats?.upcomingEventsCount || '-'}</span>
             <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Events</span>
          </div>
       </div>
@@ -174,11 +174,11 @@ export function Dashboard() {
 
       {/* Feed Stream */}
       <div className="flex flex-col gap-4">
-        {data.recentPosts.length === 0 ? (
+        {(!data?.recentPosts || data.recentPosts.length === 0) ? (
           <Card className="text-center py-10">
              <div className="flex justify-center mb-3"><div className="p-4 bg-surface-muted rounded-full"><Edit3 size={32} className="text-ink-muted"/></div></div>
              <p className="text-ink-body font-medium text-[15px]">No recent posts available.</p>
-             <p className="text-ink-muted text-sm mt-1">Be the first to share an update with {activeScope.label}!</p>
+             <p className="text-ink-muted text-sm mt-1">Be the first to share an update with {activeScope?.label || 'your group'}!</p>
           </Card>
         ) : (
           data.recentPosts.map((post, i) => (

@@ -322,15 +322,15 @@ export function AppLayout() {
                   setScope(type, id, label);
                }}
             >
-               {user.role && user.role.includes("Platform") && <option value="all" style={{backgroundColor:'#fff',color:'#050505'}}>All Schools</option>}
-               <option value="school" style={{backgroundColor:'#fff',color:'#050505'}}>Whole School</option>
-               {user.year_group_id && <option value="yeargroup" style={{backgroundColor:'#fff',color:'#050505'}}>{user.year_group_nickname || 'My Year Group'}</option>}
-               {user.class_group_id && <option value="classgroup" style={{backgroundColor:'#fff',color:'#050505'}}>{user.class_group_name || 'My Class Group'}</option>}
+               {user.role && user.role.includes("Platform") && <option value="all" className="bg-surface-default text-ink-body">All Schools</option>}
+               <option value="school" className="bg-surface-default text-ink-body">Whole School</option>
+               {user.year_group_id && <option value="yeargroup" className="bg-surface-default text-ink-body">{user.year_group_nickname || 'My Year Group'}</option>}
+               {user.class_group_id && <option value="classgroup" className="bg-surface-default text-ink-body">{user.class_group_name || 'My Class Group'}</option>}
                {(user.role?.includes("President") || user.role?.includes("Admin") || user.role?.includes("IT")) && (
-                   <option value="exec" style={{backgroundColor:'#fff',color:'#050505'}}>Exec/Admin view</option>
+                   <option value="exec" className="bg-surface-default text-ink-body">Exec/Admin view</option>
                )}
                {isSuperAdmin && (
-                   <option value="superadmin" style={{backgroundColor:'#fff',color:'#050505'}}>Super Admin view</option>
+                   <option value="superadmin" className="bg-surface-default text-ink-body">Super Admin view</option>
                )}
             </select>
         </div>

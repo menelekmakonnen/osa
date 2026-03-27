@@ -46,10 +46,10 @@ export function Support() {
       setIsSubmitModalOpen(false);
       setSubmitData({ issue_type: '', description: '' });
       toast.success("Ticket submitted successfully!");
-      loadTickets();
+      setSubmitting(false); // Reset boolean immediately
+      await loadTickets();
     } catch (err) {
       toast.error("Error submitting ticket: " + err.message);
-    } finally {
       setSubmitting(false);
     }
   };
@@ -58,11 +58,8 @@ export function Support() {
     if(!window.confirm("Escalate this ticket to the next governance tier?")) return;
     try {
       await api.escalateTicket(ticketId);
-      // Optimistically update local state
-      setTickets(prev => prev.map(t =>
-        t.id === ticketId ? { ...t, status: 'Escalated', current_tier: String(parseInt(t.current_tier || '1') + 1) } : t
-      ));
       toast.success("Ticket escalated to next tier");
+      await loadTickets();
     } catch (err) {
       toast.error("Error escalating ticket: " + err.message);
     }
@@ -73,11 +70,8 @@ export function Support() {
     if (resolution === null) return; // cancelled
     try {
       await api.resolveTicket(ticketId, resolution);
-      // Optimistically update local state
-      setTickets(prev => prev.map(t =>
-        t.id === ticketId ? { ...t, status: 'Resolved', resolution } : t
-      ));
       toast.success("Ticket marked as resolved");
+      await loadTickets();
     } catch (err) {
       toast.error("Error resolving ticket: " + err.message);
     }

@@ -172,6 +172,7 @@ export const api = {
 
   // POST mutations
   onboardSchool: (schoolData) => apiRequest("onboardSchool", schoolData),
+  adminCreateSchool: (schoolData) => apiRequest("adminCreateSchool", schoolData),
   resendVerificationEmail: (email) => apiRequest("resendVerificationEmail", { email }),
   verifyEmail: (token) => apiRequest("verifyEmail", { token }),
   requestPasswordReset: (email) => apiRequest("resetPassword", { email }),
@@ -205,7 +206,7 @@ export const api = {
   donate: (data) => apiRequest("donate", data),
 
   createEvent: (data) => apiRequest("createEvent", data),
-  rsvp: (eventId) => apiRequest("rsvp", { eventId }),
+  rsvp: (eventId) => apiRequest("rsvp", { event_id: eventId }),
   assignTargetRole: (target_user_id, new_role) => apiRequest("assignTargetRole", { target_user_id, new_role }),
 
   // Board & Gallery

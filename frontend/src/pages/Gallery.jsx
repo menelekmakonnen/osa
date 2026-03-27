@@ -56,26 +56,25 @@ export function Gallery() {
       if (!newAlbumName.trim()) return;
       setCreatingAlbum(true);
       
-      const tempAlbum = { 
-          id: 'temp_' + Date.now(), 
-          name: newAlbumName.trim(), 
-          description: newAlbumDesc.trim(), 
-          created_by_name: user?.name || 'You', 
-          timestamp: new Date().toISOString() 
-      };
-      setAlbums(prev => [tempAlbum, ...prev]);
+      // Don't add a tempAlbum anymore, just let the button state say "Creating..."
 
       try {
-          await api.createAlbum({
+          const newAlbumObj = await api.createAlbum({
               scope_type: activeScope.type,
               scope_id: activeScope.id,
               name: newAlbumName.trim(),
               description: newAlbumDesc.trim()
           });
+          
+          if (newAlbumObj) {
+             setAlbums(prev => [newAlbumObj, ...prev]);
+          } else {
+             fetchAlbums();
+          }
+          
           setNewAlbumName("");
           setNewAlbumDesc("");
           setIsCreatingModalOpen(false);
-          fetchAlbums();
       } catch(err) {
           console.error("Failed to create album", err);
           toast.error("Failed to create album");
@@ -91,7 +90,7 @@ export function Gallery() {
      setUploading(true);
      try {
          const compressedBase64 = await compressImage(file);
-         await api.uploadImage({
+         const uploadedImage = await api.uploadImage({
              scope_type: activeScope.type,
              scope_id: activeScope.id,
              album_id: activeAlbum ? activeAlbum.id : null,
@@ -100,8 +99,17 @@ export function Gallery() {
              file_name: file.name
          });
          
-         if (activeAlbum) fetchGalleryItems(activeAlbum.id);
-         else fetchAlbums(); // Though usually they upload *into* an album
+         if (uploadedImage && uploadedImage.url) {
+             if (activeAlbum) {
+                 setImages(prev => [uploadedImage, ...prev]);
+             } else {
+                 // Should not happen since they upload INTO an album view
+                 fetchAlbums(); 
+             }
+         } else {
+             if (activeAlbum) fetchGalleryItems(activeAlbum.id);
+             else fetchAlbums();
+         }
      } catch(err) {
          console.error("Upload failed", err);
          toast.error("Upload failed. Please try again.");
