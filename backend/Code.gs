@@ -1359,29 +1359,30 @@ function assignTargetRole(user, data) {
 
 function getDashboard(user, data = {}) {
   const userSchool = user.school || "Aggrey Memorial";
+  const hasGlobalAccess = ROLE_TIERS[user.role] === 5;
   const scope_type = data.scope_type || "yeargroup";
   const scope_id = data.scope_id || user.year_group_id;
   
   // Assemble basic stats based on active scope
   const ygs = getSheetData("members", CURRENT_SCHOOL_ID).filter(m => 
-     (m.school || "Aggrey Memorial") === userSchool && 
+     (hasGlobalAccess || (m.school || "Aggrey Memorial") === userSchool) && 
      (scope_type === "school" || m.year_group_id === scope_id || m.house_name === scope_id || m.final_class === scope_id)
   );
   
   const posts = getSheetData("posts", CURRENT_SCHOOL_ID).filter(p => 
-     (p.school || "Aggrey Memorial") === userSchool && 
+     (hasGlobalAccess || (p.school || "Aggrey Memorial") === userSchool) && 
      ((p.scope_type === scope_type && p.scope_id === scope_id) || (scope_type === "yeargroup" && p.year_group_id === scope_id)) && 
      p.status === "Approved"
   );
   
   const activeCampaigns = getSheetData("campaigns", CURRENT_SCHOOL_ID).filter(c => 
-     (c.school || "Aggrey Memorial") === userSchool && 
+     (hasGlobalAccess || (c.school || "Aggrey Memorial") === userSchool) && 
      c.status === "active" && 
      (c.scope === "school" || c.scope_id === scope_id)
   );
   
   const upcomingEvents = getSheetData("events", CURRENT_SCHOOL_ID).filter(e => {
-     if ((e.school || "Aggrey Memorial") !== userSchool) return false;
+     if (!hasGlobalAccess && (e.school || "Aggrey Memorial") !== userSchool) return false;
      let isVisible = (e.scope === "platform" || e.scope === "school" || e.scope_id === scope_id);
      return isVisible && e.status !== "past";
   });
@@ -1532,10 +1533,11 @@ function checkSupergroup(baseYgId, targetYgId) {
 
 function getPosts(user, data) {
   const userSchool = user.school || "Aggrey Memorial";
+  const hasGlobalAccess = ROLE_TIERS[user.role] === 5;
   const scope_type = data.scope_type || "yeargroup";
   const scope_id = data.scope_id || user.year_group_id;
 
-  const allPosts = getSheetData("posts", CURRENT_SCHOOL_ID).filter(p => (p.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
+  const allPosts = getSheetData("posts", CURRENT_SCHOOL_ID).filter(p => hasGlobalAccess || (p.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
   
   // Author filtering mapping caching
   const allMembers = getSheetData("members", CURRENT_SCHOOL_ID);
@@ -1768,8 +1770,9 @@ function dispatchNewsletter(user, data) {
 function getCampaigns(user, data) {
   const scopeFilter = data.scope || "all"; // my_school, all
   const userSchool = user.school || "Aggrey Memorial";
+  const hasGlobalAccess = ROLE_TIERS[user.role] === 5;
   
-  const allCampaigns = getSheetData("campaigns", CURRENT_SCHOOL_ID).filter(c => (c.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
+  const allCampaigns = getSheetData("campaigns", CURRENT_SCHOOL_ID).filter(c => hasGlobalAccess || (c.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
   
   const allMembers = getSheetData("members", CURRENT_SCHOOL_ID);
   const memMap = {};
@@ -1834,8 +1837,9 @@ function handleDonation(user, data) {
 function getEvents(user, data) {
   const scopeFilter = data.scope || "all";
   const userSchool = user.school || "Aggrey Memorial";
+  const hasGlobalAccess = ROLE_TIERS[user.role] === 5;
   
-  const events = getSheetData("events", CURRENT_SCHOOL_ID).filter(e => (e.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
+  const events = getSheetData("events", CURRENT_SCHOOL_ID).filter(e => hasGlobalAccess || (e.school || "Aggrey Memorial") === userSchool); // P0: Tenant Isolation
   
   const allMembers = getSheetData("members", CURRENT_SCHOOL_ID);
   const memMap = {};
