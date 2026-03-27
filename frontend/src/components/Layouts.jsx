@@ -387,6 +387,20 @@ export function AppLayout() {
       {/* Main Content Area - Center Aligned Feed Style */}
       <main className={`flex-1 flex justify-center w-full transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-[280px]'}`}>
          <div className="w-full max-w-[680px] lg:max-w-[740px] xl:max-w-[800px] py-4 md:py-6 px-4 pb-20 md:pb-6 relative">
+            {isImpersonating && (
+               <div className="mb-4 bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-3">
+                     <AlertTriangle size={20} className="text-amber-500 shrink-0" />
+                     <div className="flex flex-col">
+                        <span className="text-[13px] font-bold text-amber-900 leading-tight">Simulation Mode Engaged</span>
+                        <span className="text-[11px] text-amber-700 mt-0.5">You are currently possessing the namespace of <strong>{impersonationName}</strong>. Return to the Cockpit to disengage.</span>
+                     </div>
+                  </div>
+                  <Link to="/app/cockpit" className="shrink-0 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 text-[11px] font-bold rounded-lg transition-colors border border-amber-300 shadow-sm">
+                      End Simulation
+                  </Link>
+               </div>
+            )}
             <Outlet />
          </div>
       </main>

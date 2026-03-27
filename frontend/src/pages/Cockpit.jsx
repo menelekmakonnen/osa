@@ -405,13 +405,18 @@ export function Cockpit() {
                     </div>
                 ) : (
                     <div className="space-y-6">
+                        <div className="flex items-center justify-between -mb-4 relative z-10">
+                            <label className="text-sm font-semibold text-ink-muted pl-1">1. Target Organization / School</label>
+                            <Button variant="ghost" size="sm" onClick={loadOverview} className="h-6 text-[10px] px-2 gap-1 text-brand-600 hover:bg-brand-50" title="Refresh network node list">
+                                <RefreshCw size={12} /> Sync
+                            </Button>
+                        </div>
                         <Select 
-                            label="1. Target Organization / School"
                             value={impForm.schoolId}
                             onChange={(e) => setImpForm(p => ({...p, schoolId: e.target.value}))}
                             options={[
                                 {label: 'Select Database Namespace...', value: ''},
-                                ...schoolsList.map(s => ({label: Math.max(0, s.name.length) ? s.name + ' (' + s.short_code + ')' : s.name, value: s.id}))
+                                ...schoolsList.map(s => ({label: Math.max(0, s.name.length) ? s.name + (s.short_code ? ' (' + s.short_code + ')' : '') : s.name, value: s.id}))
                             ]}
                         />
                         <Select 
