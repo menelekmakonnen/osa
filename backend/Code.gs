@@ -308,6 +308,10 @@ function handleAction(action, data, token) {
       return createCampaign(user, data);
     case "donate":
       return handleDonation(user, data);
+    case "approveDonation":
+      return handleApproveDonation(user, data);
+    case "adminAssignDonation":
+      return handleAdminAssignDonation(user, data);
 
     // Events
     case "getEvents":
@@ -1448,8 +1452,11 @@ function handleRegisterStaff(data) {
 }
 
 function handleResendVerification(data) {
-  const { email } = data;
+  const { email, target_school_id } = data;
   if (!email) return { success: false, error: "Missing email address" };
+  if (target_school_id) {
+     CURRENT_SCHOOL_ID = target_school_id;
+  }
 
   const membersSheet = getSheet("members", CURRENT_SCHOOL_ID);
   const headers = getHeaders(membersSheet);
@@ -2126,10 +2133,10 @@ function getCampaigns(user, data) {
 }
 
 function handleDonation(user, data) {
-   const { campaign_id, amount } = data;
-   if(!amount || isNaN(amount)) return { success: false, error: "Invalid amount" };
+   const { campaign_id, amount, is_anonymous } = data;
+   if(!amount || isNaN(amount)) return { success: false, error: "Invalid pledge amount" };
 
-   // Log donation
+   // Log pledge
    const sheet = getSheet("donations", CURRENT_SCHOOL_ID);
    const headers = getHeaders(sheet);
    sheet.appendRow(headers.map(h => {
@@ -2138,15 +2145,95 @@ function handleDonation(user, data) {
        if(h==="donor_id") return user.id;
        if(h==="amount") return amount;
        if(h==="timestamp") return new Date().toISOString();
+       if(h==="is_anonymous") return Boolean(is_anonymous);
+       if(h==="status") return "Pending";
        return "";
    }));
    
+   return { success: true, message: "Pledge successfully submitted for finance review", data: { amount } };
+}
+
+function handleApproveDonation(user, data) {
+   // Assuming Tier 4 (School Administrator) or Tier 5 (Staff) serves as the Finance Executive
+   enforceRoleHierarchy(user, "School Administrator", [4, 5]);
+
+   const { pledge_id } = data;
+   if (!pledge_id) return { success: false, error: "Missing pledge reference" };
+
+   const dSheet = getSheet("donations", CURRENT_SCHOOL_ID);
+   const dHeaders = getHeaders(dSheet);
+   const dRows = dSheet.getDataRange().getValues();
+   
+   let targetPledge = null;
+   let targetRowIndex = -1;
+   
+   for (let i = 1; i < dRows.length; i++) {
+     let r = rowToObject(dRows[i], dHeaders);
+     if (r.id === pledge_id) {
+        if (r.status === "Approved") return { success: false, error: "Pledge is already verified" };
+        targetPledge = r;
+        targetRowIndex = i + 1;
+        break;
+     }
+   }
+
+   if (!targetPledge) return { success: false, error: "Pledge not found in ledger" };
+
+   // Mark pledge as approved
+   dSheet.getRange(targetRowIndex, dHeaders.indexOf("status") + 1).setValue("Approved");
+   if (dHeaders.indexOf("approved_by") !== -1) {
+       dSheet.getRange(targetRowIndex, dHeaders.indexOf("approved_by") + 1).setValue(user.id);
+   }
+
    // Update campaign totals
    const campSheet = getSheet("campaigns", CURRENT_SCHOOL_ID);
    const cHeaders = getHeaders(campSheet);
-   const rows = campSheet.getDataRange().getValues();
-   for(let i=1; i<rows.length; i++) {
-     let r = rowToObject(rows[i], cHeaders);
+   const cRows = campSheet.getDataRange().getValues();
+   let targetCampaignName = "Campaign";
+   
+   for (let j = 1; j < cRows.length; j++) {
+     let c = rowToObject(cRows[j], cHeaders);
+     if (c.id === targetPledge.campaign_id) {
+        let nRaised = (parseFloat(c.raised_amount) || 0) + parseFloat(targetPledge.amount);
+        let nDonors = parseInt(c.donor_count || 0) + 1;
+        campSheet.getRange(j+1, cHeaders.indexOf("raised_amount")+1).setValue(nRaised);
+        campSheet.getRange(j+1, cHeaders.indexOf("donor_count")+1).setValue(nDonors);
+        targetCampaignName = c.title || targetCampaignName;
+        break;
+     }
+   }
+   
+   // We could technically issue a platform board/push notification here
+   // For now we assume logic returns success and client handles UI updates.
+   return { success: true, message: "Pledge reconciled and funds authorized" };
+}
+
+function handleAdminAssignDonation(user, data) {
+   enforceRoleHierarchy(user, "School Administrator", [4, 5]);
+
+   const { campaign_id, donor_id, amount, is_anonymous } = data;
+   if(!amount || isNaN(amount) || !campaign_id || !donor_id) return { success: false, error: "Missing required fields for direct assignment" };
+
+   const sheet = getSheet("donations", CURRENT_SCHOOL_ID);
+   const headers = getHeaders(sheet);
+   sheet.appendRow(headers.map(h => {
+       if(h==="id") return Utilities.getUuid();
+       if(h==="campaign_id") return campaign_id;
+       if(h==="donor_id") return donor_id;
+       if(h==="amount") return amount;
+       if(h==="timestamp") return new Date().toISOString();
+       if(h==="is_anonymous") return Boolean(is_anonymous);
+       if(h==="status") return "Approved"; // Auto-approved because admin created it
+       if(h==="approved_by") return user.id;
+       return "";
+   }));
+
+   // Instantly update counter
+   const campSheet = getSheet("campaigns", CURRENT_SCHOOL_ID);
+   const cHeaders = getHeaders(campSheet);
+   const cRows = campSheet.getDataRange().getValues();
+   for(let i=1; i<cRows.length; i++) {
+     let r = rowToObject(cRows[i], cHeaders);
      if(r.id === campaign_id) {
         let nRaised = (parseFloat(r.raised_amount) || 0) + parseFloat(amount);
         let nDonors = parseInt(r.donor_count || 0) + 1;
@@ -2156,7 +2243,7 @@ function handleDonation(user, data) {
      }
    }
    
-   return { success: true, message: "Donation logged", data: { amount } };
+   return { success: true, message: "Authorized donation forced into ledger" };
 }
 
 // ==========================================
@@ -2620,7 +2707,7 @@ function INITIALIZE_SHEETS(targetDB = null) {
         "members": ["id", "name", "username", "email", "password", "role", "year_group_id", "year_group_nickname", "final_class", "house_name", "gender", "cheque_colour", "school", "association", "date_joined", "session_token", "token_expiry", "priv_email", "priv_phone", "priv_location", "priv_profession", "priv_linkedin", "priv_bio", "priv_social", "bio", "profession", "location", "phone", "linkedin", "social_links", "profile_pic", "cover_url", "school_admin_id", "verification_status", "drive_folder_id"],
         "posts": ["id", "title", "category", "content", "author_id", "author_name", "scope_type", "scope_id", "school", "submission_date", "status", "newsletter_month", "rejection_note"],
         "campaigns": ["id", "title", "type", "description", "target_amount", "currency", "deadline", "scope", "scope_type", "scope_id", "school", "status", "raised_amount", "donor_count", "updates", "created_by"],
-        "donations": ["id", "campaign_id", "donor_id", "amount", "timestamp", "payment_method"],
+        "donations": ["id", "campaign_id", "donor_id", "amount", "timestamp", "payment_method", "is_anonymous", "status", "approved_by"],
         "events": ["id", "title", "type", "description", "date", "time", "virtual_link", "venue", "scope", "scope_type", "scope_id", "school", "max_attendees", "status", "created_by"],
         "rsvps": ["id", "event_id", "user_id", "timestamp"],
         "newsletters": ["id", "month", "scope_type", "scope_id", "post_ids", "recipient_count", "dispatched_by", "timestamp"],

@@ -179,7 +179,7 @@ export const api = {
   adminProvisionMember: (data) => apiRequest("adminProvisionMember", data),
   adminProvisionYearGroup: (data) => apiRequest("adminProvisionYearGroup", data),
   adminProvisionClub: (data) => apiRequest("adminProvisionClub", data),
-  resendVerificationEmail: (email) => apiRequest("resendVerificationEmail", { email }),
+  resendVerificationEmail: (email, target_school_id) => apiRequest("resendVerificationEmail", { email, target_school_id }),
   verifyEmail: (token) => apiRequest("verifyEmail", { token }),
   requestPasswordReset: (email) => apiRequest("resetPassword", { email }),
   completePasswordReset: (token, new_password) => apiRequest("completePasswordReset", { token, new_password }),
@@ -210,6 +210,8 @@ export const api = {
 
   createCampaign: (data) => apiRequest("createCampaign", data),
   donate: (data) => apiRequest("donate", data),
+  approveDonation: (data) => apiRequest("approveDonation", data),
+  adminAssignDonation: (data) => apiRequest("adminAssignDonation", data),
 
   createEvent: (data) => apiRequest("createEvent", data),
   rsvp: (eventId) => apiRequest("rsvp", { event_id: eventId }),
