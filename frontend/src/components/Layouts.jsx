@@ -44,7 +44,7 @@ export function AuthLayout() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="text-center mb-6 mt-4">
           <Link to="/" onClick={() => window.location.href='/'} className="inline-block transition-transform hover:scale-105 active:scale-95">
-             <Logo wrapperClass="w-16 h-16 mx-auto shadow-social-card" className="w-10 h-10" noText />
+             <Logo wrapperClass="w-16 h-16 mx-auto" className="w-14 h-14" noText />
           </Link>
           <h2 className="mt-4 text-3xl font-extrabold text-ink-title">OSA Directory</h2>
         </div>

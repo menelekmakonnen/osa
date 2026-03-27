@@ -333,8 +333,10 @@ export function Register() {
            </>
         )}
 
-        {!isCustomDomain && (
-          <div className="mt-2 border-t border-border-light pt-4 flex flex-col gap-3">
+        {!isStaffReg && (
+          <>
+            {!isCustomDomain && (
+              <div className="mt-2 border-t border-border-light pt-4 flex flex-col gap-3">
              <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide block">Select School</label>
              <select 
                  name="school_id"
@@ -592,6 +594,8 @@ export function Register() {
                   </div>
                )}
            </>
+        )}
+          </>
         )}
         
         {(!isStaffReg || staffAuthPassed) && (

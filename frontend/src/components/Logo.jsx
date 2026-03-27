@@ -15,11 +15,11 @@ export function Logo({ className = "w-10 h-10 w-full h-full", wrapperClass = "w-
         const secondaryColor = styles.getPropertyValue('--school-secondary').trim() || "#3b82f6";
 
         const svgStr = `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-             <path d="M100 15 C100 15, 25 35, 25 100 C25 165, 100 195, 100 195 C100 195, 175 165, 175 100 C175 35, 100 15, 100 15 Z" fill="${primaryColor}" fill-opacity="0.9" />
-             <path d="M100 15 C100 15, 25 35, 25 100 C25 165, 100 195, 100 195 L100 190 L100 15 Z" fill="${secondaryColor}" />
-             <path d="M100 15 L100 195 C100 195, 175 165, 175 100 C175 35, 100 15, 100 15 Z" fill="${primaryColor}" />
-             <circle cx="100" cy="65" r="18" fill="white"/>
-             <path d="M65 110 h70 M65 145 h70" stroke="white" stroke-width="10" stroke-linecap="round"/>
+             <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 C100 190, 185 150, 185 100 L185 30 Z" fill="${primaryColor}" fill-opacity="0.9" />
+             <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 L100 10 Z" fill="${secondaryColor}" />
+             <path d="M100 10 L185 30 L185 100 C185 150, 100 190, 100 190 L100 10 Z" fill="${primaryColor}" />
+             <circle cx="100" cy="70" r="16" fill="white"/>
+             <path d="M70 115 h60 M70 145 h60" stroke="white" stroke-width="10" stroke-linecap="round"/>
           </svg>`;
 
         try {
@@ -38,7 +38,7 @@ export function Logo({ className = "w-10 h-10 w-full h-full", wrapperClass = "w-
   }, []);
 
   return (
-    <div className={`flex items-center justify-center text-brand-500 bg-brand-50 rounded-xl overflow-hidden shadow-sm ${wrapperClass}`}>
+    <div className={`flex items-center justify-center text-brand-500 ${wrapperClass}`}>
       <svg 
         ref={svgRef}
         viewBox="0 0 200 200" 
@@ -46,11 +46,11 @@ export function Logo({ className = "w-10 h-10 w-full h-full", wrapperClass = "w-
         xmlns="http://www.w3.org/2000/svg" 
         className={className}
       >
-         <path d="M100 15 C100 15, 25 35, 25 100 C25 165, 100 195, 100 195 C100 195, 175 165, 175 100 C175 35, 100 15, 100 15 Z" fill="currentColor" fillOpacity="0.9" />
-         <path d="M100 15 C100 15, 25 35, 25 100 C25 165, 100 195, 100 195 L100 190 L100 15 Z" fill="var(--school-secondary, #3b82f6)" />
-         <path d="M100 15 L100 195 C100 195, 175 165, 175 100 C175 35, 100 15, 100 15 Z" fill="currentColor" />
-         <circle cx="100" cy="65" r="18" fill="white"/>
-         <path d="M65 110 h70 M65 145 h70" stroke="white" strokeWidth="10" strokeLinecap="round"/>
+         <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 C100 190, 185 150, 185 100 L185 30 Z" fill="currentColor" fillOpacity="0.9" />
+         <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 L100 10 Z" fill="var(--school-secondary, #3b82f6)" />
+         <path d="M100 10 L185 30 L185 100 C185 150, 100 190, 100 190 L100 10 Z" fill="currentColor" />
+         <circle cx="100" cy="70" r="16" fill="white"/>
+         <path d="M70 115 h60 M70 145 h60" stroke="white" strokeWidth="10" strokeLinecap="round"/>
       </svg>
     </div>
   );
