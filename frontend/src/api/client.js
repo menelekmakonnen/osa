@@ -173,6 +173,12 @@ export const api = {
   // POST mutations
   onboardSchool: (schoolData) => apiRequest("onboardSchool", schoolData),
   adminCreateSchool: (schoolData) => apiRequest("adminCreateSchool", schoolData),
+  adminProvisionMember: (data) => apiRequest("adminProvisionMember", data),
+  adminProvisionYearGroup: (data) => apiRequest("adminProvisionYearGroup", data),
+  adminProvisionClub: (data) => apiRequest("adminProvisionClub", data),
+  adminProvisionMember: (data) => apiRequest("adminProvisionMember", data),
+  adminProvisionYearGroup: (data) => apiRequest("adminProvisionYearGroup", data),
+  adminProvisionClub: (data) => apiRequest("adminProvisionClub", data),
   resendVerificationEmail: (email) => apiRequest("resendVerificationEmail", { email }),
   verifyEmail: (token) => apiRequest("verifyEmail", { token }),
   requestPasswordReset: (email) => apiRequest("resetPassword", { email }),

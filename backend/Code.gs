@@ -250,6 +250,12 @@ function handleAction(action, data, token) {
   switch (action) {
     case "adminCreateSchool":
       return handleAdminCreateSchool(user, data);
+    case "adminProvisionMember":
+      return handleGodModeProvisionMember(user, data);
+    case "adminProvisionYearGroup":
+      return handleGodModeProvisionYearGroup(user, data);
+    case "adminProvisionClub":
+      return handleGodModeProvisionClub(user, data);
     case "getDashboard":
       return getDashboard(user, data);
     case "getProfile":
@@ -919,6 +925,90 @@ function handleAdminCreateSchool(user, data) {
       school_id: newSchoolId
     }
   };
+}
+
+function handleGodModeProvisionMember(user, data) {
+  if (user.role !== "ICUNI Staff" && user.role !== "IT Department") return { success: false, error: "Unauthorized access: Staff only" };
+  const { target_school_id, name, email, role, year_group_id, password } = data;
+  if (!target_school_id || !name || !email || !role || !password) return { success: false, error: "Missing required fields" };
+  
+  const mSheet = getSheet("members", target_school_id);
+  const hs = getHeaders(mSheet);
+  const rows = mSheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const r = rowToObject(rows[i], hs);
+    if (r.email && r.email.toLowerCase() === email.toLowerCase()) {
+      return { success: false, error: "Email already exists in target tenant" };
+    }
+  }
+  
+  const newId = Utilities.getUuid();
+  const salt = Utilities.getUuid();
+  const passHash = computeHash(password, salt);
+  
+  const newRowObj = {
+    id: newId,
+    name: name,
+    email: email.toLowerCase(),
+    phone: "",
+    password_hash: passHash,
+    salt: salt,
+    role: role,
+    school: target_school_id,
+    year_group_id: year_group_id || "",
+    class_group_id: "",
+    house_name: "",
+    custom_title: "",
+    bio: "Manually provisioned by ICUNI Network Administrator.",
+    profile_pic: "",
+    verification_status: "Approved",
+    magic_link_token: "",
+    magic_link_expires: "",
+    created_at: new Date().toISOString(),
+    last_login: ""
+  };
+  
+  mSheet.appendRow(hs.map(h => newRowObj[h] !== undefined ? newRowObj[h] : ""));
+  return { success: true, data: { message: "Member successfully injected into topology.", member: newRowObj } };
+}
+
+function handleGodModeProvisionYearGroup(user, data) {
+  if (user.role !== "ICUNI Staff" && user.role !== "IT Department") return { success: false, error: "Unauthorized access" };
+  const { target_school_id, year, nickname } = data;
+  if (!target_school_id || !year) return { success: false, error: "Missing required fields" };
+  
+  const ygSheet = getSheet("year_groups", target_school_id);
+  const hs = getHeaders(ygSheet);
+  const newId = Utilities.getUuid();
+  const newRowObj = {
+     id: newId,
+     year: year,
+     nickname: nickname || year,
+     president_id: "",
+     status: "Active"
+  };
+  ygSheet.appendRow(hs.map(h => newRowObj[h] !== undefined ? newRowObj[h] : ""));
+  return { success: true, data: { message: "Year Group physically created.", group: newRowObj } };
+}
+
+function handleGodModeProvisionClub(user, data) {
+  if (user.role !== "ICUNI Staff" && user.role !== "IT Department") return { success: false, error: "Unauthorized access" };
+  const { target_school_id, group_name, group_type, description } = data;
+  if (!target_school_id || !group_name || !group_type) return { success: false, error: "Missing required fields" };
+  
+  const gsSheet = getSheet("group_settings", target_school_id);
+  const hs = getHeaders(gsSheet);
+  const newId = Utilities.getUuid();
+  const newRowObj = {
+     id: newId,
+     group_type: group_type, // 'club' or 'house'
+     group_name: group_name,
+     description: description || "",
+     president_id: "",
+     status: "Active"
+  };
+  gsSheet.appendRow(hs.map(h => newRowObj[h] !== undefined ? newRowObj[h] : ""));
+  return { success: true, data: { message: "Club configuration created.", club: newRowObj } };
 }
 
 function handleResetPassword(data) {

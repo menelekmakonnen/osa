@@ -6,7 +6,7 @@ import {
   Monitor, Users, School, AlertTriangle, FileText, UserPlus, Trash2, 
   ArrowUpRight, Clock, Eye, Activity, Shield, ChevronRight, RefreshCw,
   Database, Search, Save, Settings, Power, Edit2, Table, UserCog, 
-  ToggleLeft, ToggleRight, XCircle, CheckCircle, Download
+  ToggleLeft, ToggleRight, XCircle, CheckCircle, Download, Zap
 } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';
 import { Dashboard } from './Dashboard';
@@ -21,6 +21,7 @@ const TIERS = [
 
 const SHEETS = ['members', 'posts', 'campaigns', 'events', 'tickets', 'schools', 'year_groups', 'donations', 'rsvps', 'newsletters', 'board_messages', 'group_settings'];
 
+import { Calendar } from "lucide-react";
 export function Cockpit() {
   const user = authState.getUser();
   const { setScope } = useTenant();
@@ -39,7 +40,11 @@ export function Cockpit() {
 
   // Add School Modal
   const [isAddSchoolOpen, setIsAddSchoolOpen] = useState(false);
-  const [newSchoolData, setNewSchoolData] = useState({ school_name: '', admin_name: '', admin_email: '', school_type: 'Mixed' });
+  const [newSchoolData, setNewSchoolData] = useState({ school_name: '', admin_name: '', admin_email: '', school_type: 'Mixed', association_name: '', association_short_name: '', motto: '', cheque_representation: 'N/A', classes: '', houses: '' });
+  const [provMember, setProvMember] = useState({ target_school_id: '', name: '', email: '', role: 'Member', year_group_id: '', password: '' });
+  const [provYG, setProvYG] = useState({ target_school_id: '', year: '', nickname: '' });
+  const [provClub, setProvClub] = useState({ target_school_id: '', group_name: '', group_type: 'club', description: '' });
+  const [provisioning, setProvisioning] = useState(false);
   const [submittingSchool, setSubmittingSchool] = useState(false);
 
   // Feature Flags
@@ -171,7 +176,7 @@ export function Cockpit() {
       });
       toast.success("School onboarded successfully!");
       setIsAddSchoolOpen(false);
-      setNewSchoolData({ school_name: '', admin_name: '', admin_email: '', school_type: 'Mixed' });
+      setNewSchoolData({ school_name: '', admin_name: '', admin_email: '', school_type: 'Mixed', association_name: '', association_short_name: '', motto: '', cheque_representation: 'N/A', classes: '', houses: '' });
       loadOverview();
     } catch (err) {
       toast.error("Error: " + err.message);
@@ -341,6 +346,7 @@ export function Cockpit() {
           { id: 'schools', icon: School, label: 'Schools' },
           { id: 'members', icon: UserCog, label: 'Member Override' },
           { id: 'data', icon: Table, label: 'Spreadsheet' },
+          { id: 'provision', icon: Zap, label: 'Provision API' },
           { id: 'flags', icon: Settings, label: 'Feature Flags' },
         ].map(tab => (
           <button
@@ -575,6 +581,69 @@ export function Cockpit() {
               </div>
             </div>
           </>
+        )}
+
+        
+        {/* ============ PROVISIONING TAB ============ */}
+        {activeTab === 'provision' && (
+          <div className="flex flex-col gap-6">
+            <Card className="p-8 border-2 border-brand-200 shadow-md">
+                <div className="mb-6 border-b border-brand-200 pb-4">
+                    <h3 className="text-xl font-bold flex items-center gap-2 text-brand-900">
+                        <Zap className="text-brand-600" size={24} />
+                        Entity Provisioning Hub
+                    </h3>
+                    <p className="text-brand-700/80 text-sm mt-1">Directly inject objects into target tenant schemas.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                   {/* Member Provision */}
+                   <div className="space-y-4 bg-surface-muted p-4 rounded-xl border border-border-light shadow-sm">
+                      <h4 className="font-bold text-ink-title flex items-center gap-2 border-b border-border-light pb-2"><UserPlus size={16}/> Forge Member</h4>
+                      <Select label="Target DB Node" value={provMember.target_school_id} onChange={e=>setProvMember(p=>({...p, target_school_id: e.target.value}))} options={[{label:'Select...', value:''}, ...schoolsList.map(s=>({label:s.name, value:s.id}))]} />
+                      <Input label="Full Name" value={provMember.name} onChange={e=>setProvMember(p=>({...p, name: e.target.value}))} />
+                      <Input label="Email Address" type="email" value={provMember.email} onChange={e=>setProvMember(p=>({...p, email: e.target.value}))} />
+                      <Input label="Temp Password" type="password" value={provMember.password} onChange={e=>setProvMember(p=>({...p, password: e.target.value}))} />
+                      <Select label="Force Tier Role" value={provMember.role} onChange={e=>setProvMember(p=>({...p, role: e.target.value}))} options={[{label:'Member', value:'Member'}, {label:'Year Group Admin', value:'Year Group Admin'}, {label:'School Administrator', value:'School Administrator'}]} />
+                      <Button onClick={async () => {
+                         if(!provMember.target_school_id || !provMember.email) return toast.error("Missing fields");
+                         setProvisioning(true);
+                         try { await api.adminProvisionMember(provMember); toast.success("Member Provisioned!"); setProvMember(p=>({...p, email:'', name:'', password:''})); }
+                         catch(err) { toast.error(err.message); } finally { setProvisioning(false); }
+                      }} disabled={provisioning} className="w-full">Inject Profile</Button>
+                   </div>
+
+                   {/* Year Group Provision */}
+                   <div className="space-y-4 bg-surface-muted p-4 rounded-xl border border-border-light shadow-sm">
+                      <h4 className="font-bold text-ink-title flex items-center gap-2 border-b border-border-light pb-2"><Calendar size={16}/> Forge Year Group</h4>
+                      <Select label="Target DB Node" value={provYG.target_school_id} onChange={e=>setProvYG(p=>({...p, target_school_id: e.target.value}))} options={[{label:'Select...', value:''}, ...schoolsList.map(s=>({label:s.name, value:s.id}))]} />
+                      <Input label="Year (e.g. 1999)" type="number" value={provYG.year} onChange={e=>setProvYG(p=>({...p, year: e.target.value}))} />
+                      <Input label="Nickname (Optional)" value={provYG.nickname} onChange={e=>setProvYG(p=>({...p, nickname: e.target.value}))} />
+                      <Button onClick={async () => {
+                         if(!provYG.target_school_id || !provYG.year) return toast.error("Missing fields");
+                         setProvisioning(true);
+                         try { await api.adminProvisionYearGroup(provYG); toast.success("Year Group Created!"); setProvYG(p=>({...p, year:'', nickname:''})); }
+                         catch(err) { toast.error(err.message); } finally { setProvisioning(false); }
+                      }} disabled={provisioning} className="w-full mt-auto">Inject Cohort</Button>
+                   </div>
+
+                   {/* Club Provision */}
+                   <div className="space-y-4 bg-surface-muted p-4 rounded-xl border border-border-light shadow-sm">
+                      <h4 className="font-bold text-ink-title flex items-center gap-2 border-b border-border-light pb-2"><Shield size={16}/> Forge Club / Chapter</h4>
+                      <Select label="Target DB Node" value={provClub.target_school_id} onChange={e=>setProvClub(p=>({...p, target_school_id: e.target.value}))} options={[{label:'Select...', value:''}, ...schoolsList.map(s=>({label:s.name, value:s.id}))]} />
+                      <Input label="Club Name" value={provClub.group_name} onChange={e=>setProvClub(p=>({...p, group_name: e.target.value}))} />
+                      <Select label="Group Type" value={provClub.group_type} onChange={e=>setProvClub(p=>({...p, group_type: e.target.value}))} options={[{label:'Club', value:'club'}, {label:'House', value:'house'}, {label:'City Chapter', value:'chapter'}]} />
+                      <Input label="Description" value={provClub.description} onChange={e=>setProvClub(p=>({...p, description: e.target.value}))} />
+                      <Button onClick={async () => {
+                         if(!provClub.target_school_id || !provClub.group_name) return toast.error("Missing fields");
+                         setProvisioning(true);
+                         try { await api.adminProvisionClub(provClub); toast.success("Group Initialized!"); setProvClub(p=>({...p, group_name:'', description:''})); }
+                         catch(err) { toast.error(err.message); } finally { setProvisioning(false); }
+                      }} disabled={provisioning} className="w-full">Inject Structure</Button>
+                   </div>
+                </div>
+            </Card>
+          </div>
         )}
 
         {/* ============ SCHOOLS TAB ============ */}
@@ -874,22 +943,31 @@ export function Cockpit() {
       </Modal>
 
       {/* Add School Modal */}
-      <Modal isOpen={isAddSchoolOpen} onClose={() => setIsAddSchoolOpen(false)} title="Onboard New School">
-        <form onSubmit={handleAddSchool} className="flex flex-col gap-4 mt-2">
-          <Input label="School Name" required value={newSchoolData.school_name} onChange={e => setNewSchoolData({...newSchoolData, school_name: e.target.value})} placeholder="e.g. Aggrey Memorial SHS" />
-          <div className="mb-0">
-            <label className="block text-sm font-semibold text-ink-title mb-1.5 ml-1">School Type</label>
-            <select className="social-input" value={newSchoolData.school_type} onChange={e => setNewSchoolData({...newSchoolData, school_type: e.target.value})}>
-              <option value="Mixed">Mixed</option>
-              <option value="Boys">Boys</option>
-              <option value="Girls">Girls</option>
-            </select>
+            <Modal isOpen={isAddSchoolOpen} onClose={() => setIsAddSchoolOpen(false)} title="Forge Tenant Node">
+        <form onSubmit={handleAddSchool} className="flex flex-col gap-4 mt-2 max-h-[70vh] overflow-y-auto px-1 pb-4">
+          <div className="bg-brand-50 border border-brand-200 p-3 rounded-lg text-xs leading-snug text-brand-800 font-medium italic mb-2">
+             Warning: Values here initialize the permanent DB Architecture for the target partition.
           </div>
-          <Input label="Initial Admin Name" required value={newSchoolData.admin_name} onChange={e => setNewSchoolData({...newSchoolData, admin_name: e.target.value})} placeholder="e.g. Yaw Adjei" />
-          <Input label="Initial Admin Email" type="email" required value={newSchoolData.admin_email} onChange={e => setNewSchoolData({...newSchoolData, admin_email: e.target.value})} placeholder="e.g. admin@school.edu" />
-          <div className="flex justify-end gap-2 mt-2">
-            <Button type="button" variant="ghost" onClick={() => setIsAddSchoolOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={submittingSchool}>{submittingSchool ? 'Registering...' : 'Register School'}</Button>
+          
+          <h4 className="text-sm font-bold border-b pb-1 text-ink-title">1. Organization Topology</h4>
+          <Input label="Short Code / Acronym" required value={newSchoolData.school_name} onChange={e => setNewSchoolData({...newSchoolData, school_name: e.target.value})} placeholder="e.g. AMOSA" />
+          <Input label="Association Real Name" required value={newSchoolData.association_name} onChange={e => setNewSchoolData({...newSchoolData, association_name: e.target.value})} placeholder="e.g. Aggrey Memorial Old Students Association" />
+          <Input label="Association Short Name (Alias)" value={newSchoolData.association_short_name} onChange={e => setNewSchoolData({...newSchoolData, association_short_name: e.target.value})} placeholder="e.g. Aggreymorians" />
+          <Input label="Global Motto" value={newSchoolData.motto} onChange={e => setNewSchoolData({...newSchoolData, motto: e.target.value})} placeholder="e.g. Semper Fidelis" />
+          
+          <h4 className="text-sm font-bold border-b pb-1 text-ink-title mt-2">2. Network Schema (Comma Separated)</h4>
+          <div className="grid grid-cols-2 gap-3">
+             <Input label="Default Class Cohorts" value={newSchoolData.classes} onChange={e => setNewSchoolData({...newSchoolData, classes: e.target.value})} placeholder="Science, Arts, Business" />
+             <Input label="Default Houses" value={newSchoolData.houses} onChange={e => setNewSchoolData({...newSchoolData, houses: e.target.value})} placeholder="Aggrey, Casely-Hayford, Ennin" />
+          </div>
+
+          <h4 className="text-sm font-bold border-b pb-1 text-ink-title mt-2">3. Initial Tenant Admin (T-4 User)</h4>
+          <Input label="Initial Admin Name" required value={newSchoolData.admin_name} onChange={e => setNewSchoolData({...newSchoolData, admin_name: e.target.value})} placeholder="e.g. Systems Operator" />
+          <Input label="Initial Admin Email" type="email" required value={newSchoolData.admin_email} onChange={e => setNewSchoolData({...newSchoolData, admin_email: e.target.value})} placeholder="e.g. initial@school.edu" />
+          
+          <div className="flex justify-end gap-2 mt-4 pt-2 border-t">
+            <Button type="button" variant="ghost" onClick={() => setIsAddSchoolOpen(false)}>Abort sequence</Button>
+            <Button type="submit" disabled={submittingSchool}>{submittingSchool ? 'Constructing Node...' : 'Commit Protocol'}</Button>
           </div>
         </form>
       </Modal>
