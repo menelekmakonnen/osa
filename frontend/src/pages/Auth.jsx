@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { Button, Card, Input, Select, Badge } from '../components/ui';
-import { Mail, Lock, User, School, Hash, Key, X } from 'lucide-react';
+import { Mail, Lock, User, School, Hash, Key, X, Eye, EyeOff, Wand2, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';
 
 export function Login() {
@@ -10,6 +10,9 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isMagicLink, setIsMagicLink] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -18,9 +21,13 @@ export function Login() {
     setLoading(true);
 
     try {
-      await api.login(email, password);
-      // Success - navigate to dashboard
-      navigate('/app/dashboard');
+      if (isMagicLink) {
+         await api.requestMagicLink(email);
+         setMagicLinkSent(true);
+      } else {
+         await api.login(email, password);
+         navigate('/app/dashboard');
+      }
     } catch (err) {
       setError(err.message || 'Failed to login');
     } finally {
@@ -29,7 +36,7 @@ export function Login() {
   };
 
   return (
-    <Card className="p-8">
+    <Card className="p-8 w-full max-w-md mx-auto">
       <div className="text-center mb-6">
         <h1 className="text-3xl font-heading text-forest mb-2">OSA</h1>
         <p className="text-muted">Sign in to your Alumni Platform</p>
@@ -41,47 +48,86 @@ export function Login() {
         </div>
       )}
 
-      <form onSubmit={handleLogin} className="flex flex-col gap-4">
-        <div className="relative">
-          <Mail className="absolute left-3 top-9 text-muted" size={18} />
-          <Input 
-            label="Email Address"
-            placeholder="name@example.com"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="[&>input]:pl-10"
-            required
-          />
+      {magicLinkSent ? (
+        <div className="text-center animate-fade-in">
+           <div className="bg-sage/10 text-forest p-6 rounded-xl mb-6 border border-sage/20 shadow-sm">
+              <Wand2 className="mx-auto mb-3 text-sage" size={38} />
+              <p className="text-lg font-heading mb-1">Magic Link Sent!</p>
+              <p className="text-sm opacity-80">Check your inbox for a secure login link.</p>
+           </div>
+           <Button variant="outline" className="w-full" onClick={() => { setMagicLinkSent(false); setIsMagicLink(false); }}>
+              Back to Login
+           </Button>
         </div>
-        
-        <div className="relative">
-          <Lock className="absolute left-3 top-9 text-muted" size={18} />
-          <Input 
-            label="Password"
-            placeholder="Enter your password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="[&>input]:pl-10"
-            required
-          />
-        </div>
+      ) : (
+        <form onSubmit={handleLogin} className="flex flex-col gap-4 animate-fade-in">
+          <div className="relative">
+            <User className="absolute left-3 top-9 text-muted" size={18} />
+            <Input 
+              label="Email or Username"
+              placeholder="Your email or username"
+              type="text"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="[&>input]:pl-10"
+              required
+            />
+          </div>
+          
+          {!isMagicLink && (
+            <div className="relative">
+              <Lock className="absolute left-3 top-9 text-muted" size={18} />
+              <Input 
+                label="Password"
+                placeholder="Enter your password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="[&>input]:pl-10 pr-10"
+                required
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-9 p-1 text-muted hover:text-forest transition-colors focus:outline-none"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          )}
 
-        <div className="flex justify-end">
-          <Link to="/forgot-password" className="text-sm text-sage hover:underline">
-            Forgot Password?
-          </Link>
-        </div>
+          {!isMagicLink && (
+            <div className="flex justify-between items-center px-1">
+              <button 
+                 type="button" 
+                 onClick={() => setIsMagicLink(true)} 
+                 className="text-sm text-sage hover:text-forest hover:font-medium transition-all flex items-center gap-1.5"
+              >
+                 <Wand2 size={14}/> Passwordless Login
+              </button>
+              <Link to="/forgot-password" className="text-sm text-sage hover:underline hover:text-forest transition-colors">
+                Forgot Password?
+              </Link>
+            </div>
+          )}
 
-        <Button type="submit" disabled={loading} className="w-full mt-2">
-          {loading ? 'Signing In...' : 'Sign In'}
-        </Button>
+          <Button type="submit" disabled={loading} className="w-full mt-2">
+            {loading ? 'Please wait...' : (isMagicLink ? 'Send Magic Link' : 'Sign In')}
+          </Button>
 
-        <div className="text-center mt-4 text-sm text-muted">
-          Don't have an account? <Link to="/register" className="text-sage hover:underline font-medium">Register here</Link>
-        </div>
-      </form>
+          {isMagicLink && (
+            <div className="text-center mt-2">
+              <button type="button" onClick={() => setIsMagicLink(false)} className="text-sm text-muted hover:text-forest transition-colors">
+                Actually, I want to use my password
+              </button>
+            </div>
+          )}
+
+          <div className="text-center mt-4 pt-4 border-t border-slate-100 text-sm text-muted">
+            Don't have an account? <Link to="/register" className="text-sage hover:underline hover:text-forest font-medium ml-1">Register here</Link>
+          </div>
+        </form>
+      )}
     </Card>
   );
 }
@@ -124,7 +170,81 @@ export function Register() {
   const [staffAuthEmail, setStaffAuthEmail] = useState('');
   const [staffAuthPassed, setStaffAuthPassed] = useState(false);
   
+  const [showPassword, setShowPassword] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState(null); // 'checking', 'available', 'taken'
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [usernameModifiedManually, setUsernameModifiedManually] = useState(false);
+
   const navigate = useNavigate();
+
+  // Auto-generate username from name
+  useEffect(() => {
+     if (usernameModifiedManually) return;
+     if (!formData.name || formData.name.length < 3) return;
+     
+     const timeoutId = setTimeout(async () => {
+         let baseUsername = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+         if (!baseUsername) return;
+         
+         setCheckingUsername(true);
+         setUsernameStatus('checking');
+         
+         try {
+             let res = await api.checkUsername(baseUsername);
+             if (res.data?.available) {
+                 setFormData(prev => ({ ...prev, username: baseUsername }));
+                 setUsernameStatus('available');
+                 setCheckingUsername(false);
+                 return;
+             }
+             
+             // If taken, try appending numbers
+             for (let i = 1; i <= 5; i++) {
+                 res = await api.checkUsername(baseUsername + i);
+                 if (res.data?.available) {
+                     setFormData(prev => ({ ...prev, username: baseUsername + i }));
+                     setUsernameStatus('available');
+                     break;
+                 }
+                 if (i === 5) setUsernameStatus('taken'); // Max retries
+             }
+         } catch(e) {
+             console.log("Check username failed", e); 
+         }
+         
+         setCheckingUsername(false);
+     }, 600);
+     
+     return () => clearTimeout(timeoutId);
+  }, [formData.name, usernameModifiedManually]);
+
+  // Validation strictly for manual username input
+  useEffect(() => {
+     if (!usernameModifiedManually) return;
+     if (!formData.username || formData.username.length < 3) {
+         setUsernameStatus(null);
+         return;
+     }
+
+     const timeoutId = setTimeout(async () => {
+         setCheckingUsername(true);
+         setUsernameStatus('checking');
+         try {
+            const res = await api.checkUsername(formData.username);
+            setUsernameStatus(res.data?.available ? 'available' : 'taken');
+         } catch(e) {
+            console.log("Check username mapping failed", e);
+         }
+         setCheckingUsername(false);
+     }, 600);
+     
+     return () => clearTimeout(timeoutId);
+  }, [formData.username, usernameModifiedManually]);
+
+  const handleUsernameChange = (e) => {
+     setUsernameModifiedManually(true);
+     setFormData(prev => ({ ...prev, username: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') }));
+  };
 
   useEffect(() => {
     // Fetch Schools and Year Groups based on context
@@ -302,14 +422,27 @@ export function Register() {
                 required
               />
               
-              <Input 
-                label="Username"
-                name="username"
-                placeholder="e.g. janedoe"
-                value={formData.username}
-                onChange={handleChange}
-                required
-              />
+              <div className="relative">
+                <Input 
+                  label="Username"
+                  name="username"
+                  placeholder="e.g. janedoe"
+                  value={formData.username}
+                  onChange={handleUsernameChange}
+                  required
+                />
+                {formData.username && formData.username.length >= 3 && (
+                   <div className="absolute right-3 top-9 text-sm flex items-center">
+                     {checkingUsername ? (
+                       <Loader2 size={16} className="animate-spin text-muted" />
+                     ) : usernameStatus === 'available' ? (
+                       <CheckCircle2 size={16} className="text-green-500" />
+                     ) : usernameStatus === 'taken' ? (
+                       <XCircle size={16} className="text-red-500" />
+                     ) : null}
+                   </div>
+                )}
+              </div>
               
               <Input 
                 label="Email Address"
@@ -321,15 +454,25 @@ export function Register() {
                 required
               />
 
-              <Input 
-                label="Create Password"
-                name="password"
-                type="password"
-                placeholder="Minimum 8 characters"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
+              <div className="relative">
+                <Input 
+                  label="Create Password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Minimum 8 characters"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="pr-10"
+                  required
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-9 p-1 text-muted hover:text-forest transition-colors focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
            </>
         )}
 
@@ -679,6 +822,62 @@ export function ForgotPassword() {
           <Link to="/login" className="text-sage hover:underline">Back to Login</Link>
         </div>
       </form>
+    </Card>
+  );
+}
+
+export function MagicLogin() {
+  const [status, setStatus] = useState('Verifying your magic link...');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+     const verifyToken = async () => {
+         const urlParams = new URLSearchParams(window.location.search);
+         const token = urlParams.get('token');
+         if (!token) {
+             setError('No magic token provided in the URL.');
+             setStatus('');
+             return;
+         }
+
+         try {
+             await api.completeMagicLinkLogin(token);
+             setStatus('Login successful! Redirecting...');
+             setTimeout(() => navigate('/app/dashboard'), 1500);
+         } catch(e) {
+             setError(e.message || 'Invalid or expired magic link.');
+             setStatus('');
+         }
+     };
+
+     verifyToken();
+  }, [navigate]);
+
+  return (
+    <Card className="p-8 w-full max-w-md mx-auto text-center animate-fade-in mt-12">
+       <Wand2 className="mx-auto mb-6 text-sage" size={48} />
+       <h1 className="text-2xl font-heading text-forest mb-4">Magic Login</h1>
+       
+       {status && (
+         <div className="flex flex-col items-center gap-3 text-muted mb-4">
+           <Loader2 className="animate-spin text-forest mx-auto" size={24} />
+           <p>{status}</p>
+         </div>
+       )}
+       
+       {error && (
+         <div className="bg-red-50 text-red-600 p-4 rounded-md mb-6 shadow-sm">
+           <XCircle className="mx-auto mb-2 opacity-80" size={32} />
+           <p className="font-semibold">{error}</p>
+         </div>
+       )}
+
+       {error && (
+         <Button onClick={() => navigate('/login')} className="w-full" variant="outline">
+            Return to Login
+         </Button>
+       )}
     </Card>
   );
 }

@@ -6,7 +6,7 @@ import { TenantProvider } from './context/TenantContext';
 import { Toaster } from 'react-hot-toast';
 
 // Pages
-import { Login, Register, ForgotPassword } from './pages/Auth';
+import { Login, Register, ForgotPassword, MagicLogin } from './pages/Auth';
 import { ResetPassword } from './pages/ResetPassword';
 import { Dashboard } from './pages/Dashboard';
 import { Newsletter } from './pages/Newsletter';
@@ -21,6 +21,7 @@ import { Gallery } from './pages/Gallery';
 import { Support } from './pages/Support';
 import { VerifyEmail } from './pages/VerifyEmail';
 import { Cockpit } from './pages/Cockpit';
+import { Settings } from './pages/Settings';
 
 const ProtectedRoute = ({ children }) => {
   const isAuth = !!window.localStorage.getItem('osa_session_token');
@@ -47,6 +48,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/magic-login" element={<MagicLogin />} />
         </Route>
 
         {/* Public Verify Route (standalone — no auth layout) */}
@@ -69,6 +71,7 @@ function App() {
           <Route path="admin" element={<Admin />} />
           <Route path="superadmin" element={<SuperAdmin />} />
           <Route path="cockpit" element={<Cockpit />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/login" replace />} />

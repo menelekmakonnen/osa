@@ -133,6 +133,12 @@ function handleAction(action, data, token) {
     return handleResetPassword(data);
   } else if (action === "completePasswordReset") {
     return handleCompletePasswordReset(data);
+  } else if (action === "checkUsername") {
+    return handleCheckUsername(data);
+  } else if (action === "requestMagicLink") {
+    return handleRequestMagicLink(data);
+  } else if (action === "completeMagicLinkLogin") {
+    return handleCompleteMagicLinkLogin(data);
   } else if (action === "ping") {
     return { success: true, message: "PONG" };
   } else if (action === "resendVerificationEmail") {
@@ -377,11 +383,50 @@ function handleAction(action, data, token) {
 // Authentication & Session Management
 // ==========================================
 
+function isGlobalUsernameTaken(username) {
+  if(!username) return false;
+  const masterSS = getMasterDB();
+  const mSheet = masterSS.getSheetByName("staff");
+  const headers = getHeaders(mSheet);
+  const rows = mSheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const rowObj = rowToObject(rows[i], headers);
+    if(rowObj.username && String(rowObj.username).toLowerCase() === String(username).toLowerCase()) return true;
+  }
+  
+  const sSheet = masterSS.getSheetByName("schools");
+  const sHeaders = getHeaders(sSheet);
+  const sRows = sSheet.getDataRange().getValues();
+  for(let j = 1; j < sRows.length; j++){
+      let sRow = rowToObject(sRows[j], sHeaders);
+      if(!sRow.spreadsheet_id) continue;
+      try {
+         const schoolSS = SpreadsheetApp.openById(sRow.spreadsheet_id);
+         const schoolMSheet = schoolSS.getSheetByName("members");
+         if(!schoolMSheet) continue;
+         let smHeaders = getHeaders(schoolMSheet);
+         let smRows = schoolMSheet.getDataRange().getValues();
+         for(let k = 1; k < smRows.length; k++){
+            let uRow = rowToObject(smRows[k], smHeaders);
+            if(uRow.username && String(uRow.username).toLowerCase() === String(username).toLowerCase()) return true;
+         }
+      } catch(e) {}
+  }
+  return false;
+}
+
+function handleCheckUsername(data) {
+   const { username } = data;
+   if (!username) return { success: false, error: "Missing username" };
+   const taken = isGlobalUsernameTaken(username);
+   return { success: true, data: { available: !taken } };
+}
 
 function handleLogin(data) {
   const { email, password } = data;
   if (!email || !password) return { success: false, error: "Missing credentials" };
   
+  const identifier = String(email).toLowerCase();
   const hash = hashPassword(password);
   const masterSS = getMasterDB();
   const mSheet = masterSS.getSheetByName("staff");
@@ -391,11 +436,11 @@ function handleLogin(data) {
   // 1. Check Master Form (Staff & Central Users)
   for (let i = 1; i < rows.length; i++) {
     const rowObj = rowToObject(rows[i], headers);
-    if (String(rowObj.email).toLowerCase() === String(email).toLowerCase()) {
+    if (String(rowObj.email).toLowerCase() === identifier || String(rowObj.username).toLowerCase() === identifier) {
       if (rowObj.password === hash || rowObj.password === password) {
         return buildLoginSuccess(mSheet, i + 1, headers, rowObj);
       } else {
-        return { success: false, error: "Invalid email or password." };
+        return { success: false, error: "Invalid credentials." };
       }
     }
   }
@@ -415,17 +460,18 @@ function handleLogin(data) {
          let smRows = schoolMSheet.getDataRange().getValues();
          for(let k=1; k<smRows.length; k++){
             let uRow = rowToObject(smRows[k], smHeaders);
-            if(String(uRow.email).toLowerCase() === String(email).toLowerCase()) {
+            if(String(uRow.email).toLowerCase() === identifier || String(uRow.username).toLowerCase() === identifier) {
                if(uRow.password === hash || uRow.password === password) {
                   return buildLoginSuccess(schoolMSheet, k + 1, smHeaders, uRow);
                } else {
-                  return { success: false, error: "Invalid email or password" };
+                  return { success: false, error: "Invalid credentials." };
                }
             }
          }
       } catch(e) {}
   }
-  return { success: false, error: "Invalid email or password" };
+  return { success: false, error: "Invalid credentials." };
+
 }
 
 function buildLoginSuccess(sheet, rowIndex, headers, rowObj) {
@@ -442,6 +488,11 @@ function handleRegister(data) {
   const { name, username, email, password, year_group_id, school_id, new_yg_year, new_yg_nickname, final_class, house_name, gender } = data;
   if (!name || !username || !email || !password || (!year_group_id && !new_yg_year) || !school_id) {
     return { success: false, error: "Missing required fields" };
+  }
+
+  // Enforce global username uniqueness
+  if (isGlobalUsernameTaken(username)) {
+    return { success: false, error: "Username is already taken" };
   }
 
   const membersSheet = getSheet("members", CURRENT_SCHOOL_ID);
@@ -1033,15 +1084,202 @@ function handleCompletePasswordReset(data) {
    }
 
    foundSheet.getRange(foundRowIndex, headers.indexOf("password") + 1).setValue(hashPassword(new_password));
-   foundSheet.getRange(foundRowIndex, headers.indexOf("reset_token") + 1).setValue("");
+   
+   let resetTokenIdx = headers.indexOf("reset_token");
+   if (resetTokenIdx !== -1) {
+      foundSheet.getRange(foundRowIndex, resetTokenIdx + 1).setValue("");
+   }
    
    return { success: true, message: "Password updated successfully" };
+}
+
+function handleRequestMagicLink(data) {
+   const { email } = data; // the identifier (email or username)
+   if (!email) return { success: false, error: "Missing login identifier" };
+   const identifier = String(email).toLowerCase();
+
+   const masterSS = getMasterDB();
+   let foundSheet = null;
+   let foundRowIndex = -1;
+   let headers = null;
+   let foundRowObj = null;
+
+   // Check staff
+   const mSheet = masterSS.getSheetByName("staff");
+   let mHeaders = getHeaders(mSheet);
+   let mRows = mSheet.getDataRange().getValues();
+   for (let i = 1; i < mRows.length; i++) {
+     let rObj = rowToObject(mRows[i], mHeaders);
+     if (String(rObj.email).toLowerCase() === identifier || String(rObj.username).toLowerCase() === identifier) {
+        foundSheet = mSheet;
+        headers = mHeaders;
+        foundRowIndex = i + 1;
+        foundRowObj = rObj;
+        break;
+     }
+   }
+
+   // Iterate schools if not found in staff
+   if (!foundSheet) {
+      const sSheet = masterSS.getSheetByName("schools");
+      const sHeaders = getHeaders(sSheet);
+      const sRows = sSheet.getDataRange().getValues();
+      for (let j = 1; j < sRows.length; j++){
+          let sRow = rowToObject(sRows[j], sHeaders);
+          if (!sRow.spreadsheet_id) continue;
+          try {
+             const schoolSS = SpreadsheetApp.openById(sRow.spreadsheet_id);
+             const schoolMSheet = schoolSS.getSheetByName("members");
+             if (!schoolMSheet) continue;
+             let smHeaders = getHeaders(schoolMSheet);
+             let smRows = schoolMSheet.getDataRange().getValues();
+             for(let k = 1; k < smRows.length; k++){
+                let uRow = rowToObject(smRows[k], smHeaders);
+                if (String(uRow.email).toLowerCase() === identifier || String(uRow.username).toLowerCase() === identifier) {
+                   foundSheet = schoolMSheet;
+                   headers = smHeaders;
+                   foundRowIndex = k + 1;
+                   foundRowObj = uRow;
+                   break;
+                }
+             }
+             if (foundSheet) break;
+          } catch(e) {}
+      }
+   }
+
+   if (!foundSheet) return { success: false, error: "User not found." };
+
+   // Generate Magic Link Token
+   const magicToken = Utilities.getUuid() + "-" + Utilities.getUuid();
+   const expiry = new Date();
+   expiry.setMinutes(expiry.getMinutes() + 15); // 15-minute expiry
+   
+   let magicTokenIdx = headers.indexOf("magic_token");
+   let magicExpiryIdx = headers.indexOf("magic_token_expiry");
+   
+   if (magicTokenIdx === -1) {
+       magicTokenIdx = headers.length;
+       magicExpiryIdx = headers.length + 1;
+       foundSheet.getRange(1, magicTokenIdx + 1).setValue("magic_token");
+       foundSheet.getRange(1, magicExpiryIdx + 1).setValue("magic_token_expiry");
+   }
+
+   foundSheet.getRange(foundRowIndex, magicTokenIdx + 1).setValue(magicToken);
+   foundSheet.getRange(foundRowIndex, magicExpiryIdx + 1).setValue(expiry.toISOString());
+
+   // Email the magic link
+   const subject = "Your Secure Magic Login Link for OSA";
+   const verifyUrl = "http://localhost:8978/magic-login?token=" + magicToken; 
+   // Note: in production, replace localhost with the deployed React app URL
+   
+   const emailHtml = `
+     <div style="font-family: sans-serif; color: #333; max-width: 500px; margin: 0 auto;">
+       <h2 style="color: #0f172a;">Magic Login Link</h2>
+       <p>Hello <strong>${foundRowObj.name}</strong>,</p>
+       <p>Click the button below to instantly and securely log into your account. This magic link will expire in 15 minutes.</p>
+       <div style="text-align: center; margin: 32px 0;">
+         <a href="${verifyUrl}" style="background-color: #22c55e; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">Login Automatically</a>
+       </div>
+       <p style="font-size: 12px; color: #666;">If you didn't request this, you can safely ignore this email.</p>
+     </div>
+   `;
+
+   try {
+     MailApp.sendEmail({
+       to: foundRowObj.email, // Always send to the actual email
+       subject: subject,
+       htmlBody: emailHtml,
+       name: "OSA Platform"
+     });
+     return { success: true, message: "A magic login link has been sent to your email address." };
+   } catch (e) {
+     return { success: false, error: "Failed to dispatch magic link email." };
+   }
+}
+
+function handleCompleteMagicLinkLogin(data) {
+   const { token } = data;
+   if (!token) return { success: false, error: "Missing magic token" };
+
+   const masterSS = getMasterDB();
+   let foundSheet = null;
+   let foundRowIndex = -1;
+   let headers = null;
+   let foundRowObj = null;
+
+   // Check staff
+   const mSheet = masterSS.getSheetByName("staff");
+   let mHeaders = getHeaders(mSheet);
+   let mRows = mSheet.getDataRange().getValues();
+   let tmpIdx = mHeaders.indexOf("magic_token");
+   if (tmpIdx !== -1) {
+       for (let i = 1; i < mRows.length; i++) {
+         let rObj = rowToObject(mRows[i], mHeaders);
+         if (rObj.magic_token === token) {
+            foundSheet = mSheet;
+            headers = mHeaders;
+            foundRowIndex = i + 1;
+            foundRowObj = rObj;
+            break;
+         }
+       }
+   }
+
+   // Iterate schools if not found in staff
+   if (!foundSheet) {
+      const sSheet = masterSS.getSheetByName("schools");
+      const sHeaders = getHeaders(sSheet);
+      const sRows = sSheet.getDataRange().getValues();
+      for(let j=1; j<sRows.length; j++){
+          let sRow = rowToObject(sRows[j], sHeaders);
+          if(!sRow.spreadsheet_id) continue;
+          try {
+             const schoolSS = SpreadsheetApp.openById(sRow.spreadsheet_id);
+             const schoolMSheet = schoolSS.getSheetByName("members");
+             if(!schoolMSheet) continue;
+             let smHeaders = getHeaders(schoolMSheet);
+             if (smHeaders.indexOf("magic_token") === -1) continue;
+             let smRows = schoolMSheet.getDataRange().getValues();
+             for(let k=1; k<smRows.length; k++){
+                let uRow = rowToObject(smRows[k], smHeaders);
+                if(uRow.magic_token === token) {
+                   foundSheet = schoolMSheet;
+                   headers = smHeaders;
+                   foundRowIndex = k + 1;
+                   foundRowObj = uRow;
+                   break;
+                }
+             }
+             if (foundSheet) break;
+          } catch(e) {}
+      }
+   }
+
+   if (!foundSheet) return { success: false, error: "Invalid or expired magic link" };
+
+   // Check expiry
+   let rObj = rowToObject(foundSheet.getRange(foundRowIndex, 1, 1, headers.length).getValues()[0], headers);
+   let expiryDate = new Date(rObj.magic_token_expiry);
+   if (new Date() > expiryDate) {
+       return { success: false, error: "Magic link has expired" };
+   }
+
+   // Consume the token to prevent replay
+   foundSheet.getRange(foundRowIndex, headers.indexOf("magic_token") + 1).setValue("");
+   
+   return buildLoginSuccess(foundSheet, foundRowIndex, headers, foundRowObj);
 }
 
 function handleRegisterStaff(data) {
   const { name, username, email, password } = data;
   if (!name || !username || !email || !password) {
     return { success: false, error: "Missing required fields" };
+  }
+
+  // Enforce global username uniqueness
+  if (isGlobalUsernameTaken(username)) {
+    return { success: false, error: "Username is already taken" };
   }
 
   const masterSS = getMasterDB();

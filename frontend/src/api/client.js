@@ -37,9 +37,21 @@ export const authState = {
  */
 export async function apiRequest(action, data = {}) {
   try {
+    let finalData = { ...data };
+    
+    // Inject ICUNI Impersonation Context if Active
+    const impersonationStr = window.localStorage.getItem('osa_active_impersonation');
+    if (impersonationStr) {
+       try {
+          const impData = JSON.parse(impersonationStr);
+          if (impData.target_school_id) finalData.target_school_id = impData.target_school_id;
+          if (impData.simulate_role) finalData.simulate_role = impData.simulate_role;
+       } catch(e) {}
+    }
+
     const payload = {
       action,
-      data,
+      data: finalData,
       token: sessionToken
     };
 
@@ -91,6 +103,22 @@ export async function apiRequest(action, data = {}) {
 // ==========================================
 
 export const api = {
+  // Impersonation Control
+  setImpersonation: (schoolId, role) => {
+      window.localStorage.setItem('osa_active_impersonation', JSON.stringify({ target_school_id: schoolId, simulate_role: role }));
+      // Reload the page to clear arbitrary React state locks natively
+      window.location.href = '/app/dashboard';
+  },
+  clearImpersonation: () => {
+      window.localStorage.removeItem('osa_active_impersonation');
+      window.location.href = '/app/dashboard';
+  },
+  getImpersonation: () => {
+      try {
+          return JSON.parse(window.localStorage.getItem('osa_active_impersonation'));
+      } catch(e) { return null; }
+  },
+
   login: async (email, password) => {
     const data = await apiRequest("login", { email, password });
     authState.setSession(data.token, data.user);
@@ -111,6 +139,7 @@ export const api = {
 
   logout: () => {
     authState.clearSession();
+    window.localStorage.removeItem('osa_active_impersonation');
     window.dispatchEvent(new Event("osa-auth-expired"));
   },
 
@@ -147,6 +176,15 @@ export const api = {
   verifyEmail: (token) => apiRequest("verifyEmail", { token }),
   requestPasswordReset: (email) => apiRequest("resetPassword", { email }),
   completePasswordReset: (token, new_password) => apiRequest("completePasswordReset", { token, new_password }),
+  checkUsername: (username) => apiRequest("checkUsername", { username }),
+  requestMagicLink: (email) => apiRequest("requestMagicLink", { email }),
+  completeMagicLinkLogin: async (token) => {
+    const data = await apiRequest("completeMagicLinkLogin", { token });
+    if(data && data.token && data.user) {
+        authState.setSession(data.token, data.user);
+    }
+    return data;
+  },
   updateProfile: (profileData) => apiRequest("updateProfile", profileData),
   changePassword: (passwordData) => apiRequest("changePassword", passwordData),
   updateGroupAvatar: (scopeData) => apiRequest("updateGroupAvatar", scopeData),
