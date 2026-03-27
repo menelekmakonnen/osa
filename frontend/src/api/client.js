@@ -103,6 +103,12 @@ export const api = {
     return data;
   },
 
+  registerStaff: async (registrationData) => {
+    const data = await apiRequest("registerStaff", registrationData);
+    authState.setSession(data.token, data.user);
+    return data;
+  },
+
   logout: () => {
     authState.clearSession();
     window.dispatchEvent(new Event("osa-auth-expired"));
@@ -129,23 +135,6 @@ export const api = {
   getMembers: async (scope = {}) => {
     const d = scope?.type ? { scope_type: scope.type, scope_id: scope.id } : scope;
     let members = await apiRequest("getMembers", d) || [];
-    if (!members.find(m => m.name === "Test Executive")) {
-       members.push({
-          id: "dummy-test-exec",
-          name: "Test Executive",
-          email: "test.exec@osa.icuni.org",
-          role: "Year Group President",
-          school: "Auditor Academy",
-          year_group_nickname: "The Pioneers",
-          house_name: "Audit House",
-          cheque_colour: "#ef4444",
-          profile_pic: "",
-          bio: "Mock executive account for testing SLA routing and petitions.",
-          profession: "System Auditor",
-          location: "Global",
-          date_joined: new Date(Date.now() - 86400000 * 30).toISOString()
-       });
-    }
     return members;
   },
   getProfile: () => apiRequest("getProfile"),
@@ -156,6 +145,8 @@ export const api = {
   onboardSchool: (schoolData) => apiRequest("onboardSchool", schoolData),
   resendVerificationEmail: (email) => apiRequest("resendVerificationEmail", { email }),
   verifyEmail: (token) => apiRequest("verifyEmail", { token }),
+  requestPasswordReset: (email) => apiRequest("resetPassword", { email }),
+  completePasswordReset: (token, new_password) => apiRequest("completePasswordReset", { token, new_password }),
   updateProfile: (profileData) => apiRequest("updateProfile", profileData),
   changePassword: (passwordData) => apiRequest("changePassword", passwordData),
   updateGroupAvatar: (scopeData) => apiRequest("updateGroupAvatar", scopeData),
@@ -192,17 +183,6 @@ export const api = {
   // Tech Support
   getTickets: async () => {
     let tickets = await apiRequest("getTickets") || [];
-    if (!tickets.find(t => t.author_id === "dummy-test-exec")) {
-       tickets.push({
-          id: "ticket-mock-001",
-          author_id: "dummy-test-exec",
-          issue_type: "Platform Bug",
-          description: "Unable to access the newly created album in the gallery.",
-          status: "Escalated",
-          current_tier: 2,
-          created_at: new Date(Date.now() - 86400000 * 3).toISOString()
-       });
-    }
     return tickets;
   },
   submitTicket: (ticketData) => apiRequest("submitTicket", ticketData),

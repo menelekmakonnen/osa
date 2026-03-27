@@ -125,10 +125,14 @@ function handleAction(action, data, token) {
     return handleLogin(data);
   } else if (action === "register") {
     return handleRegister(data);
+  } else if (action === "registerStaff") {
+    return handleRegisterStaff(data);
   } else if (action === "onboardSchool") {
     return handleOnboardSchool(data);
   } else if (action === "resetPassword") {
     return handleResetPassword(data);
+  } else if (action === "completePasswordReset") {
+    return handleCompletePasswordReset(data);
   } else if (action === "ping") {
     return { success: true, message: "PONG" };
   } else if (action === "resendVerificationEmail") {
@@ -867,7 +871,252 @@ function handleAdminCreateSchool(user, data) {
 }
 
 function handleResetPassword(data) {
-   return { success: false, error: "Not implemented in v1 mock" };
+   const { email } = data;
+   if (!email) return { success: false, error: "Missing email address" };
+
+   // Check staff
+   const masterSS = getMasterDB();
+   const mSheet = masterSS.getSheetByName("staff");
+   let headers = getHeaders(mSheet);
+   let rows = mSheet.getDataRange().getValues();
+   let foundSheet = null;
+   let foundRowIndex = -1;
+   let foundRowObj = null;
+
+   for (let i = 1; i < rows.length; i++) {
+     const rowObj = rowToObject(rows[i], headers);
+     if (rowObj.email && rowObj.email.toLowerCase() === email.toLowerCase()) {
+       foundSheet = mSheet;
+       foundRowIndex = i + 1;
+       foundRowObj = rowObj;
+       break;
+     }
+   }
+
+   // Iterate schools if not found in staff
+   if (!foundSheet) {
+      const sSheet = masterSS.getSheetByName("schools");
+      const sHeaders = getHeaders(sSheet);
+      const sRows = sSheet.getDataRange().getValues();
+      for(let j=1; j<sRows.length; j++){
+          let sRow = rowToObject(sRows[j], sHeaders);
+          if(!sRow.spreadsheet_id) continue;
+          try {
+             const schoolSS = SpreadsheetApp.openById(sRow.spreadsheet_id);
+             const schoolMSheet = schoolSS.getSheetByName("members");
+             if(!schoolMSheet) continue;
+             let smHeaders = getHeaders(schoolMSheet);
+             let smRows = schoolMSheet.getDataRange().getValues();
+             for(let k=1; k<smRows.length; k++){
+                let uRow = rowToObject(smRows[k], smHeaders);
+                if(uRow.email && String(uRow.email).toLowerCase() === String(email).toLowerCase()) {
+                   foundSheet = schoolMSheet;
+                   headers = smHeaders;
+                   foundRowIndex = k + 1;
+                   foundRowObj = uRow;
+                   break;
+                }
+             }
+             if (foundSheet) break;
+          } catch(e) {}
+      }
+   }
+
+   if (!foundSheet) return { success: false, error: "Email address not found" };
+
+   const resetToken = Utilities.getUuid();
+   const expiry = new Date();
+   expiry.setHours(expiry.getHours() + 1); // 1 hour expiry
+
+   // Ensure reset_token column exists
+   let rtCol = headers.indexOf("reset_token");
+   if (rtCol === -1) {
+     foundSheet.getRange(1, headers.length + 1).setValue("reset_token");
+     headers.push("reset_token");
+     rtCol = headers.length - 1;
+   }
+   let rtexpCol = headers.indexOf("reset_token_expiry");
+   if (rtexpCol === -1) {
+     foundSheet.getRange(1, headers.length + 1).setValue("reset_token_expiry");
+     headers.push("reset_token_expiry");
+     rtexpCol = headers.length - 1;
+   }
+
+   foundSheet.getRange(foundRowIndex, rtCol + 1).setValue(resetToken);
+   foundSheet.getRange(foundRowIndex, rtexpCol + 1).setValue(expiry.toISOString());
+
+   const verifyUrl = "https://osa.icuni.org/reset-password?token=" + resetToken;
+   const subject = "Reset your password — OSA Platform";
+   const emailHtml = `
+     <div style="font-family: 'Segoe UI', sans-serif; color: #1E293B; max-width: 600px; margin: 0 auto; padding: 32px; border: 1px solid #E2E8F0; border-radius: 12px; background: #FFFFFF;">
+       <h2 style="color: #2D88FF; margin: 0; font-size: 24px; text-align: center;">Password Reset</h2>
+       <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 16px 0;" />
+       <p>Hello <strong>${foundRowObj.name}</strong>,</p>
+       <p>We received a request to reset your password. Click the button below to choose a new password. This link will expire in 1 hour.</p>
+       <div style="text-align: center; margin: 32px 0;">
+         <a href="${verifyUrl}" style="background-color: #2D88FF; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">Reset Password</a>
+       </div>
+     </div>
+   `;
+
+   try {
+     MailApp.sendEmail({
+       to: email,
+       subject: subject,
+       htmlBody: emailHtml,
+       name: "OSA Platform"
+     });
+     return { success: true, message: "Password reset link sent to " + email };
+   } catch(e) {
+     return { success: false, error: "Failed to send email." };
+   }
+}
+
+function handleCompletePasswordReset(data) {
+   const { token, new_password } = data;
+   if (!token || !new_password) return { success: false, error: "Missing token or password" };
+
+   const masterSS = getMasterDB();
+   let foundSheet = null;
+   let foundRowIndex = -1;
+   let headers = null;
+
+   // Check staff
+   const mSheet = masterSS.getSheetByName("staff");
+   let mHeaders = getHeaders(mSheet);
+   let mRows = mSheet.getDataRange().getValues();
+   for (let i = 1; i < mRows.length; i++) {
+     let rObj = rowToObject(mRows[i], mHeaders);
+     if (rObj.reset_token === token) {
+        foundSheet = mSheet;
+        headers = mHeaders;
+        foundRowIndex = i + 1;
+        break;
+     }
+   }
+
+   // Iterate schools if not found in staff
+   if (!foundSheet) {
+      const sSheet = masterSS.getSheetByName("schools");
+      const sHeaders = getHeaders(sSheet);
+      const sRows = sSheet.getDataRange().getValues();
+      for(let j=1; j<sRows.length; j++){
+          let sRow = rowToObject(sRows[j], sHeaders);
+          if(!sRow.spreadsheet_id) continue;
+          try {
+             const schoolSS = SpreadsheetApp.openById(sRow.spreadsheet_id);
+             const schoolMSheet = schoolSS.getSheetByName("members");
+             if(!schoolMSheet) continue;
+             let smHeaders = getHeaders(schoolMSheet);
+             let smRows = schoolMSheet.getDataRange().getValues();
+             for(let k=1; k<smRows.length; k++){
+                let uRow = rowToObject(smRows[k], smHeaders);
+                if(uRow.reset_token === token) {
+                   foundSheet = schoolMSheet;
+                   headers = smHeaders;
+                   foundRowIndex = k + 1;
+                   break;
+                }
+             }
+             if (foundSheet) break;
+          } catch(e) {}
+      }
+   }
+
+   if (!foundSheet) return { success: false, error: "Invalid or expired token" };
+
+   // Check expiry
+   let rObj = rowToObject(foundSheet.getRange(foundRowIndex, 1, 1, headers.length).getValues()[0], headers);
+   let expiryDate = new Date(rObj.reset_token_expiry);
+   if (new Date() > expiryDate) {
+       return { success: false, error: "Token has expired" };
+   }
+
+   foundSheet.getRange(foundRowIndex, headers.indexOf("password") + 1).setValue(hashPassword(new_password));
+   foundSheet.getRange(foundRowIndex, headers.indexOf("reset_token") + 1).setValue("");
+   
+   return { success: true, message: "Password updated successfully" };
+}
+
+function handleRegisterStaff(data) {
+  const { name, username, email, password } = data;
+  if (!name || !username || !email || !password) {
+    return { success: false, error: "Missing required fields" };
+  }
+
+  const masterSS = getMasterDB();
+  const membersSheet = masterSS.getSheetByName("staff");
+  const headers = getHeaders(membersSheet);
+  
+  // Check if email exists
+  const rows = membersSheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][headers.indexOf("email")].toLowerCase() === email.toLowerCase()) {
+      return { success: false, error: "Email already registered" };
+    }
+  }
+
+  const newId = Utilities.getUuid();
+  const token = Utilities.getUuid();
+  const expiry = new Date();
+  expiry.setDate(expiry.getDate() + 7);
+
+  const newRowObj = {
+    id: newId,
+    name: name,
+    username: username,
+    email: email.toLowerCase(),
+    password: hashPassword(password),
+    role: "ICUNI Staff", // Will map to Tier 5
+    year_group_id: "ICUNI_LABS",
+    year_group_nickname: "ICUNI Labs",
+    final_class: "N/A",
+    house_name: "Administration",
+    gender: "N/A",
+    cheque_colour: "#0F172A",
+    school: "ICUNI_LABS",
+    association: "ICUNI Group",
+    date_joined: new Date().toISOString(),
+    session_token: token,
+    token_expiry: expiry.toISOString(),
+    // Privacy defaults
+    priv_email: "all",
+    priv_phone: "all",
+    priv_location: "all",
+    priv_profession: "all",
+    priv_linkedin: "all",
+    priv_bio: "all",
+    priv_social: "all",
+    bio: "Systems Administration",
+    profession: "ICUNI Labs Staff",
+    location: "Global",
+    phone: "",
+    linkedin: "",
+    social_links: "{}",
+    cover_url: ""
+  };
+
+  const newRowArray = headers.map(h => newRowObj[h] !== undefined ? newRowObj[h] : "");
+  membersSheet.appendRow(newRowArray);
+  const newRowIndex = membersSheet.getLastRow();
+  
+  delete newRowObj.password;
+  delete newRowObj.session_token;
+
+  // Dispatch Verification Email
+  try {
+    sendVerificationEmail(membersSheet, headers, newRowIndex, newRowObj.email, newRowObj.name);
+  } catch (e) {
+    console.error("Failed to dispatch verification: ", e);
+  }
+  
+  return {
+    success: true,
+    data: {
+      token: token,
+      user: newRowObj
+    }
+  };
 }
 
 function handleResendVerification(data) {
@@ -928,6 +1177,24 @@ function handleVerifyEmail(data) {
       delete rowObj.password;
       delete rowObj.session_token;
       rowObj.email_verified = true;
+
+      // Welcome Email verification notification
+      if (rowObj.role === "ICUNI Staff" || rowObj.role === "IT Department") {
+         const subject = "Welcome to ICUNI Labs Staff!";
+         const emailHtml = `
+           <div style="font-family: 'Segoe UI', sans-serif; color: #1E293B; max-width: 600px; margin: 0 auto; padding: 32px; border: 1px solid #E2E8F0; border-radius: 12px; background: #FFFFFF;">
+             <h2 style="color: #2D88FF; margin: 0; font-size: 24px;">Verification Successful</h2>
+             <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 16px 0;" />
+             <p>Hello <strong>${rowObj.name}</strong>,</p>
+             <p>Your email has been successfully verified. You are now authorized as an ICUNI Labs Staff member on the platform.</p>
+             <p>You can proceed to login and access your centralized workspace.</p>
+           </div>
+         `;
+         try {
+           MailApp.sendEmail({ to: rowObj.email, subject: subject, htmlBody: emailHtml, name: "OSA Platform" });
+         } catch(e) {}
+      }
+
       return { success: true, data: rowObj };
     }
   }

@@ -119,6 +119,10 @@ export function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
+
+  const [isStaffReg, setIsStaffReg] = useState(false);
+  const [staffAuthEmail, setStaffAuthEmail] = useState('');
+  const [staffAuthPassed, setStaffAuthPassed] = useState(false);
   
   const navigate = useNavigate();
 
@@ -170,6 +174,30 @@ export function Register() {
     if (loading) return;
 
     setError('');
+
+    if (isStaffReg) {
+       if (!staffAuthPassed) {
+          if (staffAuthEmail === 'hello@menelekmakonnen.com') {
+             setStaffAuthPassed(true);
+             setError('');
+             return;
+          } else {
+             setError("Unauthorized personnel email.");
+             return;
+          }
+       }
+
+       setLoading(true);
+       try {
+          await api.registerStaff(formData);
+          navigate('/login'); // Return them to login to actually trigger the verification check
+       } catch (err) {
+          setError(err.message || 'Staff Registration failed');
+       } finally {
+          setLoading(false);
+       }
+       return;
+    }
 
     if (formData.school_id === 'new_school') {
        // Filter empty arrays
@@ -234,10 +262,10 @@ export function Register() {
     <Card className="p-8">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-heading text-forest mb-2">
-           {isCustomDomain ? `Join ${tenantName}` : "Join OSA Network"}
+           {isStaffReg ? "ICUNI Labs Staff" : (isCustomDomain ? `Join ${tenantName}` : "Join OSA Network")}
         </h1>
         <p className="text-muted text-sm">
-           {isNewSchoolFlow ? "Register a new school association as Super Admin" : "Create your portal account"}
+           {isStaffReg ? "Authorized personnel only" : (isNewSchoolFlow ? "Register a new school association as Super Admin" : "Create your portal account")}
         </p>
       </div>
 
@@ -248,43 +276,62 @@ export function Register() {
       )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Input 
-          label="Full Name"
-          name="name"
-          placeholder="e.g. Jane Doe"
-          value={formData.name}
-          onChange={handleChange}
-          required
-        />
-        
-        <Input 
-          label="Username"
-          name="username"
-          placeholder="e.g. janedoe"
-          value={formData.username}
-          onChange={handleChange}
-          required
-        />
-        
-        <Input 
-          label="Email Address"
-          name="email"
-          type="email"
-          placeholder="name@example.com"
-          value={formData.email}
-          onChange={handleChange}
-          required
-        />
+        {isStaffReg && !staffAuthPassed ? (
+           <div className="flex flex-col gap-4">
+             <Input 
+               label="Authorization Email"
+               name="staffAuthEmail"
+               type="email"
+               placeholder="Enter authorized email"
+               value={staffAuthEmail}
+               onChange={(e) => setStaffAuthEmail(e.target.value)}
+               required
+             />
+             <Button type="submit" disabled={loading} className="w-full">
+               {loading ? 'Verifying...' : 'Verify Authorization'}
+             </Button>
+           </div>
+        ) : (
+           <>
+              <Input 
+                label="Full Name"
+                name="name"
+                placeholder="e.g. Jane Doe"
+                value={formData.name}
+                onChange={handleChange}
+                required
+              />
+              
+              <Input 
+                label="Username"
+                name="username"
+                placeholder="e.g. janedoe"
+                value={formData.username}
+                onChange={handleChange}
+                required
+              />
+              
+              <Input 
+                label="Email Address"
+                name="email"
+                type="email"
+                placeholder="name@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
 
-        <Input 
-          label="Create Password"
-          name="password"
-          type="password"
-          placeholder="Minimum 8 characters"
-          value={formData.password}
-          onChange={handleChange}
-          required
-        />
+              <Input 
+                label="Create Password"
+                name="password"
+                type="password"
+                placeholder="Minimum 8 characters"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+           </>
+        )}
 
         {!isCustomDomain && (
           <div className="mt-2 border-t border-border-light pt-4 flex flex-col gap-3">
@@ -543,16 +590,27 @@ export function Register() {
                           required
                       />
                   </div>
-              )}
+               )}
            </>
         )}
-
-        <Button type="submit" disabled={loading} className="w-full mt-2">
-          {loading ? 'Creating Account...' : 'Register as Member'}
-        </Button>
+        
+        {(!isStaffReg || staffAuthPassed) && (
+           <Button type="submit" disabled={loading} className="w-full mt-2">
+             {loading ? 'Creating Account...' : 'Register as Member'}
+           </Button>
+        )}
 
         <div className="text-center mt-4 text-sm text-muted">
           Already have an account? <Link to="/login" className="text-sage hover:underline font-medium">Sign in</Link>
+          <div className="mt-2">
+            <button 
+              type="button" 
+              onClick={() => { setIsStaffReg(!isStaffReg); setStaffAuthPassed(false); setError(''); }}
+              className="text-xs text-brand-600 hover:underline"
+            >
+              {isStaffReg ? "Return to Member Registration" : "Register as ICUNI Labs Staff"}
+            </button>
+          </div>
         </div>
       </form>
     </Card>
@@ -562,12 +620,23 @@ export function Register() {
 export function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In v1, this calls the GAS endpoint but acts as a mock locally
-    api.getRequest?.("resetPassword", { email }).catch(() => {});
-    setStatus('If your email is registered, a password reset link has been sent.');
+    setStatus('');
+    setError('');
+    setLoading(true);
+
+    try {
+      await api.requestPasswordReset(email);
+      setStatus('If your email is registered, a password reset link has been sent. Please check your inbox.');
+    } catch (err) {
+      setError(err.message || 'Failed to request password reset');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -582,6 +651,12 @@ export function ForgotPassword() {
           {status}
         </div>
       )}
+      
+      {error && (
+        <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4 text-sm text-center">
+          {error}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input 
@@ -592,8 +667,8 @@ export function ForgotPassword() {
           required
         />
 
-        <Button type="submit" className="w-full">
-          Send Link
+        <Button type="submit" disabled={loading} className="w-full">
+          {loading ? 'Sending...' : 'Send Link'}
         </Button>
 
         <div className="text-center mt-4 text-sm">

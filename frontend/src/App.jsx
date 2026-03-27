@@ -7,6 +7,7 @@ import { Toaster } from 'react-hot-toast';
 
 // Pages
 import { Login, Register, ForgotPassword } from './pages/Auth';
+import { ResetPassword } from './pages/ResetPassword';
 import { Dashboard } from './pages/Dashboard';
 import { Newsletter } from './pages/Newsletter';
 import { Fundraising } from './pages/Fundraising';
@@ -45,6 +46,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Route>
 
         {/* Public Verify Route (standalone — no auth layout) */}
