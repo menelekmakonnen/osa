@@ -7,7 +7,7 @@ import { Navigate } from 'react-router-dom';
 
 export function SuperAdmin() {
   const user = authState.getUser();
-  const isSuperAdmin = user?.role === "Super Admin" || user?.role === "IT Department" || user?.role?.includes("School Administrator");
+  const isSuperAdmin = user?.role === "Super Admin" || user?.role === "ICUNI Staff" || user?.role?.includes("School Administrator");
 
   const [isAddSchoolOpen, setIsAddSchoolOpen] = React.useState(false);
   const [newSchoolData, setNewSchoolData] = React.useState({ school_name: '', admin_name: '', admin_email: '', old_students_full_name: '', old_students_short_name: '', school_type: 'Mixed' });
@@ -17,7 +17,7 @@ export function SuperAdmin() {
 
   // Load persisted feature flags on mount
   useEffect(() => {
-    if (user?.role === "IT Department" || user?.role === "Super Admin") {
+    if (user?.role === "ICUNI Staff" || user?.role === "Super Admin") {
       api.getFeatureFlags().then(flags => {
         if (flags && Object.keys(flags).length > 0) setFeatures(flags);
       }).catch(() => {});

@@ -196,7 +196,7 @@ function handleAction(action, data, token) {
     }
     return { success: true, message: `Unblocked ${count} members and ${scount} schools.` };
   } else if (action === "getSchools") {
-      let schools = getSheetData("schools", CURRENT_SCHOOL_ID);
+      let schools = getSheetData("schools", MASTER_DB_ID);
       if (schools.length === 0) {
         // Fallback for empty new instances
         return {
@@ -1671,8 +1671,9 @@ function getMembers(user, data) {
   const scope_type = data.scope_type || "yeargroup";
   const scope_id = data.scope_id || user.year_group_id;
   const targetSchool = user.school || "Aggrey Memorial"; 
+  const hasGlobalAccess = ROLE_TIERS[user.role] === 5;
   
-  const allMembers = getSheetData("members", CURRENT_SCHOOL_ID).filter(m => (m.school || "Aggrey Memorial") === targetSchool);
+  const allMembers = getSheetData("members", CURRENT_SCHOOL_ID).filter(m => hasGlobalAccess || (m.school || "Aggrey Memorial") === targetSchool);
 
   let filteredMembers = [];
   

@@ -12,7 +12,7 @@ export function Fundraising() {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const user = authState.getUser();
-  const isAdmin = user && (user.role.includes("Admin") || user.role === "IT Department");
+  const isAdmin = user && (user.role.includes("Admin") || user.role === "ICUNI Staff");
 
   // Donation Modal
   const [selectedCampaign, setSelectedCampaign] = useState(null);

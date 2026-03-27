@@ -12,7 +12,7 @@ export function Events() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const user = authState.getUser();
-  const isAdmin = user && (user.role.includes("Admin") || user.role === "IT Department");
+  const isAdmin = user && (user.role.includes("Admin") || user.role === "ICUNI Staff");
 
   const [selectedEvent, setSelectedEvent] = useState(null); // For details modal
   const [rsvping, setRsvping] = useState(false);

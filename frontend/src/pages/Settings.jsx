@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 
 export function Settings() {
   const user = authState.getUser() || {};
-  const isStaff = user.role === "ICUNI Staff" || user.role === "IT Department";
+  const isStaff = user.role === "ICUNI Staff" || user.role === "ICUNI Staff";
   const [activeTab, setActiveTab] = useState('account');
 
   const tabs = [

@@ -18,7 +18,7 @@ export function Support() {
   const [submitData, setSubmitData] = useState({ issue_type: '', description: '' });
   const [submitting, setSubmitting] = useState(false);
 
-  const isExec = user?.role?.includes("President") || user?.role?.includes("Admin") || user?.role === "IT Department";
+  const isExec = user?.role?.includes("President") || user?.role?.includes("Admin") || user?.role === "ICUNI Staff";
 
   const loadTickets = React.useCallback(async () => {
     setLoading(true);

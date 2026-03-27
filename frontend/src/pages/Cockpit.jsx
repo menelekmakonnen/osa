@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 
 export function Cockpit() {
    const user = authState.getUser();
-   const isStaff = user?.role === "ICUNI Staff" || user?.role === "IT Department";
+   const isStaff = user?.role === "ICUNI Staff" || user?.role === "ICUNI Staff";
    
    const [schools, setSchools] = useState([]);
    const [loading, setLoading] = useState(true);

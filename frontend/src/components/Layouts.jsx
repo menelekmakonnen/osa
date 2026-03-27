@@ -115,15 +115,15 @@ export function AppLayout() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  const isYGAdmin = user.role && (user.role.includes("Admin") || user.role.includes("President") || user.role === "IT Department");
-  const isSuperAdmin = user.role && (user.role === "Super Admin" || user.role.includes("School Administrator") || user.role === "IT Department");
+  const isYGAdmin = user.role && (user.role.includes("Admin") || user.role.includes("President") || user.role === "ICUNI Staff");
+  const isSuperAdmin = user.role && (user.role === "Super Admin" || user.role.includes("School Administrator") || user.role === "ICUNI Staff");
 
   const handleLogout = () => {
     authState.clearSession();
     window.location.href = '/login';
   };
 
-  const isICUNIStaff = user.role === "IT Department";
+  const isICUNIStaff = user.role === "ICUNI Staff";
   const needsEmailVerify = user.email_verified === false && !isICUNIStaff;
   const needsIdVerify = isSuperAdmin && !isICUNIStaff && user.id_verified !== true && user.id_verified !== "true";
 

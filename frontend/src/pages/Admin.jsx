@@ -30,7 +30,7 @@ const getRolesForScope = (scopeType) => {
 export function Admin() {
   const user = authState.getUser();
   const { activeScope } = useTenant();
-  const isExec = user?.role?.includes("Admin") || user?.role?.includes("President") || user?.role === "IT Department";
+  const isExec = user?.role?.includes("Admin") || user?.role?.includes("President") || user?.role === "ICUNI Staff";
 
   const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
   const [members, setMembers] = useState([]);
