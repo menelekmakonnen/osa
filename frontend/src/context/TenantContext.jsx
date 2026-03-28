@@ -24,7 +24,11 @@ export function TenantProvider({ children }) {
     schoolId: null,
     name: "OSA Directory",
     isCustomDomain: false,
-    activeScope: { type: 'yeargroup', id: user?.year_group_id || null, label: user?.year_group_nickname || 'My Year Group' } // Tiers: yeargroup, club, house, school, all-schools
+    activeScope: { 
+      type: user?.role === 'ICUNI Staff' ? 'all' : (user?.role?.includes('School Admin') || user?.role === 'Super Admin' ? 'school' : 'yeargroup'), 
+      id: user?.year_group_id || null, 
+      label: user?.year_group_nickname || 'My Year Group' 
+    } // Tiers: yeargroup, club, house, school, all-schools
   });
   const [loading, setLoading] = useState(true);
 
