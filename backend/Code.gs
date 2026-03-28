@@ -312,6 +312,8 @@ function handleAction(action, data, token) {
       return handleApproveDonation(user, data);
     case "adminAssignDonation":
       return handleAdminAssignDonation(user, data);
+    case "getPendingPledges":
+      return getPendingPledges(user, data);
 
     // Events
     case "getEvents":
@@ -1617,7 +1619,7 @@ function validateToken(token) {
 
 const ROLE_TIERS = {
   // Tier 5: Platform
-  "Platform President": 5, "Platform Vice President": 5, "Platform Gen. Secretary": 5, "Platform Organiser": 5, "Platform Finance Exec": 5, "IT Department": 5, "Platform Admin": 5, "Super Admin": 5,
+  "Platform President": 5, "Platform Vice President": 5, "Platform Gen. Secretary": 5, "Platform Organiser": 5, "Platform Finance Exec": 5, "IT Department": 5, "Platform Admin": 5, "Super Admin": 5, "ICUNI Staff": 5,
   
   // Tier 4: School
   "School President": 4, "School Vice President": 4, "School Gen. Secretary": 4, "School Organiser": 4, "School Finance Exec": 4, "School Administrator": 4,
@@ -1751,8 +1753,12 @@ function updateProfile(user, data) {
   
   allowedFields.forEach(field => {
     if (data[field] !== undefined) {
-      sheet.getRange(user.rowIndex, headers.indexOf(field) + 1).setValue(data[field]);
-      user[field] = data[field];
+      let safeValue = data[field];
+      if (typeof safeValue === 'string') {
+          safeValue = safeValue.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      }
+      sheet.getRange(user.rowIndex, headers.indexOf(field) + 1).setValue(safeValue);
+      user[field] = safeValue;
       updatedAny = true;
     }
   });
@@ -2246,6 +2252,44 @@ function handleAdminAssignDonation(user, data) {
    return { success: true, message: "Authorized donation forced into ledger" };
 }
 
+function getPendingPledges(user, data) {
+   enforceRoleHierarchy(user, "School Administrator", [4, 5]);
+
+   const dSheet = getSheet("donations", CURRENT_SCHOOL_ID);
+   const dHeaders = getHeaders(dSheet);
+   const dRows = dSheet.getDataRange().getValues();
+   
+   const campSheet = getSheet("campaigns", CURRENT_SCHOOL_ID);
+   const cHeaders = getHeaders(campSheet);
+   const cRows = campSheet.getDataRange().getValues();
+   const campaigns = {};
+   for(let i=1; i<cRows.length; i++) {
+       let c = rowToObject(cRows[i], cHeaders);
+       campaigns[c.id] = c.title || "Unknown Campaign";
+   }
+   
+   const mSheet = getSheet("members", CURRENT_SCHOOL_ID);
+   const mHeaders = getHeaders(mSheet);
+   const mRows = mSheet.getDataRange().getValues();
+   const members = {};
+   for(let i=1; i<mRows.length; i++) {
+       let m = rowToObject(mRows[i], mHeaders);
+       members[m.id] = m;
+   }
+
+   const pending = [];
+   for(let i=1; i<dRows.length; i++) {
+      let r = rowToObject(dRows[i], dHeaders);
+      if(r.status === "Pending") {
+         r.campaign_name = campaigns[r.campaign_id] || "Unknown Campaign";
+         r.donor_name = members[r.donor_id] ? members[r.donor_id].name : "Unknown Donor";
+         r.donor_email = members[r.donor_id] ? members[r.donor_id].email : "";
+         pending.push(r);
+      }
+   }
+   return { success: true, data: pending };
+}
+
 // ==========================================
 // Events
 // ==========================================
@@ -2394,7 +2438,7 @@ function updateGroupAvatar(user, data) {
     
     // Authorization check
     let isExec = user.role.includes("President") || user.role.includes("Admin");
-    if (!isExec && user.role !== "Super Admin" && user.role !== "IT Department") {
+    if (!isExec && user.role !== "Super Admin" && user.role !== "IT Department" && user.role !== "ICUNI Staff") {
        return { success: false, error: "Unauthorized. Must be an admin/exec." };
     }
 
@@ -2952,7 +2996,7 @@ function saveGroupSettings(user, data) {
 
     // Authorization check
     let isExec = user.role.includes("President") || user.role.includes("Admin");
-    if (!isExec && user.role !== "Super Admin" && user.role !== "IT Department") {
+    if (!isExec && user.role !== "Super Admin" && user.role !== "IT Department" && user.role !== "ICUNI Staff") {
        return { success: false, error: "Unauthorized. Must be an admin/exec." };
     }
 
@@ -2999,7 +3043,7 @@ function saveGroupSettings(user, data) {
 // ==========================================
 
 function getSystemOverview(user) {
-  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  if (user.role !== "IT Department" && user.role !== "ICUNI Staff") return { success: false, error: "Unauthorized" };
 
   const members = getSheetData("members", CURRENT_SCHOOL_ID);
   const schools = getSheetData("schools", CURRENT_SCHOOL_ID);
@@ -3055,7 +3099,7 @@ function getSystemOverview(user) {
       openTickets: openTickets.length,
       escalatedTickets: escalatedTickets.length,
       pendingPosts: pendingPosts.length,
-      staffCount: members.filter(m => m.role === "IT Department").length,
+      staffCount: members.filter(m => m.role === "IT Department" || m.role === "ICUNI Staff").length,
       schools: schoolSummaries,
       escalatedTicketsList: escalatedTickets.map(t => ({
         id: t.id,
@@ -3073,10 +3117,10 @@ function getSystemOverview(user) {
 }
 
 function getStaffRoster(user) {
-  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  if (user.role !== "IT Department" && user.role !== "ICUNI Staff") return { success: false, error: "Unauthorized" };
 
   const members = getSheetData("members", CURRENT_SCHOOL_ID);
-  const staff = members.filter(m => m.role === "IT Department");
+  const staff = members.filter(m => m.role === "IT Department" || m.role === "ICUNI Staff");
 
   return {
     success: true,
@@ -3094,7 +3138,7 @@ function getStaffRoster(user) {
 }
 
 function addStaffMember(user, data) {
-  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  if (user.role !== "IT Department" && user.role !== "ICUNI Staff") return { success: false, error: "Unauthorized" };
 
   const { name, email, password } = data;
   if (!name || !email || !password) return { success: false, error: "Missing required fields: name, email, password" };
@@ -3155,7 +3199,7 @@ function addStaffMember(user, data) {
 }
 
 function removeStaffMember(user, data) {
-  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  if (user.role !== "IT Department" && user.role !== "ICUNI Staff") return { success: false, error: "Unauthorized" };
 
   const { userId } = data;
   if (!userId) return { success: false, error: "Missing userId" };
@@ -3170,7 +3214,7 @@ function removeStaffMember(user, data) {
 
   for (let i = 1; i < rows.length; i++) {
     const row = rowToObject(rows[i], mh);
-    if (row.id === userId && row.role === "IT Department") {
+    if (row.id === userId && (row.role === "IT Department" || row.role === "ICUNI Staff")) {
       ms.getRange(i + 1, roleCol + 1).setValue("Member");
       return { success: true, message: row.name + " has been removed from IT Department" };
     }
@@ -3184,7 +3228,7 @@ function removeStaffMember(user, data) {
 // ==========================================
 
 function removeSchool(user, data) {
-  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  if (user.role !== "IT Department" && user.role !== "ICUNI Staff") return { success: false, error: "Unauthorized" };
   const { schoolId } = data;
   if (!schoolId) return { success: false, error: "Missing schoolId" };
 
@@ -3202,7 +3246,7 @@ function removeSchool(user, data) {
 }
 
 function getSheetDataRaw(user, data) {
-  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  if (user.role !== "IT Department" && user.role !== "ICUNI Staff") return { success: false, error: "Unauthorized" };
   const { sheetName, limit } = data;
   if (!sheetName) return { success: false, error: "Missing sheetName" };
 
@@ -3232,7 +3276,7 @@ function getSheetDataRaw(user, data) {
 }
 
 function updateSheetCell(user, data) {
-  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  if (user.role !== "IT Department" && user.role !== "ICUNI Staff") return { success: false, error: "Unauthorized" };
   const { sheetName, rowIndex, columnName, value } = data;
   if (!sheetName || !rowIndex || !columnName) return { success: false, error: "Missing required fields" };
 
@@ -3252,7 +3296,7 @@ function updateSheetCell(user, data) {
 }
 
 function overrideMember(user, data) {
-  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  if (user.role !== "IT Department" && user.role !== "ICUNI Staff") return { success: false, error: "Unauthorized" };
   const { memberId, field, value } = data;
   if (!memberId || !field) return { success: false, error: "Missing memberId or field" };
 
@@ -3276,7 +3320,7 @@ function overrideMember(user, data) {
 }
 
 function saveFeatureFlags(user, data) {
-  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  if (user.role !== "IT Department" && user.role !== "ICUNI Staff") return { success: false, error: "Unauthorized" };
   const { flags } = data;
   if (!flags) return { success: false, error: "Missing flags object" };
 
@@ -3306,7 +3350,7 @@ function saveFeatureFlags(user, data) {
 }
 
 function getFeatureFlags(user) {
-  if (user.role !== "IT Department") return { success: false, error: "Unauthorized" };
+  if (user.role !== "IT Department" && user.role !== "ICUNI Staff") return { success: false, error: "Unauthorized" };
   let sheet;
   try { sheet = getSheet("system_config", CURRENT_SCHOOL_ID); } catch(e) { return { success: true, data: {} }; }
   if (!sheet) return { success: true, data: {} };

@@ -103,11 +103,13 @@ export function AppLayout() {
   // Read impersonation logic directly here for UX warnings
   let isImpersonating = false;
   let impersonationName = "None";
+  let impSimRole = null;
   try {
      const imp = JSON.parse(window.localStorage.getItem('osa_active_impersonation'));
      if (imp) {
          isImpersonating = true;
          impersonationName = imp.target_school_id;
+         impSimRole = imp.simulate_role;
      }
   } catch(e) {}
 
@@ -115,17 +117,22 @@ export function AppLayout() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  const isYGAdmin = user.role && (user.role.includes("Admin") || user.role.includes("President") || user.role === "ICUNI Staff");
-  const isSuperAdmin = user.role && (user.role === "Super Admin" || user.role.includes("School Administrator") || user.role === "ICUNI Staff");
+  const effectiveRole = impSimRole || user.role || '';
+  const isYGAdmin = effectiveRole && (effectiveRole.includes("Admin") || effectiveRole.includes("President") || effectiveRole === "ICUNI Staff");
+  const isSuperAdmin = effectiveRole && (effectiveRole === "Super Admin" || effectiveRole.includes("School Administrator") || effectiveRole === "ICUNI Staff");
 
   const handleLogout = () => {
     authState.clearSession();
     window.location.href = '/login';
   };
 
-  const isICUNIStaff = user.role === "ICUNI Staff";
+  const isICUNIStaff = effectiveRole === "ICUNI Staff";
   const needsEmailVerify = user.email_verified === false && !isICUNIStaff;
   const needsIdVerify = isSuperAdmin && !isICUNIStaff && user.id_verified !== true && user.id_verified !== "true";
+
+  // Conditionally hide elevated admin shortcuts when viewing limited scopes (e.g. User View feature in Cockpit)
+  const hideCockpit = activeScope?.type === 'yeargroup' || activeScope?.type === 'club' || activeScope?.type === 'house' || activeScope?.type === 'school';
+  const hideSuperAdmin = activeScope?.type === 'yeargroup' || activeScope?.type === 'club' || activeScope?.type === 'house';
 
   if (needsEmailVerify || needsIdVerify) {
     return <VerificationWall user={user} isSuperAdmin={isSuperAdmin} />;
@@ -223,8 +230,11 @@ export function AppLayout() {
                 
                 {isYGAdmin && (
                   <div className="mt-2 pt-2 border-t border-border-light px-2">
+                     {!hideCockpit && isICUNIStaff && (
+                        <NavItem to="/app/cockpit" icon={Monitor} label="Cockpit" isAdminSection onClick={() => setMobileMenuOpen(false)} />
+                     )}
                      <NavItem to="/app/admin" icon={Settings} label="Admin Panel" isAdminSection onClick={() => setMobileMenuOpen(false)} />
-                     {isSuperAdmin && (
+                     {!hideSuperAdmin && isSuperAdmin && (
                         <NavItem to="/app/superadmin" icon={ShieldAlert} label="Super Admin" isAdminSection onClick={() => setMobileMenuOpen(false)} />
                      )}
                   </div>
@@ -350,11 +360,11 @@ export function AppLayout() {
           {isYGAdmin && (
             <div className={`mt-4 pt-4 border-t border-border-light ${isSidebarCollapsed ? 'mx-2' : 'mx-4'}`}>
               {!isSidebarCollapsed && <div className="px-2 mb-2 text-[11px] font-bold uppercase tracking-widest text-ink-muted">Administration</div>}
-              {isICUNIStaff && (
+              {isICUNIStaff && !hideCockpit && (
                 <NavItem collapsed={isSidebarCollapsed} to="/app/cockpit" icon={Monitor} label="Cockpit" isAdminSection />
               )}
               <NavItem collapsed={isSidebarCollapsed} to="/app/admin" icon={Settings} label="Admin Panel" isAdminSection />
-              {isSuperAdmin && (
+              {isSuperAdmin && !hideSuperAdmin && (
                  <NavItem collapsed={isSidebarCollapsed} to="/app/superadmin" icon={ShieldAlert} label="Super Admin" isAdminSection />
               )}
             </div>
