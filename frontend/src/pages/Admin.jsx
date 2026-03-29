@@ -43,6 +43,19 @@ export function Admin() {
   const [avatarImage, setAvatarImage] = useState(null);
   const avatarInputRef = React.useRef(null);
 
+  // Pledges Management
+  const [isPledgesModalOpen, setIsPledgesModalOpen] = useState(false);
+  const [pendingPledges, setPendingPledges] = useState([]);
+  const [loadingPledges, setLoadingPledges] = useState(false);
+  const [approvingPledge, setApprovingPledge] = useState(null);
+
+  // Assign Pledge State
+  const [isAssignPledgeModalOpen, setIsAssignPledgeModalOpen] = useState(false);
+  const [assignPledgeData, setAssignPledgeData] = useState({ campaign_id: '', donor_id: '', amount: '', is_anonymous: false });
+  const [assigningPledge, setAssigningPledge] = useState(false);
+  const [adminCampaigns, setAdminCampaigns] = useState([]);
+  const [loadingAdminCampaigns, setLoadingAdminCampaigns] = useState(false);
+
   // Social Links Setup
   const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
   const [socialSettings, setSocialSettings] = useState({});
@@ -72,7 +85,35 @@ export function Admin() {
           setLoadingSocials(false);
        });
     }
-  }, [isRolesModalOpen, isSocialModalOpen, activeScope]);
+
+    if (isPledgesModalOpen) {
+       setLoadingPledges(true);
+       api.getPendingPledges().then(res => {
+          setPendingPledges(res || []);
+       }).catch(err => {
+          console.error("Failed to fetch pending pledges", err);
+       }).finally(() => {
+          setLoadingPledges(false);
+       });
+    }
+
+    if (isAssignPledgeModalOpen) {
+       setLoadingMembers(true);
+       setLoadingAdminCampaigns(true);
+       Promise.all([
+          api.getMembers(activeScope),
+          api.getCampaigns(activeScope)
+       ]).then(([mRes, cRes]) => {
+          setMembers(mRes || []);
+          setAdminCampaigns(cRes || []);
+       }).catch(err => {
+          console.error("Failed to load data for assign pledge", err);
+       }).finally(() => {
+          setLoadingMembers(false);
+          setLoadingAdminCampaigns(false);
+       });
+    }
+  }, [isRolesModalOpen, isSocialModalOpen, isPledgesModalOpen, isAssignPledgeModalOpen, activeScope]);
 
   const handleAssignRole = async (e) => {
     e.preventDefault();
@@ -89,6 +130,37 @@ export function Admin() {
     } finally {
        setAssigning(false);
     }
+  };
+
+  const handleApprovePledge = async (pledgeId) => {
+     setApprovingPledge(pledgeId);
+     try {
+         await api.approveDonation({ pledge_id: pledgeId });
+         toast.success("Pledge officially approved and ledger updated!");
+         setPendingPledges(prev => prev.filter(p => p.id !== pledgeId));
+     } catch(err) {
+         toast.error("Failed to approve pledge: " + err.message);
+     } finally {
+         setApprovingPledge(null);
+     }
+  };
+
+  const handleManualAssignPledge = async (e) => {
+     e.preventDefault();
+     setAssigningPledge(true);
+     try {
+         const res = await api.adminAssignDonation({
+             ...assignPledgeData,
+             amount: parseFloat(assignPledgeData.amount)
+         });
+         toast.success("Pledge directly bound to user profile and campaign totals updated!");
+         setIsAssignPledgeModalOpen(false);
+         setAssignPledgeData({ campaign_id: '', donor_id: '', amount: '', is_anonymous: false });
+     } catch(err) {
+         toast.error("Failed to assign pledge: " + err.message);
+     } finally {
+         setAssigningPledge(false);
+     }
   };
 
   const handleSaveSocials = async (e) => {
@@ -190,8 +262,8 @@ export function Admin() {
              Create emergency relief efforts or long-term school support campaigns. Track donations and post updates.
            </p>
            <div className="flex justify-between items-center mt-auto pt-2 gap-2">
-             <Button size="sm" variant="secondary" onClick={() => toast.success("Fundraising module is currently undergoing active construction.")} className="flex-1 font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title">Create New</Button>
-             <Button size="sm" variant="ghost" onClick={() => toast.success("Fundraising module is currently undergoing active construction.")} className="font-bold text-ink-muted hover:text-ink-title px-2">Manage</Button>
+             <Button size="sm" variant="secondary" onClick={() => setIsAssignPledgeModalOpen(true)} className="flex-[0.6] font-bold shadow-sm bg-surface-muted border border-border-light text-ink-title">Assign</Button>
+             <Button size="sm" variant="ghost" onClick={() => setIsPledgesModalOpen(true)} className="flex-[0.4] font-bold text-ink-muted hover:text-ink-title px-2 border border-border-light shadow-sm bg-white">Review Queue</Button>
            </div>
         </Card>
 
@@ -243,6 +315,107 @@ export function Admin() {
         )}
 
       </div>
+
+      {/* Review Pledges Modal */}
+      <Modal isOpen={isPledgesModalOpen} onClose={() => setIsPledgesModalOpen(false)} title="Review Pending Pledges">
+         <div className="flex flex-col gap-4 py-2 min-h-[30vh] max-h-[70vh]">
+            <p className="text-[14px] text-ink-body leading-relaxed mb-2">
+              Review and reconcile member pledges. Once you verify the funds have physically hit the accounts, approve the pledge to permanently update the campaign target ledger.
+            </p>
+            {loadingPledges ? (
+               <div className="flex flex-col gap-3">
+                  <div className="animate-pulse h-16 w-full bg-surface-muted rounded-lg border border-border-light"></div>
+                  <div className="animate-pulse h-16 w-full bg-surface-muted rounded-lg border border-border-light"></div>
+               </div>
+            ) : pendingPledges.length === 0 ? (
+               <div className="text-center py-12 text-ink-muted bg-surface-muted rounded-lg border border-border-light font-medium">
+                  No pending pledges found.
+               </div>
+            ) : (
+               <div className="flex flex-col gap-2 overflow-y-auto">
+                  {pendingPledges.map(p => (
+                     <div key={p.id} className="flex justify-between items-center bg-surface-default p-3 rounded-lg border border-border-light shadow-sm">
+                        <div className="flex flex-col">
+                           <span className="font-bold text-[15px] text-ink-title">{p.campaign_name}</span>
+                           <span className="text-[13px] text-ink-body">{p.donor_name} {p.is_anonymous ? "(Requested Anonymity)" : ""}</span>
+                           <span className="text-[14px] font-bold text-brand-600 mt-1">Amount: {p.amount}</span>
+                        </div>
+                        <Button 
+                           size="sm" 
+                           onClick={() => handleApprovePledge(p.id)} 
+                           disabled={approvingPledge === p.id}
+                           className="font-bold shadow-sm"
+                        >
+                           {approvingPledge === p.id ? "Approving..." : "Approve"}
+                        </Button>
+                     </div>
+                  ))}
+               </div>
+            )}
+            <div className="flex justify-end gap-2 mt-auto pt-4 border-t border-border-light">
+               <Button variant="ghost" onClick={() => setIsPledgesModalOpen(false)}>Close</Button>
+            </div>
+         </div>
+      </Modal>
+
+      {/* Assign Pledge Modal */}
+      <Modal isOpen={isAssignPledgeModalOpen} onClose={() => setIsAssignPledgeModalOpen(false)} title="Direct Assign Pledge">
+         <form onSubmit={handleManualAssignPledge} className="flex flex-col gap-4 py-2">
+            <p className="text-[14px] text-ink-body leading-relaxed mb-2">
+              Bypass the pending queue and directly allocate received funds to a member. This instantly updates the live campaign target total.
+            </p>
+            
+            {(loadingMembers || loadingAdminCampaigns) ? (
+               <div className="flex flex-col gap-3">
+                  <div className="animate-pulse h-10 w-full bg-surface-muted rounded-lg border border-border-light"></div>
+                  <div className="animate-pulse h-10 w-full bg-surface-muted rounded-lg border border-border-light"></div>
+               </div>
+            ) : (
+               <>
+                  <Select 
+                     label="Target Campaign" 
+                     options={[
+                        { value: '', label: 'Select Campaign...' },
+                        ...adminCampaigns.map(c => ({ value: c.id, label: c.title }))
+                     ]}
+                     value={assignPledgeData.campaign_id}
+                     onChange={e => setAssignPledgeData({...assignPledgeData, campaign_id: e.target.value})}
+                     required
+                  />
+                  
+                  <Select 
+                     label="Member (Donor)" 
+                     options={memberOptions}
+                     value={assignPledgeData.donor_id}
+                     onChange={e => setAssignPledgeData({...assignPledgeData, donor_id: e.target.value})}
+                     required
+                  />
+
+                  <Input 
+                     label="Amount (GHS)" 
+                     type="number" 
+                     min="1" 
+                     value={assignPledgeData.amount} 
+                     onChange={e => setAssignPledgeData({...assignPledgeData, amount: e.target.value})} 
+                     required 
+                     placeholder="e.g. 500" 
+                  />
+
+                  <label className="flex items-center gap-2 cursor-pointer mt-1 mb-2">
+                     <input type="checkbox" className="w-4 h-4 text-brand-500 rounded border-border-light focus:ring-brand-500" checked={assignPledgeData.is_anonymous} onChange={e => setAssignPledgeData({...assignPledgeData, is_anonymous: e.target.checked})} />
+                     <span className="text-[14px] text-ink-title font-medium">Flag as Anonymous Donation</span>
+                  </label>
+               </>
+            )}
+
+            <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-border-light">
+               <Button variant="ghost" type="button" onClick={() => setIsAssignPledgeModalOpen(false)}>Cancel</Button>
+               <Button type="submit" disabled={assigningPledge || !assignPledgeData.campaign_id || !assignPledgeData.donor_id || !assignPledgeData.amount} className="flex gap-2 items-center">
+                  <CheckCircle size={18} strokeWidth={2.5}/> Commit to Ledger
+               </Button>
+            </div>
+         </form>
+      </Modal>
 
       {/* Role Assignment Modal */}
       <Modal isOpen={isRolesModalOpen} onClose={() => setIsRolesModalOpen(false)} title={`Assign Governance Roles - ${activeScope.label}`}>

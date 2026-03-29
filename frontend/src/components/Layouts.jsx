@@ -117,7 +117,7 @@ export function AppLayout() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  const effectiveRole = impSimRole || user.role || '';
+  const effectiveRole = impSimRole || user?.role || '';
   const isYGAdmin = effectiveRole && (effectiveRole.includes("Admin") || effectiveRole.includes("President") || effectiveRole === "ICUNI Staff");
   const isSuperAdmin = effectiveRole && (effectiveRole === "Super Admin" || effectiveRole.includes("School Administrator") || effectiveRole === "ICUNI Staff");
 
@@ -206,7 +206,7 @@ export function AppLayout() {
                           setMobileMenuOpen(false);
                        }}
                     >
-                       {user.role && user.role.includes("Platform") && <option value="all" style={{backgroundColor:'#fff',color:'#050505'}}>All Schools</option>}
+                       {user?.role && user.role.includes("Platform") && <option value="all" style={{backgroundColor:'#fff',color:'#050505'}}>All Schools</option>}
                        <option value="school" style={{backgroundColor:'#fff',color:'#050505'}}>Whole School</option>
                        {user.year_group_id && <option value="yeargroup" style={{backgroundColor:'#fff',color:'#050505'}}>{user.year_group_nickname || 'My Year Group'}</option>}
                        {user.class_group_id && <option value="classgroup" style={{backgroundColor:'#fff',color:'#050505'}}>{user.class_group_name || 'My Class Group'}</option>}
@@ -332,7 +332,7 @@ export function AppLayout() {
                   setScope(type, id, label);
                }}
             >
-               {user.role && user.role.includes("Platform") && <option value="all" className="bg-surface-default text-ink-body">All Schools</option>}
+               {user?.role && user.role.includes("Platform") && <option value="all" className="bg-surface-default text-ink-body">All Schools</option>}
                <option value="school" className="bg-surface-default text-ink-body">Whole School</option>
                {user.year_group_id && <option value="yeargroup" className="bg-surface-default text-ink-body">{user.year_group_nickname || 'My Year Group'}</option>}
                {user.class_group_id && <option value="classgroup" className="bg-surface-default text-ink-body">{user.class_group_name || 'My Class Group'}</option>}

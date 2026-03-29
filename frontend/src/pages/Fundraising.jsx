@@ -17,6 +17,7 @@ export function Fundraising() {
   // Donation Modal
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [donationAmount, setDonationAmount] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [donating, setDonating] = useState(false);
 
   // Create Campaign Modal
@@ -47,9 +48,10 @@ export function Fundraising() {
       if(!donationAmount || isNaN(donationAmount) || parseFloat(donationAmount) <= 0) {
           throw new Error("Please enter a valid amount.");
       }
-      await api.donate({ campaign_id: selectedCampaign.id, amount: parseFloat(donationAmount) });
+      await api.donate({ campaign_id: selectedCampaign.id, amount: parseFloat(donationAmount), is_anonymous: isAnonymous });
       setSelectedCampaign(null);
       setDonationAmount('');
+      setIsAnonymous(false);
       loadData();
       toast.success("Pledge recorded successfully! You will receive an email receipt.");
     } catch(err) {
@@ -145,7 +147,7 @@ export function Fundraising() {
       </div>
 
       {/* Donation Modal */}
-      <Modal isOpen={!!selectedCampaign} onClose={() => !donating && setSelectedCampaign(null)} title="Make a Contribution">
+      <Modal isOpen={!!selectedCampaign} onClose={() => { if(!donating) { setSelectedCampaign(null); setIsAnonymous(false); } }} title="Make a Contribution">
          {selectedCampaign && (
             <form onSubmit={handleDonate} className="flex flex-col gap-4 mt-2">
                <div className="p-4 bg-parchment rounded-md mb-2">
@@ -183,8 +185,12 @@ export function Fundraising() {
                  autoFocus
                />
 
+               <label className="flex items-center gap-2 cursor-pointer mt-1 mb-2">
+                 <input type="checkbox" className="w-4 h-4 text-brand-500 rounded border-border-light focus:ring-brand-500" checked={isAnonymous} onChange={e => setIsAnonymous(e.target.checked)} />
+                 <span className="text-[14px] text-ink-title font-medium">Make this interaction anonymous</span>
+               </label>
                <p className="text-xs text-muted mb-4 leading-relaxed">
-                 Note: By clicking confirm, your pledge will be recorded on the official ledger and a receipt will be emailed to you. Please follow the instructions in the email to fulfill the payment via Bank Transfer or Mobile Money.
+                 Note: By clicking confirm, your pledge will be recorded as <strong className="text-amber-600">Pending</strong> and requires administrative reconciliation. A receipt will be emailed to you with instructions to fulfill the payment via Bank Transfer or Mobile Money.
                </p>
 
                <div className="flex justify-end gap-2 text-white">

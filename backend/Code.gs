@@ -949,29 +949,41 @@ function handleGodModeProvisionMember(user, data) {
   }
   
   const newId = Utilities.getUuid();
-  const salt = Utilities.getUuid();
-  const passHash = computeHash(password, salt);
+  const username = name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z.]/g, '');
   
   const newRowObj = {
     id: newId,
     name: name,
+    username: username,
     email: email.toLowerCase(),
-    phone: "",
-    password_hash: passHash,
-    salt: salt,
+    password: hashPassword(password),
     role: role,
-    school: target_school_id,
     year_group_id: year_group_id || "",
-    class_group_id: "",
+    year_group_nickname: "Provisioned User",
+    final_class: "",
     house_name: "",
-    custom_title: "",
-    bio: "Manually provisioned by ICUNI Network Administrator.",
-    profile_pic: "",
+    gender: "",
+    cheque_colour: "#1E293B",
+    school: target_school_id,
+    association: "",
+    date_joined: new Date().toISOString(),
+    session_token: "",
+    token_expiry: "",
     verification_status: "Approved",
-    magic_link_token: "",
-    magic_link_expires: "",
-    created_at: new Date().toISOString(),
-    last_login: ""
+    priv_email: "all",
+    priv_phone: "all",
+    priv_location: "all",
+    priv_profession: "all",
+    priv_linkedin: "all",
+    priv_bio: "all",
+    priv_social: "all",
+    bio: "Manually provisioned by ICUNI Network Administrator.",
+    profession: "",
+    location: "",
+    phone: "",
+    linkedin: "",
+    social_links: "{}",
+    cover_url: ""
   };
   
   mSheet.appendRow(hs.map(h => newRowObj[h] !== undefined ? newRowObj[h] : ""));
@@ -1595,20 +1607,45 @@ function sendVerificationEmail(sheet, headers, rowIndex, recipientEmail, userNam
 
 function validateToken(token) {
   if (!token) return null;
-  const membersSheet = getSheet("members", CURRENT_SCHOOL_ID);
-  const headers = getHeaders(membersSheet);
-  const rows = membersSheet.getDataRange().getValues();
+  const masterSS = getMasterDB();
   
+  const mSheet = masterSS.getSheetByName("staff");
+  let headers = getHeaders(mSheet);
+  let rows = mSheet.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
     const rowObj = rowToObject(rows[i], headers);
     if (rowObj.session_token === token) {
-      const expiry = new Date(rowObj.token_expiry);
-      if (expiry > new Date()) {
-        rowObj.rowIndex = i + 1; // Preserve row index for updates
+      if (new Date(rowObj.token_expiry) > new Date()) {
+        rowObj.rowIndex = i + 1;
         delete rowObj.password;
         return rowObj;
       }
     }
+  }
+
+  const sSheet = masterSS.getSheetByName("schools");
+  const sHeaders = getHeaders(sSheet);
+  const sRows = sSheet.getDataRange().getValues();
+  for(let j=1; j<sRows.length; j++){
+      let sRow = rowToObject(sRows[j], sHeaders);
+      if(!sRow.spreadsheet_id) continue;
+      try {
+         const schoolSS = SpreadsheetApp.openById(sRow.spreadsheet_id);
+         const schoolMSheet = schoolSS.getSheetByName("members");
+         if(!schoolMSheet) continue;
+         let smHeaders = getHeaders(schoolMSheet);
+         let smRows = schoolMSheet.getDataRange().getValues();
+         for(let k=1; k<smRows.length; k++){
+            let uRow = rowToObject(smRows[k], smHeaders);
+            if(uRow.session_token === token) {
+               if(new Date(uRow.token_expiry) > new Date()) {
+                  uRow.rowIndex = k + 1;
+                  delete uRow.password;
+                  return uRow;
+               }
+            }
+         }
+      } catch(e) {}
   }
   return null;
 }
@@ -2590,7 +2627,7 @@ function postBoardMessage(user, data) {
         if(h==="school") return user.school; // P0: Tenant Isolation
         if(h==="author_id") return user.id;
         if(h==="author_name") return user.name;
-        if(h==="content") return content;
+        if(h==="content") return content.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
         if(h==="comments") return "[]";
         if(h==="reactions") return "[]";
         if(h==="timestamp") return new Date().toISOString();

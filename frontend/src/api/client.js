@@ -212,6 +212,7 @@ export const api = {
   donate: (data) => apiRequest("donate", data),
   approveDonation: (data) => apiRequest("approveDonation", data),
   adminAssignDonation: (data) => apiRequest("adminAssignDonation", data),
+  getPendingPledges: () => apiRequest("getPendingPledges"),
 
   createEvent: (data) => apiRequest("createEvent", data),
   rsvp: (eventId) => apiRequest("rsvp", { event_id: eventId }),
