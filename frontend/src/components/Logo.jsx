@@ -1,6 +1,9 @@
 import React, { useEffect, useRef } from 'react';
+import { authState } from '../api/client';
 
 export function Logo({ className = "w-10 h-10 w-full h-full", wrapperClass = "w-10 h-10" }) {
+  const user = authState.getUser();
+  const userColor = user?.colour || user?.cheque_colour || null;
   const svgRef = useRef(null);
 
   useEffect(() => {
@@ -11,8 +14,8 @@ export function Logo({ className = "w-10 h-10 w-full h-full", wrapperClass = "w-
     setTimeout(() => {
         if (!svgRef.current) return;
         const styles = getComputedStyle(svgRef.current);
-        const primaryColor = styles.color || "#1e293b"; 
-        const secondaryColor = styles.getPropertyValue('--school-secondary').trim() || "#3b82f6";
+        const primaryColor = userColor || styles.color || "#1e293b"; 
+        const secondaryColor = userColor || styles.getPropertyValue('--school-secondary').trim() || "#3b82f6";
 
         const svgStr = `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
              <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 C100 190, 185 150, 185 100 L185 30 Z" fill="${primaryColor}" fill-opacity="0.9" />
@@ -46,9 +49,9 @@ export function Logo({ className = "w-10 h-10 w-full h-full", wrapperClass = "w-
         xmlns="http://www.w3.org/2000/svg" 
         className={className}
       >
-         <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 C100 190, 185 150, 185 100 L185 30 Z" fill="currentColor" fillOpacity="0.9" />
-         <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 L100 10 Z" fill="var(--school-secondary, #3b82f6)" />
-         <path d="M100 10 L185 30 L185 100 C185 150, 100 190, 100 190 L100 10 Z" fill="currentColor" />
+         <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 C100 190, 185 150, 185 100 L185 30 Z" fill={userColor || "currentColor"} fillOpacity="0.9" />
+         <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 L100 10 Z" fill={userColor || "var(--school-secondary, #3b82f6)"} />
+         <path d="M100 10 L185 30 L185 100 C185 150, 100 190, 100 190 L100 10 Z" fill={userColor || "currentColor"} />
          <circle cx="100" cy="70" r="16" fill="white"/>
          <path d="M70 115 h60 M70 145 h60" stroke="white" strokeWidth="10" strokeLinecap="round"/>
       </svg>
