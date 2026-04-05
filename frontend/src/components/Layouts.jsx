@@ -58,25 +58,50 @@ export function ThemeToggle({ size = 20 }) {
 // ══════════════════════════════════════════════════════════════════════
 
 export function AuthLayout() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % 10);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, []);
+
   if (authState.isAuthenticated()) {
     return <Navigate to="/app" replace />;
   }
 
-  // Check stored preference for auth layout style (ICUNI staff can toggle this)
-  const layoutPref = localStorage.getItem('osa_auth_layout') || 'split'; // 'split' or 'centered'
+  const slides = Array.from({ length: 10 }, (_, i) => `/alumni/${i + 1}.png`);
+  const BackgroundSlider = () => (
+    <>
+      {slides.map((src, idx) => (
+        <div 
+          key={src}
+          className="absolute inset-0 bg-cover bg-center transition-opacity duration-[2000ms] ease-in-out"
+          style={{ backgroundImage: `url('${src}')`, opacity: currentSlide === idx ? 1 : 0 }}
+        />
+      ))}
+    </>
+  );
+
+  const layoutPref = localStorage.getItem('osa_auth_layout') || 'split';
 
   if (layoutPref === 'centered') {
     return (
-      <div className="min-h-screen bg-surface-muted flex flex-col justify-center py-12 px-4 animate-fade-in">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="text-center mb-6 mt-4">
-            <Link to="/" onClick={() => window.location.href='/'} className="inline-block transition-transform hover:scale-105 active:scale-95">
+      <div className="min-h-screen flex flex-col justify-center py-12 px-4 animate-fade-in relative overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <BackgroundSlider />
+          <div className="absolute inset-0 bg-surface-default/60 backdrop-blur-xl dark:bg-surface-default/80"></div>
+        </div>
+        <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+          <div className="text-center mb-6 mt-4 drop-shadow-md">
+            <Link to="/" onClick={() => window.location.href='/'} className="inline-block transition-transform duration-300 ease-spring hover:scale-105 active:scale-95">
                <Logo wrapperClass="w-14 h-14 mx-auto" className="w-12 h-12" noText />
             </Link>
-            <h2 className="mt-4 text-2xl font-bold text-ink-title tracking-tight">OSA Directory</h2>
-            <p className="text-ink-muted text-sm mt-1">Your alumni community, connected.</p>
+            <h2 className="mt-4 text-3xl font-bold text-ink-title tracking-tight">OSA Directory</h2>
+            <p className="text-ink-muted text-sm mt-1 font-medium">Your alumni community, connected.</p>
           </div>
-          <div className="bg-surface-default py-8 px-6 shadow-lg rounded-2xl border border-border-light">
+          <div className="bg-surface-glass backdrop-blur-2xl py-8 px-6 shadow-social-dropdown rounded-[32px] border border-border-light/50">
             <Outlet />
           </div>
         </div>
@@ -86,34 +111,48 @@ export function AuthLayout() {
 
   // Split-screen layout (default — modern)
   return (
-    <div className="min-h-screen flex animate-fade-in">
+    <div className="min-h-screen flex animate-fade-in relative overflow-hidden bg-surface-default">
+      
+      {/* Mobile Background (behind glass) */}
+      <div className="lg:hidden absolute inset-0 z-0">
+         <BackgroundSlider />
+         <div className="absolute inset-0 bg-surface-default/60 backdrop-blur-2xl dark:bg-surface-default/80"></div>
+      </div>
+
       {/* Left decorative panel (hidden on mobile) */}
-      <div className="hidden lg:flex lg:w-[45%] xl:w-[50%] relative overflow-hidden items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--school-primary, #0F172A), var(--school-secondary, #1E293B))' }}>
-        <div className="absolute inset-0 opacity-10">
+      <div className="hidden lg:flex lg:w-[45%] xl:w-[50%] relative overflow-hidden items-center justify-center">
+        <BackgroundSlider />
+        <div className="absolute inset-0 z-10 mix-blend-multiply" style={{ background: 'linear-gradient(135deg, var(--school-primary), var(--school-secondary))', opacity: 0.85 }}></div>
+        <div className="absolute inset-0 opacity-20 z-10">
           <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full mix-blend-screen" style={{ background: 'radial-gradient(circle, var(--school-secondary, #3B82F6), transparent)' }} />
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full mix-blend-screen" style={{ background: 'radial-gradient(circle, var(--school-primary, #6366F1), transparent)' }} />
         </div>
-        <div className="relative z-10 text-center px-12">
-          <Logo wrapperClass="w-20 h-20 mx-auto mb-6" className="w-16 h-16" noText />
-          <h1 className="text-4xl font-bold mb-3 tracking-tight" style={{ color: 'var(--school-on-primary, white)' }}>
+        <div className="relative z-20 text-center px-12 -mt-[5%]">
+          <Logo wrapperClass="w-24 h-24 mx-auto mb-6 drop-shadow-xl" className="w-20 h-20" noText />
+          <h1 className="text-5xl font-bold mb-4 tracking-tight drop-shadow-md text-white">
             OSA Directory
           </h1>
-          <p className="text-lg opacity-80 leading-relaxed max-w-md" style={{ color: 'var(--school-on-primary, white)' }}>
+          <p className="text-xl opacity-90 leading-relaxed max-w-md drop-shadow-md text-white">
             A permanent digital home for your old students community.
           </p>
         </div>
       </div>
 
       {/* Right form panel */}
-      <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 py-12 bg-surface-muted">
-        <div className="w-full max-w-md mx-auto">
-          <div className="lg:hidden text-center mb-8">
-            <Link to="/" onClick={() => window.location.href='/'} className="inline-block transition-transform hover:scale-105 active:scale-95">
+      <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 xl:px-24 py-12 relative z-10 w-full lg:w-[55%] xl:w-[50%]">
+        <div className="hidden lg:block absolute inset-0 z-0">
+           <BackgroundSlider />
+           <div className="absolute inset-0 bg-surface-default/60 backdrop-blur-3xl"></div>
+        </div>
+
+        <div className="w-full max-w-md mx-auto relative z-10">
+          <div className="lg:hidden text-center mb-8 drop-shadow-md">
+            <Link to="/" onClick={() => window.location.href='/'} className="inline-block transition-transform duration-300 ease-spring hover:scale-105 active:scale-95">
               <Logo wrapperClass="w-14 h-14 mx-auto" className="w-12 h-12" noText />
             </Link>
-            <h2 className="mt-3 text-2xl font-bold text-ink-title tracking-tight">OSA Directory</h2>
+            <h2 className="mt-3 text-3xl font-bold text-ink-title tracking-tight">OSA Directory</h2>
           </div>
-          <div className="bg-surface-default py-8 px-6 sm:px-8 shadow-lg rounded-2xl border border-border-light">
+          <div className="bg-surface-glass backdrop-blur-2xl py-8 px-6 sm:px-8 shadow-social-dropdown rounded-[32px] border border-border-light/50">
             <Outlet />
           </div>
         </div>

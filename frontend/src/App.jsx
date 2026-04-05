@@ -4,6 +4,7 @@ import { AuthLayout, AppLayout } from './components/Layouts';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { TenantProvider } from './context/TenantContext';
 import { Toaster } from 'react-hot-toast';
+import { authState } from './api/client';
 
 // Pages
 import { Login, Register, ForgotPassword, MagicLogin } from './pages/Auth';
