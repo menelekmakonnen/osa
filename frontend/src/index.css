@@ -13,8 +13,8 @@
 @layer base {
   :root {
     /* ── School Brand (Injected at runtime by themeEngine.js) ── */
-    --school-primary: #0F172A;
-    --school-secondary: #3B82F6;
+    --school-primary: #9966CC;
+    --school-secondary: #FACC15;
     --school-on-primary: #FFFFFF;
     --school-on-secondary: #FFFFFF;
     --school-50: #F8FAFC;
@@ -34,9 +34,9 @@
     --school-active-bg: #020617;
     --school-active-text: #F1F5F9;
     --school-active-icon: #94A3B8;
-    --school-btn-from: #475569;
-    --school-btn-to: #334155;
-    --school-btn-hover: #1E293B;
+    --school-btn-from: #8050B3;
+    --school-btn-to: #6A3E9E;
+    --school-btn-hover: #5A3587;
 
     /* ── Surfaces ── */
     --surface-default: #FFFFFF;

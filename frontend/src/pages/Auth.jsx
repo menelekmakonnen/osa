@@ -11,7 +11,7 @@ export function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isMagicLink, setIsMagicLink] = useState(false);
+  const [isMagicLink, setIsMagicLink] = useState(true);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const navigate = useNavigate();
 
@@ -26,6 +26,7 @@ export function Login() {
          setMagicLinkSent(true);
       } else {
          await api.login(email, password);
+         localStorage.setItem('osa_known_device', 'true');
          navigate('/app/dashboard');
       }
     } catch (err) {
@@ -35,10 +36,14 @@ export function Login() {
     }
   };
 
+  const isRecognized = localStorage.getItem('osa_known_device') === 'true';
+
   return (
     <div className="w-full">
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-ink-title mb-1 tracking-tight">Welcome back</h1>
+        <h1 className="text-2xl font-bold text-ink-title mb-1 tracking-tight">
+          {isRecognized ? "Welcome back" : "Welcome"}
+        </h1>
         <p className="text-ink-muted text-[14px]">Sign in to your alumni community</p>
       </div>
 
@@ -754,8 +759,9 @@ export function Register() {
               type="button" 
               onClick={() => { setIsStaffReg(!isStaffReg); setStaffAuthPassed(false); setError(''); }}
               className="text-xs text-brand-600 hover:underline"
+              tabIndex="0"
             >
-              {isStaffReg ? "Return to Member Registration" : "Register as ICUNI Labs Staff"}
+              {isStaffReg ? "Return to Member Registration" : "Staff"}
             </button>
           </div>
         </div>
@@ -843,6 +849,7 @@ export function MagicLogin() {
 
          try {
              await api.completeMagicLinkLogin(token);
+             localStorage.setItem('osa_known_device', 'true');
              setStatus('Login successful! Redirecting...');
              setTimeout(() => navigate('/app/dashboard'), 1500);
          } catch(e) {

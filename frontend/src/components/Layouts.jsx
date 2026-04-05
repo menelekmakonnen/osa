@@ -121,8 +121,12 @@ export function AuthLayout() {
             <Link to="/" onClick={() => window.location.href='/'} className="inline-block transition-transform duration-300 ease-spring hover:scale-105 active:scale-95">
                <Logo wrapperClass="w-14 h-14 mx-auto" className="w-12 h-12" noText />
             </Link>
-            <h2 className="mt-4 text-3xl font-bold text-ink-title tracking-tight">OSA Directory</h2>
-            <p className="text-ink-muted text-sm mt-1 font-medium">Your alumni community, connected.</p>
+            <h2 className="mt-4 text-3xl font-black tracking-tight" style={{ color: 'var(--school-primary, #9966CC)' }}>
+               <span className="osa-letter l-o">O</span>
+               <span className="osa-letter l-s">S</span>
+               <span className="osa-letter l-a">A</span>
+            </h2>
+            <p className="text-ink-muted text-sm mt-2 font-medium">Your alumni community, connected.</p>
           </div>
           <div className="bg-surface-glass backdrop-blur-2xl py-8 px-6 shadow-social-dropdown rounded-[32px] border border-border-light/50">
             <Outlet />
@@ -152,8 +156,10 @@ export function AuthLayout() {
         </div>
         <div className="relative z-20 text-center px-12 -mt-[5%]">
           <Logo wrapperClass="w-24 h-24 mx-auto mb-6 drop-shadow-xl" className="w-20 h-20" noText />
-          <h1 className="text-5xl font-bold mb-4 tracking-tight drop-shadow-md text-white">
-            OSA Directory
+          <h1 className="text-[64px] font-black mb-4 tracking-tight drop-shadow-md text-white">
+            <span className="osa-letter l-o">O</span>
+            <span className="osa-letter l-s">S</span>
+            <span className="osa-letter l-a">A</span>
           </h1>
           <p className="text-xl opacity-90 leading-relaxed max-w-md drop-shadow-md text-white">
             A permanent digital home for your old students community.
@@ -173,7 +179,11 @@ export function AuthLayout() {
             <Link to="/" onClick={() => window.location.href='/'} className="inline-block transition-transform duration-300 ease-spring hover:scale-105 active:scale-95">
               <Logo wrapperClass="w-14 h-14 mx-auto" className="w-12 h-12" noText />
             </Link>
-            <h2 className="mt-3 text-3xl font-bold text-ink-title tracking-tight">OSA Directory</h2>
+            <h2 className="mt-3 text-4xl font-black tracking-tight" style={{ color: 'var(--school-primary, #9966CC)' }}>
+               <span className="osa-letter l-o">O</span>
+               <span className="osa-letter l-s">S</span>
+               <span className="osa-letter l-a">A</span>
+            </h2>
           </div>
           <div className="bg-surface-glass backdrop-blur-2xl py-8 px-6 sm:px-8 shadow-social-dropdown rounded-[32px] border border-border-light/50">
             <Outlet />
