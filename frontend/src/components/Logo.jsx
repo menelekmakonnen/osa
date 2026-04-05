@@ -1,47 +1,52 @@
 import React, { useEffect, useRef } from 'react';
 import { authState } from '../api/client';
 
-export function Logo({ className = "w-10 h-10 w-full h-full", wrapperClass = "w-10 h-10" }) {
+/**
+ * OSA Logo / School Crest
+ * Uses school primary & secondary colors from the theme engine.
+ * Falls back to the school_logo image URL if available.
+ */
+export function Logo({ className = "w-10 h-10", wrapperClass = "w-10 h-10", noText = false }) {
   const user = authState.getUser();
-  const userColor = user?.colour || user?.cheque_colour || null;
   const svgRef = useRef(null);
 
   useEffect(() => {
-    // Generate and inject dynamic Favicon matching the Crest's colors
     if (!svgRef.current) return;
     
-    // Give browser a moment to apply computed CSS
-    setTimeout(() => {
-        if (!svgRef.current) return;
-        const styles = getComputedStyle(svgRef.current);
-        const primaryColor = userColor || styles.color || "#1e293b"; 
-        const secondaryColor = userColor || styles.getPropertyValue('--school-secondary').trim() || "#3b82f6";
+    const timer = setTimeout(() => {
+      if (!svgRef.current) return;
+      
+      const root = document.documentElement;
+      const primaryColor = getComputedStyle(root).getPropertyValue('--school-primary').trim() || '#0F172A';
+      const secondaryColor = getComputedStyle(root).getPropertyValue('--school-secondary').trim() || '#3B82F6';
 
-        const svgStr = `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-             <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 C100 190, 185 150, 185 100 L185 30 Z" fill="${primaryColor}" fill-opacity="0.9" />
-             <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 L100 10 Z" fill="${secondaryColor}" />
-             <path d="M100 10 L185 30 L185 100 C185 150, 100 190, 100 190 L100 10 Z" fill="${primaryColor}" />
-             <circle cx="100" cy="70" r="16" fill="white"/>
-             <path d="M70 115 h60 M70 145 h60" stroke="white" stroke-width="10" stroke-linecap="round"/>
-          </svg>`;
+      const svgStr = `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+           <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 C100 190, 185 150, 185 100 L185 30 Z" fill="${primaryColor}" fill-opacity="0.9" />
+           <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 L100 10 Z" fill="${secondaryColor}" />
+           <path d="M100 10 L185 30 L185 100 C185 150, 100 190, 100 190 L100 10 Z" fill="${primaryColor}" />
+           <circle cx="100" cy="70" r="16" fill="white"/>
+           <path d="M70 115 h60 M70 145 h60" stroke="white" stroke-width="10" stroke-linecap="round"/>
+        </svg>`;
 
-        try {
-            const dataUri = "data:image/svg+xml;base64," + btoa(svgStr);
-            let link = document.querySelector("link[rel~='icon']");
-            if (!link) {
-              link = document.createElement('link');
-              link.rel = 'icon';
-              document.head.appendChild(link);
-            }
-            link.href = dataUri;
-        } catch (e) {
-            console.error("Failed to inject favicon", e);
+      try {
+        const dataUri = "data:image/svg+xml;base64," + btoa(svgStr);
+        let link = document.querySelector("link[rel~='icon']");
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.head.appendChild(link);
         }
-    }, 50);
+        link.href = dataUri;
+      } catch (e) {
+        console.error("Failed to inject favicon", e);
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
-    <div className={`flex items-center justify-center text-brand-500 ${wrapperClass}`}>
+    <div className={`flex items-center justify-center ${wrapperClass}`}>
       <svg 
         ref={svgRef}
         viewBox="0 0 200 200" 
@@ -49,9 +54,9 @@ export function Logo({ className = "w-10 h-10 w-full h-full", wrapperClass = "w-
         xmlns="http://www.w3.org/2000/svg" 
         className={className}
       >
-         <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 C100 190, 185 150, 185 100 L185 30 Z" fill={userColor || "currentColor"} fillOpacity="0.9" />
-         <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 L100 10 Z" fill={userColor || "var(--school-secondary, #3b82f6)"} />
-         <path d="M100 10 L185 30 L185 100 C185 150, 100 190, 100 190 L100 10 Z" fill={userColor || "currentColor"} />
+         <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 C100 190, 185 150, 185 100 L185 30 Z" fill="var(--school-primary, #0F172A)" fillOpacity="0.9" />
+         <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 L100 10 Z" fill="var(--school-secondary, #3B82F6)" />
+         <path d="M100 10 L185 30 L185 100 C185 150, 100 190, 100 190 L100 10 Z" fill="var(--school-primary, #0F172A)" />
          <circle cx="100" cy="70" r="16" fill="white"/>
          <path d="M70 115 h60 M70 145 h60" stroke="white" strokeWidth="10" strokeLinecap="round"/>
       </svg>

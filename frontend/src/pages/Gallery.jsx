@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { api, authState } from '../api/client';
 import { Card, Button, Input, Textarea } from '../components/ui';
+import { ErrorCard } from '../components/ErrorCard';
 import { toast } from 'react-hot-toast';
 import { Image as ImageIcon, Camera, Loader2, UploadCloud, Folder, Plus, ArrowLeft, X } from 'lucide-react';
 import { compressImage } from '../components/ImageUpload';
@@ -15,6 +16,7 @@ export function Gallery() {
   const [images, setImages] = useState([]);
   
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [creatingAlbum, setCreatingAlbum] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState("");
@@ -27,9 +29,13 @@ export function Gallery() {
 
   const fetchAlbums = () => {
     setLoading(true);
+    setError(null);
     api.getAlbums(activeScope)
        .then(res => setAlbums(res || []))
-       .catch(err => console.error("Albums Error", err))
+       .catch(err => {
+         console.error("Albums Error", err);
+         setError(err.message || "Failed to load albums");
+       })
        .finally(() => setLoading(false));
   };
 
@@ -124,6 +130,7 @@ export function Gallery() {
   if (!activeAlbum) {
       return (
         <div className="flex flex-col gap-6 pb-12">
+           {error && <ErrorCard message={error} onRetry={fetchAlbums} context="Gallery" />}
            <div className="flex justify-between items-center bg-surface-default p-4 rounded-social shadow-sm border border-border-light">
                <div>
                   <h1 className="text-xl font-bold text-ink-title">Galleries</h1>

@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authState } from '../api/client';
+import { applySchoolTheme, restoreTheme, clearTheme } from '../utils/themeEngine';
 
 export const TenantContext = createContext(null);
 
@@ -28,20 +29,53 @@ export function TenantProvider({ children }) {
       type: user?.role === 'ICUNI Staff' ? 'all' : (user?.role?.includes('School Admin') || user?.role === 'Super Admin' ? 'school' : 'yeargroup'), 
       id: user?.year_group_id || null, 
       label: user?.year_group_nickname || 'My Year Group' 
-    } // Tiers: yeargroup, club, house, school, all-schools
+    },
+    schoolColors: null, // { primary, secondary } resolved hex values
   });
   const [loading, setLoading] = useState(true);
+
+  // Apply school theme on mount / user change
+  useEffect(() => {
+    // Try restoring from session first (instant)
+    const restored = restoreTheme();
+
+    if (user) {
+      // Apply theme from user data
+      const themeResult = applySchoolTheme({
+        primaryHex: user.school_primary_color || null,
+        secondaryHex: user.school_secondary_color || null,
+        colourNames: user.school_colours || null,
+      });
+
+      setTenant(prev => ({
+        ...prev,
+        schoolColors: {
+          primary: themeResult.primary,
+          secondary: themeResult.secondary,
+          onPrimary: themeResult.onPrimary,
+          onSecondary: themeResult.onSecondary,
+        }
+      }));
+    } else if (!restored) {
+      // No user, no stored theme — apply defaults
+      applySchoolTheme({});
+    }
+  }, [user?.school_primary_color, user?.school_secondary_color, user?.school_colours]);
+
+  // Clear theme on auth expiry
+  useEffect(() => {
+    const handleExpired = () => clearTheme();
+    window.addEventListener('osa-auth-expired', handleExpired);
+    return () => window.removeEventListener('osa-auth-expired', handleExpired);
+  }, []);
 
   useEffect(() => {
     // Determine Tenant from URL
     const hostname = window.location.hostname;
-    const pathname = window.location.pathname; // e.g. /amosa/dashboard or /dashboard
+    const pathname = window.location.pathname;
     
-    // We only need to run this on mount, so we construct the updates 
-    // without relying on the specific 'tenant' dependency
     let updates = {};
 
-    // 1. Check if it's a known custom domain/subdomain
     const mapped = DOMAIN_MAPPING[hostname];
     if (mapped) {
         updates.schoolId = mapped.schoolId;
@@ -49,13 +83,9 @@ export function TenantProvider({ children }) {
         updates.isCustomDomain = true;
         updates.activeScope = { type: 'school', id: mapped.schoolId, label: 'Whole School' };
     } else {
-        // 2. Fallback to path parsing if on global osa.icuni.org
         const pathParts = pathname.split('/').filter(Boolean);
-        
-        // Very basic parsing for demo: if /app/school_path
         if (pathParts[0] === 'app' && pathParts.length > 1) {
-            // Check if parts[1] is a known route. If not, it's likely a school slug.
-            const standardRoutes = ['dashboard', 'newsletter', 'fundraising', 'events', 'members', 'board', 'gallery', 'profile', 'admin', 'superadmin'];
+            const standardRoutes = ['dashboard', 'newsletter', 'fundraising', 'events', 'members', 'board', 'gallery', 'profile', 'admin', 'superadmin', 'cockpit', 'settings', 'support'];
             if (!standardRoutes.includes(pathParts[1])) {
                 updates.schoolId = pathParts[1];
                 updates.name = pathParts[1].toUpperCase(); 
@@ -68,17 +98,39 @@ export function TenantProvider({ children }) {
     setLoading(false);
   }, []);
 
-  // Provide utility to change scope
   const setScope = (type, id, label) => {
       setTenant(prev => ({ ...prev, activeScope: { type, id, label } }));
   };
 
+  /**
+   * Update school colors dynamically (used by Super Admin color picker)
+   */
+  const updateSchoolColors = (primaryHex, secondaryHex) => {
+    const result = applySchoolTheme({ primaryHex, secondaryHex });
+    setTenant(prev => ({
+      ...prev,
+      schoolColors: {
+        primary: result.primary,
+        secondary: result.secondary,
+        onPrimary: result.onPrimary,
+        onSecondary: result.onSecondary,
+      }
+    }));
+  };
+
   if (loading) {
-      return <div className="min-h-screen flex items-center justify-center text-ink-muted animate-pulse">Initializing Organization...</div>;
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4 animate-fade-in">
+            <div className="w-8 h-8 border-2 border-ink-muted/20 border-l-ink-muted rounded-full animate-spin" />
+            <span className="text-ink-muted text-sm font-medium">Initializing...</span>
+          </div>
+        </div>
+      );
   }
 
   return (
-    <TenantContext.Provider value={{ ...tenant, setScope }}>
+    <TenantContext.Provider value={{ ...tenant, setScope, updateSchoolColors }}>
       {children}
     </TenantContext.Provider>
   );

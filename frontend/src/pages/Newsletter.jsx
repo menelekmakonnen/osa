@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api, authState } from '../api/client';
 import { Card, Button, Input, Textarea, Badge, Modal, Select } from '../components/ui';
+import { ErrorCard } from '../components/ErrorCard';
 import { toast } from 'react-hot-toast';
 import { FileText, Send, CheckCircle, XCircle, Edit3, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';
@@ -13,6 +14,7 @@ export function Newsletter() {
   const [activeTab, setActiveTab] = useState('feed'); // feed, my_submissions, approve, dispatch
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Post Submission State
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
@@ -25,8 +27,8 @@ export function Newsletter() {
 
   const loadPosts = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Unpack scope so the backend receives scope_type + scope_id strings, not an object
       const data = await api.getPosts({
         scope_type: activeScope?.type || 'yeargroup',
         scope_id: activeScope?.id || user?.year_group_id || ''
@@ -34,6 +36,7 @@ export function Newsletter() {
       setPosts(data || []);
     } catch (e) {
       console.error('Newsletter load error:', e);
+      setError(e.message || 'Failed to load posts');
       setPosts([]);
     } finally {
       setLoading(false);
@@ -118,6 +121,7 @@ export function Newsletter() {
 
   return (
     <div className="flex flex-col gap-4 pb-12 w-full max-w-[680px] mx-auto">
+      {error && <ErrorCard message={error} onRetry={loadPosts} context="Newsletter" />}
       
       {/* Header Area */}
       <div className="bg-surface-default p-4 rounded-[var(--radius-social)] shadow-social-card border border-border-light flex justify-between items-center mb-2">

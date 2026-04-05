@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Badge, Modal, Select, Input, Textarea } from '../components/ui';
+import { ErrorCard } from '../components/ErrorCard';
 import { api, authState } from '../api/client';
 import { toast } from 'react-hot-toast';
 import { HelpCircle, ArrowUpRight, Clock, CheckCircle } from 'lucide-react';
@@ -12,6 +13,7 @@ export function Support() {
   
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('my_tickets');
 
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
@@ -22,11 +24,13 @@ export function Support() {
 
   const loadTickets = React.useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await api.getTickets();
       setTickets(data || []);
     } catch (e) {
       console.error(e);
+      setError(e.message || 'Failed to load tickets');
     } finally {
       setLoading(false);
     }
@@ -91,18 +95,16 @@ export function Support() {
   const displayTickets = activeTab === 'queue' ? queueTickets : myTickets;
 
   const getTierLabel = (tier) => {
-     switch(parseInt(tier)) {
-        case 1: return "Tier 1: Year Group";
-        case 2: return "Tier 2: Club Execs";
-        case 3: return "Tier 3: House Execs";
-        case 4: return "Tier 4: School Execs";
-        case 5: return "Tier 5: ICUNI Labs";
-        default: return `Tier ${tier}`;
-     }
+     const tierStr = String(tier || '');
+     if (tierStr === 'Year Group' || tierStr === '1') return "Tier 1: Year Group";
+     if (tierStr === 'School Admin' || tierStr === '2') return "Tier 2: School Admin";
+     if (tierStr === 'ICUNI Labs' || tierStr === '3') return "Tier 3: ICUNI Labs";
+     return tierStr;
   };
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-[800px] mx-auto pb-12">
+      {error && <ErrorCard message={error} onRetry={loadTickets} context="Support" />}
       <div className="flex flex-col gap-2">
         <h1 className="text-[24px] font-bold text-ink-title m-0 flex items-center gap-3">
            <HelpCircle className="text-brand-500" size={28} strokeWidth={2.5}/> Tech Support
@@ -178,7 +180,7 @@ export function Support() {
             ))}
             
             <div className="mt-4 p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-[13px] leading-relaxed">
-               <strong>SLA Escalation Engine:</strong> Unresolved tickets automatically bounce upward through the 5 Tiers (Year Group → Club → House → School Exec → ICUNI Labs) every 48 hours to guarantee resolution accountability.
+               <strong>SLA Escalation Engine:</strong> Unresolved tickets automatically bounce upward through 3 Tiers (Year Group → School Admin → ICUNI Labs) every 48 hours to guarantee resolution accountability.
             </div>
         </div>
       )}

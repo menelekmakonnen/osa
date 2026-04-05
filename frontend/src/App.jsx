@@ -24,7 +24,7 @@ import { Cockpit } from './pages/Cockpit';
 import { Settings } from './pages/Settings';
 
 const ProtectedRoute = ({ children }) => {
-  const isAuth = !!window.localStorage.getItem('osa_session_token');
+  const isAuth = authState.isAuthenticated() && authState.isTokenValid();
   if (!isAuth) {
     return <Navigate to="/login" replace />;
   }

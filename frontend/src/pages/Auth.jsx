@@ -36,24 +36,24 @@ export function Login() {
   };
 
   return (
-    <Card className="p-8 w-full max-w-md mx-auto">
+    <div className="w-full">
       <div className="text-center mb-6">
-        <h1 className="text-3xl font-heading text-forest mb-2">OSA</h1>
-        <p className="text-muted">Sign in to your Alumni Platform</p>
+        <h1 className="text-2xl font-bold text-ink-title mb-1 tracking-tight">Welcome back</h1>
+        <p className="text-ink-muted text-[14px]">Sign in to your alumni community</p>
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4 text-sm text-center">
+        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-xl mb-4 text-[13px] text-center font-medium">
           {error}
         </div>
       )}
 
       {magicLinkSent ? (
         <div className="text-center animate-fade-in">
-           <div className="bg-sage/10 text-forest p-6 rounded-xl mb-6 border border-sage/20 shadow-sm">
-              <Wand2 className="mx-auto mb-3 text-sage" size={38} />
-              <p className="text-lg font-heading mb-1">Magic Link Sent!</p>
-              <p className="text-sm opacity-80">Check your inbox for a secure login link.</p>
+           <div className="bg-school-tint p-6 rounded-xl mb-6 border shadow-sm" style={{ borderColor: 'var(--school-200)' }}>
+               <Wand2 className="mx-auto mb-3" style={{ color: 'var(--school-primary)' }} size={38} />
+               <p className="text-lg font-bold text-ink-title mb-1">Magic Link Sent!</p>
+               <p className="text-[14px] text-ink-muted">Check your inbox for a secure login link.</p>
            </div>
            <Button variant="outline" className="w-full" onClick={() => { setMagicLinkSent(false); setIsMagicLink(false); }}>
               Back to Login
@@ -62,7 +62,7 @@ export function Login() {
       ) : (
         <form onSubmit={handleLogin} className="flex flex-col gap-4 animate-fade-in">
           <div className="relative">
-            <User className="absolute left-3 top-9 text-muted" size={18} />
+            <User className="absolute left-3 top-9 text-ink-muted" size={18} />
             <Input 
               label="Email or Username"
               placeholder="Your email or username"
@@ -76,7 +76,7 @@ export function Login() {
           
           {!isMagicLink && (
             <div className="relative">
-              <Lock className="absolute left-3 top-9 text-muted" size={18} />
+              <Lock className="absolute left-3 top-9 text-ink-muted" size={18} />
               <Input 
                 label="Password"
                 placeholder="Enter your password"
@@ -89,7 +89,7 @@ export function Login() {
               <button 
                 type="button" 
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-9 p-1 text-muted hover:text-forest transition-colors focus:outline-none"
+                className="absolute right-3 top-9 p-1 text-ink-muted hover:text-ink-title transition-colors focus:outline-none"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -101,11 +101,11 @@ export function Login() {
               <button 
                  type="button" 
                  onClick={() => setIsMagicLink(true)} 
-                 className="text-sm text-sage hover:text-forest hover:font-medium transition-all flex items-center gap-1.5"
+                 className="text-[13px] text-ink-muted hover:text-ink-title hover:font-medium transition-all flex items-center gap-1.5"
               >
                  <Wand2 size={14}/> Passwordless Login
               </button>
-              <Link to="/forgot-password" className="text-sm text-sage hover:underline hover:text-forest transition-colors">
+              <Link to="/forgot-password" className="text-[13px] text-ink-muted hover:underline hover:text-ink-title transition-colors">
                 Forgot Password?
               </Link>
             </div>
@@ -117,18 +117,18 @@ export function Login() {
 
           {isMagicLink && (
             <div className="text-center mt-2">
-              <button type="button" onClick={() => setIsMagicLink(false)} className="text-sm text-muted hover:text-forest transition-colors">
+              <button type="button" onClick={() => setIsMagicLink(false)} className="text-[13px] text-ink-muted hover:text-ink-title transition-colors">
                 Actually, I want to use my password
               </button>
             </div>
           )}
 
-          <div className="text-center mt-4 pt-4 border-t border-slate-100 text-sm text-muted">
-            Don't have an account? <Link to="/register" className="text-sage hover:underline hover:text-forest font-medium ml-1">Register here</Link>
+          <div className="text-center mt-4 pt-4 border-t border-border-light text-[13px] text-ink-muted">
+            Don't have an account? <Link to="/register" className="hover:underline font-semibold ml-1" style={{ color: 'var(--school-primary)' }}>Register here</Link>
           </div>
         </form>
       )}
-    </Card>
+    </div>
   );
 }
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api, authState } from '../api/client';
 import { toast } from 'react-hot-toast';
 import { Card, Button, Input, Modal } from '../components/ui';
+import { ErrorCard } from '../components/ErrorCard';
 import { Edit3, Image as ImageIcon, Video, MessageCircle, Smile, Send, ThumbsUp } from 'lucide-react';
 import Picker from 'emoji-picker-react';
 import { useTenant } from '../context/TenantContext';
@@ -11,6 +12,7 @@ export function Board() {
   const { activeScope } = useTenant();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [composerText, setComposerText] = useState("");
   const [posting, setPosting] = useState(false);
   
@@ -23,9 +25,13 @@ export function Board() {
 
   const fetchMessages = () => {
     setLoading(true);
+    setError(null);
     api.getBoardMessages(activeScope)
       .then(res => setMessages(res || []))
-      .catch(err => console.error(err))
+      .catch(err => {
+        console.error(err);
+        setError(err.message || 'Failed to load messages');
+      })
       .finally(() => setLoading(false));
   };
 
@@ -122,6 +128,7 @@ export function Board() {
 
   return (
     <div className="flex flex-col gap-5 pb-12">
+      {error && <ErrorCard message={error} onRetry={fetchMessages} context="Group Board" />}
       {/* Composer */}
       <Card className="!p-3 border border-border-light shadow-social-card relative z-10 transition-shadow">
          <div className="flex gap-3 px-1 pt-1 pb-3">
