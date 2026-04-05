@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Card, Button, Badge, Modal, Input } from '../components/ui';
 import { authState, api } from '../api/client';
 import { toast } from 'react-hot-toast';
-import { ShieldAlert, Database, Users, Settings, Activity, Save } from 'lucide-react';
+import { ShieldAlert, Database, Users, Settings, Activity, Save, Image as ImageIcon } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
 export function SuperAdmin() {
@@ -15,6 +15,11 @@ export function SuperAdmin() {
   const [features, setFeatures] = React.useState({ fundraising: true, newsletters: true, crossSchoolEvents: true, paymentGateway: false, adminApproval: false });
   const [savingFlags, setSavingFlags] = React.useState(false);
 
+  // Slider Config States
+  const [sliderDuration, setSliderDuration] = React.useState('15');
+  const [disabledSlides, setDisabledSlides] = React.useState([]);
+  const [customSlides, setCustomSlides] = React.useState({});
+
   // Load persisted feature flags on mount
   useEffect(() => {
     if (user?.role === "ICUNI Staff" || user?.role === "Super Admin") {
@@ -22,6 +27,11 @@ export function SuperAdmin() {
         if (flags && Object.keys(flags).length > 0) setFeatures(flags);
       }).catch(() => {});
     }
+    
+    // Load local auth settings
+    setSliderDuration(localStorage.getItem('osa_slider_duration') || '15');
+    setDisabledSlides(JSON.parse(localStorage.getItem('osa_disabled_slides') || '[]'));
+    setCustomSlides(JSON.parse(localStorage.getItem('osa_custom_slides') || '{}'));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -37,6 +47,22 @@ export function SuperAdmin() {
     }
   };
 
+  const handleSaveSliderSettings = () => {
+    localStorage.setItem('osa_slider_duration', sliderDuration);
+    localStorage.setItem('osa_disabled_slides', JSON.stringify(disabledSlides));
+    localStorage.setItem('osa_custom_slides', JSON.stringify(customSlides));
+    toast.success("Login Branding Updated");
+  };
+
+  const handleResetSliderSettings = () => {
+    localStorage.removeItem('osa_slider_duration');
+    localStorage.removeItem('osa_disabled_slides');
+    localStorage.removeItem('osa_custom_slides');
+    setSliderDuration('15');
+    setDisabledSlides([]);
+    setCustomSlides({});
+    toast.success("Slider configs reset to defaults");
+  };
 
   const handleAddSchool = async (e) => {
      e.preventDefault();
@@ -128,6 +154,53 @@ export function SuperAdmin() {
              <FeatureToggle label="Admin Approval for Registrations" enabled={features.adminApproval} onClick={() => setFeatures({...features, adminApproval: !features.adminApproval})} />
            </div>
         </Card>
+
+         {/* Login Appearance Config */}
+         <Card className="flex flex-col gap-4 border-amber-200 shadow-social-card hover:border-amber-400 transition-colors md:col-span-2">
+            <div className="flex items-center justify-between border-b border-border-light pb-3">
+               <div className="flex flex-col">
+                  <h2 className="text-[18px] font-bold flex items-center gap-2 text-ink-title m-0"><ImageIcon className="text-amber-500" size={22} strokeWidth={2.5}/> Login Branding Settings</h2>
+                  <span className="text-[12px] text-ink-muted">Configure the alumni portrait slider on the public login page. Saves locally.</span>
+               </div>
+               <div className="flex gap-2">
+                  <Button size="sm" onClick={handleResetSliderSettings} variant="ghost" className="text-red-500 border-border-light hover:bg-red-50">Reset Defaults</Button>
+                  <Button size="sm" onClick={handleSaveSliderSettings} className="font-bold shadow-sm flex items-center gap-1.5"><Save size={14} /> Save Config</Button>
+               </div>
+            </div>
+            
+            <div className="flex gap-4 items-center pl-1">
+              <label className="text-[14px] font-bold text-ink-title">Slide Transition Period (seconds):</label>
+              <input type="number" min="3" className="social-input w-24 !py-1 text-center font-bold" value={sliderDuration} onChange={e => setSliderDuration(e.target.value)} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+              {Array.from({ length: 10 }, (_, i) => i + 1).map(num => {
+                 const isEnabled = !disabledSlides.includes(num);
+                 return (
+                   <div key={num} className="flex flex-col gap-2 bg-surface-muted p-3 rounded-xl border border-border-light">
+                      <div className="flex justify-between items-center cursor-pointer" onClick={() => setDisabledSlides(prev => prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num])}>
+                         <div className="flex items-center gap-2">
+                            <span className="font-bold text-[14px] text-ink-title">Portrait Slide {num}</span>
+                            {!isEnabled && <Badge colorHex="#fee2e2" textHex="#dc2626" className="font-bold border border-red-200 uppercase tracking-widest text-[9px]">Disabled</Badge>}
+                         </div>
+                         <div className={`w-10 h-5 rounded-pill relative transition-colors shadow-inner ${isEnabled ? 'bg-amber-500' : 'bg-[#E4E6EB]'}`}>
+                            <div className={`absolute top-[2px] w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${isEnabled ? 'right-[2px]' : 'left-[2px]'}`} />
+                         </div>
+                      </div>
+                      <div className="flex items-center gap-2 transition-all">
+                         <input 
+                           className="social-input w-full !py-1.5 !text-[12px] opacity-80 focus:opacity-100" 
+                           placeholder={`Override URL (default: /alumni/${num}.png)`}
+                           value={customSlides[num] || ''}
+                           onChange={e => setCustomSlides({...customSlides, [num]: e.target.value})}
+                           disabled={!isEnabled}
+                         />
+                      </div>
+                   </div>
+                 );
+              })}
+            </div>
+         </Card>
 
         {/* Accountability Tracker (New Phase 2 UI Blueprint) */}
         <Card className="flex flex-col gap-4 border-amber-200 shadow-social-card hover:border-amber-400 transition-colors md:col-span-2">

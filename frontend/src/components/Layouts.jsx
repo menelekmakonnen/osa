@@ -59,26 +59,49 @@ export function ThemeToggle({ size = 20 }) {
 
 export function AuthLayout() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  
+  const [activeSlides, setActiveSlides] = useState([]);
+  const [intervalDuration, setIntervalDuration] = useState(15000);
+
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % 10);
-    }, 6000);
-    return () => clearInterval(timer);
+    const duration = parseInt(localStorage.getItem('osa_slider_duration') || '15', 10) * 1000;
+    setIntervalDuration(duration);
+
+    const customUrls = JSON.parse(localStorage.getItem('osa_custom_slides') || '{}');
+    const disabled = JSON.parse(localStorage.getItem('osa_disabled_slides') || '[]');
+
+    const builtSlides = [];
+    for (let i = 1; i <= 10; i++) {
+       if (!disabled.includes(i)) {
+          builtSlides.push(customUrls[i] || `/alumni/${i}.png`);
+       }
+    }
+    // Fallback if they disable everything
+    setActiveSlides(builtSlides.length > 0 ? builtSlides : ['/alumni/1.png']);
   }, []);
+
+  useEffect(() => {
+    if (activeSlides.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
+    }, intervalDuration);
+    return () => clearInterval(timer);
+  }, [activeSlides, intervalDuration]);
 
   if (authState.isAuthenticated()) {
     return <Navigate to="/app" replace />;
   }
 
-  const slides = Array.from({ length: 10 }, (_, i) => `/alumni/${i + 1}.png`);
   const BackgroundSlider = () => (
     <>
-      {slides.map((src, idx) => (
+      {activeSlides.map((src, idx) => (
         <div 
-          key={src}
-          className="absolute inset-0 bg-cover bg-center transition-opacity duration-[2000ms] ease-in-out"
-          style={{ backgroundImage: `url('${src}')`, opacity: currentSlide === idx ? 1 : 0 }}
+          key={`${src}-${idx}`}
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ 
+             backgroundImage: `url('${src}')`, 
+             opacity: currentSlide === idx ? 1 : 0,
+             transition: "opacity 4s ease-in-out" 
+          }}
         />
       ))}
     </>
