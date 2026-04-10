@@ -1,76 +1,61 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 
 /**
- * useScrollShadow — Scroll-responsive shadow system
+ * useScrollShadow — Makes card shadows respond to scroll position.
+ * Cards closer to the viewport center get stronger shadows; cards near
+ * the edges get subdued. Uses IntersectionObserver for performance.
  *
- * Observes all .social-card elements in the viewport and dynamically
- * adjusts their --scroll-shadow CSS property (0 to 1) based on how
- * centered they are in the viewport.
- *
- * Cards near the center of the viewport get brighter/stronger shadows (1),
- * cards near the edges get dimmer shadows (0).
- *
- * Uses IntersectionObserver for efficiency — no scroll event listeners.
+ * Usage: const containerRef = useScrollShadow();
+ *        <div ref={containerRef}>...cards with .scroll-shadow-card...</div>
  */
 export function useScrollShadow() {
-  const observerRef = useRef(null);
+  const containerRef = useRef(null);
+  const rafId = useRef(null);
+
+  const updateShadows = useCallback(() => {
+    if (!containerRef.current) return;
+    const cards = containerRef.current.querySelectorAll('.scroll-shadow-card');
+    if (cards.length === 0) return;
+
+    const vh = window.innerHeight;
+    const center = vh / 2;
+
+    cards.forEach((card) => {
+      const rect = card.getBoundingClientRect();
+      const cardCenter = rect.top + rect.height / 2;
+      // Distance from viewport center, normalized 0-1
+      const dist = Math.abs(cardCenter - center) / center;
+      // Closer to center = higher opacity (0.3 to 1.0 range)
+      const opacity = Math.max(0.15, Math.min(1, 1 - dist * 0.7));
+      card.style.setProperty('--scroll-shadow-opacity', opacity.toFixed(2));
+    });
+  }, []);
 
   useEffect(() => {
-    // Create an IntersectionObserver with multiple thresholds for granularity
-    const thresholds = Array.from({ length: 11 }, (_, i) => i * 0.1);
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) {
-            entry.target.style.setProperty('--scroll-shadow', '0.1');
-            return;
-          }
-          // Map intersection ratio to shadow intensity
-          // Higher ratio = more visible = brighter shadow
-          const ratio = entry.intersectionRatio;
-          // Add a boost when element is centered in viewport
-          const rect = entry.boundingClientRect;
-          const viewportCenter = window.innerHeight / 2;
-          const elementCenter = rect.top + rect.height / 2;
-          const distFromCenter = Math.abs(viewportCenter - elementCenter);
-          const maxDist = window.innerHeight / 2;
-          const centerBoost = 1 - Math.min(distFromCenter / maxDist, 1);
-
-          // Combine: 60% from ratio, 40% from center proximity
-          const intensity = Math.min(1, ratio * 0.6 + centerBoost * 0.4);
-          entry.target.style.setProperty('--scroll-shadow', intensity.toFixed(2));
-        });
-      },
-      { threshold: thresholds }
-    );
-
-    // Observe all social-card elements
-    const observe = () => {
-      const cards = document.querySelectorAll('.social-card, .scroll-shadow-card');
-      cards.forEach((card) => {
-        observerRef.current.observe(card);
-      });
+    const onScroll = () => {
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+      rafId.current = requestAnimationFrame(updateShadows);
     };
 
-    // Initial observation + re-observe on DOM changes
-    observe();
-    const mutationObserver = new MutationObserver(() => {
-      // Disconnect existing observations and re-observe
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-        observe();
-      }
-    });
+    // Run once on mount
+    updateShadows();
 
-    mutationObserver.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+
+    // Also observe DOM mutations for dynamically added cards
+    const observer = new MutationObserver(onScroll);
+    if (containerRef.current) {
+      observer.observe(containerRef.current, { childList: true, subtree: true });
+    }
 
     return () => {
-      if (observerRef.current) observerRef.current.disconnect();
-      mutationObserver.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      observer.disconnect();
+      if (rafId.current) cancelAnimationFrame(rafId.current);
     };
-  }, []);
+  }, [updateShadows]);
+
+  return containerRef;
 }

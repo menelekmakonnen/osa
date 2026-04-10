@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShieldAlert, Menu, X, Sun, Moon, MoreHorizontal, ChevronRight } from 'lucide-react';
-import { IconDashboard, IconNewsletter, IconFundraising, IconEvents, IconDirectory, IconBoard, IconGallery, IconSupport, IconAdmin, IconSuperAdmin, IconLogout, IconCockpit, IconSettings, NavIconWrap, NAV_COLORS } from './NavIcons';
+import { IconDashboard, IconNewsletter, IconFundraising, IconEvents, IconDirectory, IconBoard, IconGallery, IconSupport, IconAdmin, IconSuperAdmin, IconLogout, IconCockpit, IconSettings, NavIconWrap, NAV_COLORS, NAV_ANIMATIONS } from './NavIcons';
 import { Avatar } from './Avatar';
 import { authState } from '../api/client';
 import { useTenant } from '../context/TenantContext';
@@ -299,6 +299,7 @@ export function AppLayout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const navTo = useNavigate();
+  const scrollShadowRef = useScrollShadow();
 
   // Nav preference: 'bottom' (modern IG/Twitter tabs) or 'hamburger' (classic top)
   const [mobileNavStyle, setMobileNavStyle] = useState(() => {
@@ -308,9 +309,6 @@ export function AppLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(() => {
     return localStorage.getItem('osa_sidebar_collapsed') === 'true';
   });
-
-  // Activate scroll-responsive shadows on all cards
-  useScrollShadow();
 
   const toggleSidebar = () => {
     const newVal = !isSidebarCollapsed;
@@ -626,9 +624,9 @@ export function AppLayout() {
           <div className={`p-4 flex items-center sticky top-0 bg-[var(--surface-default)] z-20 pb-3 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
                <Link to="/" onClick={() => window.location.href='/'} className={`flex items-center group ${isSidebarCollapsed ? '' : 'gap-3'}`}>
                  {user.school_logo ? (
-                   <img src={user.school_logo} className="w-9 h-9 rounded-lg shrink-0 object-contain shadow-sm bg-white transition-transform group-hover:scale-105" alt="School Logo" />
+                   <img src={user.school_logo} className="w-9 h-9 rounded-lg shrink-0 object-contain shadow-sm bg-white logo-alive" alt="School Logo" />
                  ) : (
-                   <Logo className="w-6 h-6 transition-transform group-hover:scale-105" wrapperClass="w-9 h-9 shrink-0" noText />
+                   <Logo className="w-6 h-6 logo-alive" wrapperClass="w-9 h-9 shrink-0" noText />
                  )}
                  {!isSidebarCollapsed && (
                    <h1 className="text-[17px] font-bold text-[var(--ink-title)] leading-tight truncate tracking-tight">{shortName}</h1>
@@ -726,7 +724,7 @@ export function AppLayout() {
 
       {/* ═══ MAIN CONTENT ═══ */}
       <main className={`flex-1 flex justify-center w-full transition-all duration-300 ease-expo-out ${isSidebarCollapsed ? 'md:ml-[72px]' : 'md:ml-[264px]'}`} style={isDemo ? { paddingTop: isImpersonating ? '72px' : '38px' } : (isImpersonating ? { paddingTop: '34px' } : undefined)}>
-         <div className={`w-full max-w-[680px] lg:max-w-[740px] xl:max-w-[800px] py-5 md:py-8 px-4 relative ${useBottomTabs ? 'pb-24' : 'pb-20'} md:pb-8`}>
+         <div ref={scrollShadowRef} className={`w-full max-w-[680px] lg:max-w-[740px] xl:max-w-[800px] py-5 md:py-8 px-4 relative ${useBottomTabs ? 'pb-24' : 'pb-20'} md:pb-8`}>
             {isImpersonating && (
                <div className="mb-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-3 flex items-center justify-between shadow-sm animate-slide-down">
                   <div className="flex items-center gap-3">

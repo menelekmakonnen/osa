@@ -101,7 +101,7 @@ export function SchoolPill({ shortCode, brandColorHex, className = '' }) {
    Card
    ══════════════════════════════════════════════════════════════════════ */
 export function Card({ children, hoverable = false, glass = false, className = '', ...props }) {
-  const baseClass = glass ? 'glass-card' : 'social-card';
+  const baseClass = glass ? 'glass-card' : 'social-card scroll-shadow-card';
   return (
     <div 
       className={`${baseClass} p-4 ${hoverable ? 'hoverable cursor-pointer' : ''} ${className}`} 

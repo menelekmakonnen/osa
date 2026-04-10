@@ -46,7 +46,7 @@ export function Logo({ className = "w-10 h-10", wrapperClass = "w-10 h-10", noTe
   }, []);
 
   return (
-    <div className={`flex items-center justify-center transition-transform duration-300 hover:scale-105 active:scale-95 ${wrapperClass}`}>
+    <div className={`flex items-center justify-center ${wrapperClass}`}>
       <svg 
         ref={svgRef}
         viewBox="0 0 200 200" 

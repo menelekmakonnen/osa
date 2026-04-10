@@ -418,6 +418,208 @@
   animation: icon-bounce 400ms var(--ease-spring) both;
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   AVATAR GRADIENT RING
+   ══════════════════════════════════════════════════════════════════════ */
+
+@keyframes ring-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.avatar-gradient-ring {
+  animation: ring-rotate 3s linear infinite;
+  animation-play-state: paused;
+}
+
+.avatar-gradient-ring:hover,
+*:hover > .avatar-gradient-ring {
+  animation-play-state: running !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SCROLL-RESPONSIVE CARD SHADOWS
+   ══════════════════════════════════════════════════════════════════════ */
+
+.scroll-shadow-card {
+  --scroll-shadow-opacity: 0.5;
+  box-shadow:
+    0 2px 8px -2px rgba(0,0,0, calc(0.04 * var(--scroll-shadow-opacity))),
+    0 8px 24px -4px rgba(0,0,0, calc(0.08 * var(--scroll-shadow-opacity))),
+    inset 0 0 0 1px var(--border-light);
+  transition: box-shadow 0.4s ease, transform 0.3s var(--ease-spring);
+}
+
+.scroll-shadow-card:hover {
+  --scroll-shadow-opacity: 1;
+  transform: translateY(-2px);
+}
+
+.dark .scroll-shadow-card {
+  box-shadow:
+    0 2px 8px -2px rgba(0,0,0, calc(0.15 * var(--scroll-shadow-opacity))),
+    0 8px 24px -4px rgba(0,0,0, calc(0.25 * var(--scroll-shadow-opacity))),
+    inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SIDEBAR ICON HOVER ANIMATIONS (icon circle only)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Dashboard — grid tiles wiggle */
+@keyframes nav-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg); }
+  75% { transform: rotate(8deg); }
+}
+.nav-icon-circle.nav-anim-wiggle:hover {
+  animation: nav-wiggle 500ms var(--ease-spring);
+}
+
+/* Newsletter — page flip */
+@keyframes nav-flip {
+  0% { transform: perspective(200px) rotateY(0deg); }
+  50% { transform: perspective(200px) rotateY(15deg); }
+  100% { transform: perspective(200px) rotateY(0deg); }
+}
+.nav-icon-circle.nav-anim-flip:hover {
+  animation: nav-flip 600ms var(--ease-spring);
+}
+
+/* Fundraising — heartbeat pulse */
+@keyframes nav-heartbeat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.18); }
+  30% { transform: scale(1); }
+  45% { transform: scale(1.12); }
+  60% { transform: scale(1); }
+}
+.nav-icon-circle.nav-anim-heartbeat:hover {
+  animation: nav-heartbeat 800ms ease;
+}
+
+/* Events — calendar shake */
+@keyframes nav-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+.nav-icon-circle.nav-anim-shake:hover {
+  animation: nav-shake 500ms ease;
+}
+
+/* Directory — friendly wave */
+@keyframes nav-wave {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(12deg); }
+  40% { transform: rotate(-8deg); }
+  60% { transform: rotate(6deg); }
+  80% { transform: rotate(-3deg); }
+}
+.nav-icon-circle.nav-anim-wave:hover {
+  animation: nav-wave 700ms ease;
+}
+
+/* Board — chat bubble bounce */
+@keyframes nav-bounce {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-5px); }
+  60% { transform: translateY(-3px); }
+}
+.nav-icon-circle.nav-anim-bounce:hover {
+  animation: nav-bounce 500ms var(--ease-spring);
+}
+
+/* Gallery — tilt */
+@keyframes nav-tilt {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(-6deg) scale(1.05); }
+}
+.nav-icon-circle.nav-anim-tilt:hover {
+  animation: nav-tilt 400ms var(--ease-spring);
+}
+
+/* Support — lifebuoy spin */
+.nav-icon-circle.nav-anim-spin:hover {
+  animation: spin 800ms ease;
+}
+
+/* Admin — sliders slide */
+@keyframes nav-slide {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(3px); }
+}
+.nav-icon-circle.nav-anim-slide:hover {
+  animation: nav-slide 400ms ease;
+}
+
+/* Super Admin — shield glow */
+@keyframes nav-glow {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.3); }
+}
+.nav-icon-circle.nav-anim-glow:hover {
+  animation: nav-glow 600ms ease;
+}
+
+/* Cockpit — pulse */
+@keyframes nav-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+.nav-icon-circle.nav-anim-pulse:hover {
+  animation: nav-pulse 500ms var(--ease-spring);
+}
+
+/* Settings — rotate */
+@keyframes nav-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(90deg); }
+}
+.nav-icon-circle.nav-anim-rotate:hover {
+  animation: nav-rotate 400ms ease forwards;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   UNIVERSAL MICRO-ANIMATIONS
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Modal Spring Pop */
+@keyframes spring-pop {
+  0% { opacity: 0; transform: translateY(20px) scale(0.95); }
+  60% { transform: translateY(-4px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-spring-pop {
+  animation: spring-pop 400ms var(--ease-spring) both;
+}
+
+/* Button hover lift (apply via class) */
+.btn-alive {
+  transition: all 200ms var(--ease-spring);
+}
+.btn-alive:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--shadow-md);
+}
+.btn-alive:active {
+  transform: translateY(0) scale(0.95);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Logo hover animation */
+.logo-alive {
+  transition: transform 300ms var(--ease-spring);
+}
+.logo-alive:hover {
+  transform: scale(1.08) rotate(3deg);
+}
+.logo-alive:active {
+  transform: scale(0.95);
+}
+
 /* Stagger children */
 .stagger-children > * {
   animation: slideUp var(--duration-slow) var(--ease-out-expo) both;
@@ -624,142 +826,3 @@
 .dark .modal-backdrop {
   background: rgba(0, 0, 0, 0.6);
 }
-
-
-/* ══════════════════════════════════════════════════════════════════════
-   ENHANCED MICRO-ANIMATIONS
-   ══════════════════════════════════════════════════════════════════════ */
-
-/* Modal spring pop-in */
-@keyframes spring-pop {
-  0% { opacity: 0; transform: translateY(40px) scale(0.92); }
-  60% { transform: translateY(-4px) scale(1.02); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.animate-spring-pop {
-  animation: spring-pop 500ms var(--ease-spring) both;
-}
-
-/* Button press bounce */
-@keyframes press-bounce {
-  0% { transform: scale(1); }
-  40% { transform: scale(0.92); }
-  70% { transform: scale(1.04); }
-  100% { transform: scale(1); }
-}
-
-/* Avatar pulse glow on hover */
-@keyframes avatar-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--school-primary-rgb, 59, 130, 246), 0.3); }
-  50% { box-shadow: 0 0 0 6px rgba(var(--school-primary-rgb, 59, 130, 246), 0); }
-}
-
-/* Card lift on hover */
-@keyframes card-lift {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-3px); }
-}
-
-/* Logo breathe */
-@keyframes logo-breathe {
-  0%, 100% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.05); filter: brightness(1.1); }
-}
-
-
-/* ══════════════════════════════════════════════════════════════════════
-   INTERACTIVE COMPONENT ANIMATIONS
-   Every logo, button, card gets unique hover/active/click states
-   ══════════════════════════════════════════════════════════════════════ */
-
-/* Buttons — press feedback */
-.btn-primary:active,
-.btn-secondary:active,
-.btn-ghost:active {
-  animation: press-bounce 300ms var(--ease-spring) both;
-}
-
-/* Icon buttons — rotate/scale on hover */
-.icon-btn {
-  transition: all var(--duration-fast) var(--ease-spring);
-}
-.icon-btn:hover {
-  background: var(--surface-hover);
-  transform: scale(1.1) rotate(3deg);
-}
-.icon-btn:active {
-  transform: scale(0.88) rotate(-2deg);
-  transition-duration: 80ms;
-}
-
-/* Social Cards — subtle lift + shadow on hover */
-.social-card {
-  transition: box-shadow var(--duration-normal) var(--ease-out-expo),
-              transform var(--duration-normal) var(--ease-spring),
-              background-color var(--duration-fast) var(--ease-out-expo);
-}
-
-.social-card:hover {
-  box-shadow: var(--shadow-md), 0 0 0 1px var(--border-light);
-  transform: translateY(-2px);
-}
-
-.social-card:active {
-  transform: translateY(0) scale(0.995);
-  transition-duration: 80ms;
-}
-
-/* Logo wrapper — breathe hover */
-.logo-wrapper:hover,
-[class*="logo"]:hover img,
-[class*="logo"]:hover svg {
-  animation: logo-breathe 1.5s ease-in-out infinite;
-}
-
-/* Nav items — smooth press */
-.nav-link:active,
-a[class*="nav"]:active {
-  transform: scale(0.97);
-  transition-duration: 80ms;
-}
-
-/* Toggle Switch — bounce on toggle */
-[role="switch"]:active {
-  transform: scaleX(0.95);
-  transition-duration: 80ms;
-}
-
-/* Badge pills — subtle bounce on hover */
-[class*="badge"]:hover,
-[class*="Badge"]:hover {
-  transform: scale(1.05);
-  transition: transform 200ms var(--ease-spring);
-}
-
-
-/* ══════════════════════════════════════════════════════════════════════
-   SCROLL-RESPONSIVE SHADOWS
-   Cards dynamically adjust shadow intensity based on viewport position.
-   Driven by a CSS custom property --scroll-shadow (0-1) set by JS.
-   ══════════════════════════════════════════════════════════════════════ */
-
-.scroll-shadow-card {
-  --scroll-shadow: 0.5;
-  transition: box-shadow 0.6s ease-out, transform 0.3s var(--ease-spring);
-  box-shadow:
-    0 calc(2px + 8px * var(--scroll-shadow)) calc(6px + 20px * var(--scroll-shadow)) rgba(0, 0, 0, calc(0.02 + 0.06 * var(--scroll-shadow))),
-    inset 0 0 0 1px var(--border-light);
-}
-
-.dark .scroll-shadow-card {
-  box-shadow:
-    0 calc(2px + 8px * var(--scroll-shadow)) calc(6px + 20px * var(--scroll-shadow)) rgba(0, 0, 0, calc(0.1 + 0.2 * var(--scroll-shadow))),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-
-/* Alternative: apply scroll-responsive shadows to all social-cards automatically */
-.social-card {
-  --scroll-shadow: 0.4;
-}
-

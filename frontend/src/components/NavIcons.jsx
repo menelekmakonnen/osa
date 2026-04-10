@@ -4,9 +4,9 @@ import React from 'react';
 //  Google-Inspired Colorful Navigation Icons for OSA
 //  
 //  Each icon has a unique color identity with a circular background.
-//  Active state: solid circle with white icon.
-//  Inactive: soft pastel circle with colored icon.
-//  Smooth transitions on all states.
+//  Default: solid colored circle + white icon (always vibrant).
+//  Active: scaled up with glow ring.
+//  Hover: each icon has a unique micro-animation on its wrapper.
 // ══════════════════════════════════════════════════════════════════════
 
 const I = ({ children, size = 20, className = '', ...props }) => (
@@ -26,8 +26,7 @@ const I = ({ children, size = 20, className = '', ...props }) => (
   </svg>
 );
 
-// Color map for each nav icon — gives each section its own identity
-// like Google Account's sidebar.
+// Color map for each nav icon
 const NAV_COLORS = {
   dashboard:   { bg: '#E8F0FE', active: '#4285F4', icon: '#4285F4' },
   newsletter:  { bg: '#E6F4EA', active: '#34A853', icon: '#34A853' },
@@ -44,17 +43,33 @@ const NAV_COLORS = {
   logout:      { bg: '#F5F5F5', active: '#757575', icon: '#757575' },
 };
 
-export { NAV_COLORS };
+// Unique hover animation class per icon
+const NAV_ANIMATIONS = {
+  dashboard:   'nav-anim-wiggle',
+  newsletter:  'nav-anim-flip',
+  fundraising: 'nav-anim-heartbeat',
+  events:      'nav-anim-shake',
+  directory:   'nav-anim-wave',
+  board:       'nav-anim-bounce',
+  gallery:     'nav-anim-tilt',
+  support:     'nav-anim-spin',
+  admin:       'nav-anim-slide',
+  superadmin:  'nav-anim-glow',
+  cockpit:     'nav-anim-pulse',
+  settings:    'nav-anim-rotate',
+  logout:      'nav-anim-slide',
+};
 
-// Icon wrapper that adds the circular colored background
-// Default (inactive): solid colored circle with white icon — always vibrant
-// Active: scaled up with stronger glow/shadow to clearly distinguish
+export { NAV_COLORS, NAV_ANIMATIONS };
+
+// Icon wrapper — always solid colored circle, unique hover animation
 export function NavIconWrap({ colorKey, active, collapsed, children }) {
   const c = NAV_COLORS[colorKey] || NAV_COLORS.dashboard;
+  const animClass = NAV_ANIMATIONS[colorKey] || '';
   const size = collapsed ? 36 : 38;
   return (
     <div
-      className="flex items-center justify-center shrink-0 transition-all duration-300"
+      className={`nav-icon-circle ${animClass} flex items-center justify-center shrink-0 transition-all duration-300`}
       style={{
         width: size,
         height: size,
@@ -164,7 +179,7 @@ export function IconSupport({ size = 20, active, ...p }) {
   );
 }
 
-// Admin — sliders / settings panel
+// Admin — sliders
 export function IconAdmin({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
@@ -186,7 +201,7 @@ export function IconSuperAdmin({ size = 20, active, ...p }) {
   );
 }
 
-// Cockpit — monitor/dashboard
+// Cockpit — monitor
 export function IconCockpit({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
