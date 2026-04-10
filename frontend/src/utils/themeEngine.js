@@ -169,10 +169,10 @@ export function getContrastColor(bgHex) {
  */
 export function getOnPrimaryColor(primaryHex) {
   const whiteContrast = contrastRatio(primaryHex, '#FFFFFF');
-  if (whiteContrast >= 4.5) return '#FFFFFF';
+  if (whiteContrast >= 3.0) return '#FFFFFF';  // Lowered to WCAG AA Large Text (3:1) — suitable for buttons & badges
   const darkContrast = contrastRatio(primaryHex, '#0F172A');
-  if (darkContrast >= 4.5) return '#0F172A';
-  // Extreme fallback — darken or lighten the primary
+  if (darkContrast >= 3.0) return '#0F172A';
+  // Extreme fallback — pick whichever has better contrast
   return whiteContrast > darkContrast ? '#FFFFFF' : '#0F172A';
 }
 
@@ -328,6 +328,9 @@ export function applySchoolTheme({ primaryHex, secondaryHex, colourNames } = {})
   root.style.setProperty('--school-btn-from', palette[500]);
   root.style.setProperty('--school-btn-to', palette[600]);
   root.style.setProperty('--school-btn-hover', palette[700]);
+  // Button text — always white unless primary is very light
+  const btnTextColor = relativeLuminance(palette[500]) > 0.5 ? '#0F172A' : '#FFFFFF';
+  root.style.setProperty('--school-btn-text', btnTextColor);
 
   // Update meta theme-color for mobile browsers
   let metaTheme = document.querySelector('meta[name="theme-color"]');

@@ -263,7 +263,7 @@
     @apply inline-flex items-center justify-center font-semibold px-5 py-2.5 text-[14px] border-none cursor-pointer;
     border-radius: var(--radius-social);
     background: linear-gradient(135deg, var(--school-btn-from, #3B82F6), var(--school-btn-to, #2563EB));
-    color: var(--school-on-primary, #FFFFFF);
+    color: var(--school-btn-text, #FFFFFF);
     box-shadow: 0 4px 14px 0 rgba(var(--school-primary-rgb, 59, 130, 246), 0.39);
     transition: all var(--duration-normal) var(--ease-spring);
   }
