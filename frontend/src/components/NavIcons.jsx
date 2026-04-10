@@ -47,18 +47,24 @@ const NAV_COLORS = {
 export { NAV_COLORS };
 
 // Icon wrapper that adds the circular colored background
+// Default (inactive): solid colored circle with white icon — always vibrant
+// Active: scaled up with stronger glow/shadow to clearly distinguish
 export function NavIconWrap({ colorKey, active, collapsed, children }) {
   const c = NAV_COLORS[colorKey] || NAV_COLORS.dashboard;
+  const size = collapsed ? 36 : 38;
   return (
     <div
       className="flex items-center justify-center shrink-0 transition-all duration-300"
       style={{
-        width: collapsed ? 36 : 38,
-        height: collapsed ? 36 : 38,
+        width: size,
+        height: size,
         borderRadius: '50%',
-        backgroundColor: active ? c.active : c.bg,
-        color: active ? '#FFFFFF' : c.icon,
-        boxShadow: active ? `0 2px 8px ${c.active}40` : 'none',
+        backgroundColor: c.active,
+        color: '#FFFFFF',
+        transform: active ? 'scale(1.12)' : 'scale(1)',
+        boxShadow: active
+          ? `0 3px 12px ${c.active}60, 0 0 0 3px ${c.active}20`
+          : `0 1px 4px ${c.active}25`,
       }}
     >
       {children}

@@ -30,9 +30,9 @@ export function Avatar({ src, name = '', size = 'md', className = '', style = {}
       style={{
         width: s.box,
         height: s.box,
-        boxShadow: `0 0 0 ${s.ring}px var(--school-secondary, #F5C518)`,
-        backgroundColor: hasPhoto ? 'transparent' : 'var(--school-primary, #B067A1)',
-        color: hasPhoto ? 'transparent' : 'var(--school-on-primary, #FFF)',
+        boxShadow: `0 0 0 ${s.ring}px var(--school-primary, #B067A1)`,
+        backgroundColor: hasPhoto ? 'transparent' : 'var(--school-secondary, #F5C518)',
+        color: hasPhoto ? 'transparent' : 'var(--school-on-secondary, #FFF)',
         ...style,
       }}
     >

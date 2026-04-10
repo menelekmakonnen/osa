@@ -340,9 +340,9 @@ export function AppLayout() {
       const primary = getComputedStyle(document.documentElement).getPropertyValue('--school-primary').trim() || '#B067A1';
       const secondary = getComputedStyle(document.documentElement).getPropertyValue('--school-secondary').trim() || '#F5C518';
       const svgStr = `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 C100 190, 185 150, 185 100 L185 30 Z" fill="${primary}" fill-opacity="0.9" />
-        <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 L100 10 Z" fill="${secondary}" />
-        <path d="M100 10 L185 30 L185 100 C185 150, 100 190, 100 190 L100 10 Z" fill="${primary}" />
+        <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 C100 190, 185 150, 185 100 L185 30 Z" fill="${secondary}" fill-opacity="0.9" />
+        <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 L100 10 Z" fill="${primary}" />
+        <path d="M100 10 L185 30 L185 100 C185 150, 100 190, 100 190 L100 10 Z" fill="${secondary}" />
         <circle cx="100" cy="70" r="16" fill="white"/>
         <path d="M70 115 h60 M70 145 h60" stroke="white" stroke-width="10" stroke-linecap="round"/>
       </svg>`;
