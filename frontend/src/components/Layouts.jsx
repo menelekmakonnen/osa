@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShieldAlert, Menu, X, Sun, Moon, MoreHorizontal, ChevronRight } from 'lucide-react';
-import { IconDashboard, IconNewsletter, IconFundraising, IconEvents, IconDirectory, IconBoard, IconGallery, IconSupport, IconAdmin, IconSuperAdmin, IconLogout, IconCockpit, IconSettings } from './NavIcons';
+import { IconDashboard, IconNewsletter, IconFundraising, IconEvents, IconDirectory, IconBoard, IconGallery, IconSupport, IconAdmin, IconSuperAdmin, IconLogout, IconCockpit, IconSettings, NavIconWrap, NAV_COLORS } from './NavIcons';
 import { Avatar } from './Avatar';
 import { authState } from '../api/client';
 import { useTenant } from '../context/TenantContext';
@@ -202,40 +202,56 @@ export function AuthLayout() {
 //  Monochrome by default, school-primary accent on active.
 // ══════════════════════════════════════════════════════════════════════
 
+// Map icon components to their color keys
+const ICON_COLOR_MAP = new Map([
+  [IconDashboard, 'dashboard'],
+  [IconNewsletter, 'newsletter'],
+  [IconFundraising, 'fundraising'],
+  [IconEvents, 'events'],
+  [IconDirectory, 'directory'],
+  [IconBoard, 'board'],
+  [IconGallery, 'gallery'],
+  [IconSupport, 'support'],
+  [IconAdmin, 'admin'],
+  [IconSuperAdmin, 'superadmin'],
+  [IconCockpit, 'cockpit'],
+  [IconSettings, 'settings'],
+  [IconLogout, 'logout'],
+]);
+
 function NavItem({ to, icon: Icon, label, isAdminSection = false, onClick, collapsed = false }) {
   const location = useLocation();
   const isActive = location.pathname === to || location.pathname.startsWith(to + '/');
+  const colorKey = ICON_COLOR_MAP.get(Icon) || 'dashboard';
 
   return (
     <Link 
       to={to} 
       onClick={onClick}
       title={collapsed ? label : undefined}
-      className={`relative flex items-center gap-3 py-2 rounded-xl transition-all duration-150 group
+      className={`relative flex items-center rounded-2xl transition-all duration-200 group
         ${isActive 
           ? 'bg-[var(--school-tint)] dark:bg-white/[0.06]' 
           : 'hover:bg-[var(--surface-hover)]'}
-        ${collapsed ? 'justify-center mx-1 px-2' : 'px-3 mx-1'}
+        ${collapsed ? 'justify-center mx-1 px-1.5 py-2' : 'px-3 py-2.5 mx-2'}
       `}
       style={isActive ? { color: 'var(--school-primary)' } : undefined}
     >
       {/* Active accent bar */}
       {isActive && !collapsed && (
         <div 
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full"
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full"
           style={{ backgroundColor: 'var(--school-primary)' }}
         />
       )}
-      <Icon 
-        size={20} 
-        active={isActive}
-        className={isActive 
-          ? '' 
-          : 'text-[var(--ink-muted)] group-hover:text-[var(--ink-title)]'
-        }
-      />
+      <NavIconWrap colorKey={colorKey} active={isActive} collapsed={collapsed}>
+        <Icon 
+          size={19} 
+          active={isActive}
+        />
+      </NavIconWrap>
       {!collapsed && (
-        <span className={`text-[14.5px] truncate leading-5 transition-colors duration-150
+        <span className={`ml-3 text-[14.5px] truncate leading-5 transition-colors duration-150
           ${isActive 
             ? 'font-semibold' 
             : 'font-medium text-[var(--ink-body)] group-hover:text-[var(--ink-title)]'}
@@ -659,7 +675,7 @@ export function AppLayout() {
         </div>
 
         {/* Main Nav */}
-        <nav className="flex-1 py-1 flex flex-col gap-0.5 mt-1">
+        <nav className="flex-1 py-1 flex flex-col gap-1 mt-1">
           <NavItem collapsed={isSidebarCollapsed} to="/app/dashboard" icon={IconDashboard} label="Dashboard" />
           <NavItem collapsed={isSidebarCollapsed} to="/app/newsletter" icon={IconNewsletter} label="Newsletter" />
           <NavItem collapsed={isSidebarCollapsed} to="/app/fundraising" icon={IconFundraising} label="Fundraising" />
@@ -706,7 +722,7 @@ export function AppLayout() {
 
       {/* ═══ MAIN CONTENT ═══ */}
       <main className={`flex-1 flex justify-center w-full transition-all duration-300 ease-expo-out ${isSidebarCollapsed ? 'md:ml-[72px]' : 'md:ml-[264px]'}`} style={isDemo ? { paddingTop: isImpersonating ? '72px' : '38px' } : (isImpersonating ? { paddingTop: '34px' } : undefined)}>
-         <div className={`w-full max-w-[680px] lg:max-w-[740px] xl:max-w-[800px] py-4 md:py-6 px-4 relative ${useBottomTabs ? 'pb-24' : 'pb-20'} md:pb-6`}>
+         <div className={`w-full max-w-[680px] lg:max-w-[740px] xl:max-w-[800px] py-5 md:py-8 px-4 relative ${useBottomTabs ? 'pb-24' : 'pb-20'} md:pb-8`}>
             {isImpersonating && (
                <div className="mb-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-3 flex items-center justify-between shadow-sm animate-slide-down">
                   <div className="flex items-center gap-3">

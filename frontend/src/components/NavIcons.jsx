@@ -1,15 +1,12 @@
 import React from 'react';
 
 // ══════════════════════════════════════════════════════════════════════
-//  "Quiet Luxury" Navigation Icons for OSA
+//  Google-Inspired Colorful Navigation Icons for OSA
 //  
-//  Monochrome line icons. No colored circles, no gradients.
-//  Color comes from the parent NavItem:
-//    - Default: inherits text-zinc-500
-//    - Hover: inherits text-zinc-800 / dark:text-zinc-200
-//    - Active: inherits var(--school-primary) — the ONLY color pop
-//  
-//  Each icon is a clean SVG with consistent 24x24 viewBox.
+//  Each icon has a unique color identity with a circular background.
+//  Active state: solid circle with white icon.
+//  Inactive: soft pastel circle with colored icon.
+//  Smooth transitions on all states.
 // ══════════════════════════════════════════════════════════════════════
 
 const I = ({ children, size = 20, className = '', ...props }) => (
@@ -29,8 +26,48 @@ const I = ({ children, size = 20, className = '', ...props }) => (
   </svg>
 );
 
+// Color map for each nav icon — gives each section its own identity
+// like Google Account's sidebar.
+const NAV_COLORS = {
+  dashboard:   { bg: '#E8F0FE', active: '#4285F4', icon: '#4285F4' },
+  newsletter:  { bg: '#E6F4EA', active: '#34A853', icon: '#34A853' },
+  fundraising: { bg: '#FEE2E2', active: '#EA4335', icon: '#EA4335' },
+  events:      { bg: '#FFF3E0', active: '#F9AB00', icon: '#E37400' },
+  directory:   { bg: '#E8F0FE', active: '#4285F4', icon: '#4285F4' },
+  board:       { bg: '#F3E8FD', active: '#A142F4', icon: '#9334E6' },
+  gallery:     { bg: '#E0F2F1', active: '#00897B', icon: '#00897B' },
+  support:     { bg: '#FFF8E1', active: '#F9AB00', icon: '#F9AB00' },
+  admin:       { bg: '#E8EAF6', active: '#5C6BC0', icon: '#5C6BC0' },
+  superadmin:  { bg: '#FCE4EC', active: '#E91E63', icon: '#E91E63' },
+  cockpit:     { bg: '#E3F2FD', active: '#1976D2', icon: '#1976D2' },
+  settings:    { bg: '#ECEFF1', active: '#546E7A', icon: '#546E7A' },
+  logout:      { bg: '#F5F5F5', active: '#757575', icon: '#757575' },
+};
+
+export { NAV_COLORS };
+
+// Icon wrapper that adds the circular colored background
+export function NavIconWrap({ colorKey, active, collapsed, children }) {
+  const c = NAV_COLORS[colorKey] || NAV_COLORS.dashboard;
+  return (
+    <div
+      className="flex items-center justify-center shrink-0 transition-all duration-300"
+      style={{
+        width: collapsed ? 36 : 38,
+        height: collapsed ? 36 : 38,
+        borderRadius: '50%',
+        backgroundColor: active ? c.active : c.bg,
+        color: active ? '#FFFFFF' : c.icon,
+        boxShadow: active ? `0 2px 8px ${c.active}40` : 'none',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 // Dashboard — 4-square bento grid
-export function IconDashboard({ size, active, ...p }) {
+export function IconDashboard({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
       <rect x="3" y="3" width="7" height="7" rx="1.5" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.15 : 0} />
@@ -42,18 +79,18 @@ export function IconDashboard({ size, active, ...p }) {
 }
 
 // Newsletter — open newspaper/document
-export function IconNewsletter({ size, active, ...p }) {
+export function IconNewsletter({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
       <path d="M4 4h16v16H4z" rx="2" />
       <path d="M8 8h8M8 12h5" />
-      <path d="M16 12v4H8" strokeDasharray={active ? '0' : '0'} />
+      <path d="M16 12v4H8" />
     </I>
   );
 }
 
-// Fundraising — heart with hand
-export function IconFundraising({ size, active, ...p }) {
+// Fundraising — heart
+export function IconFundraising({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
       <path d="M12 21C12 21 4 14.5 4 9.5C4 6.46 6.46 4 9.5 4C10.96 4 12 5 12 5C12 5 13.04 4 14.5 4C17.54 4 20 6.46 20 9.5C20 14.5 12 21 12 21Z" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.12 : 0} />
@@ -62,7 +99,7 @@ export function IconFundraising({ size, active, ...p }) {
 }
 
 // Events — calendar
-export function IconEvents({ size, active, ...p }) {
+export function IconEvents({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
       <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -74,7 +111,7 @@ export function IconEvents({ size, active, ...p }) {
 }
 
 // Directory — people
-export function IconDirectory({ size, active, ...p }) {
+export function IconDirectory({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
       <circle cx="9" cy="7" r="3" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.12 : 0} />
@@ -86,7 +123,7 @@ export function IconDirectory({ size, active, ...p }) {
 }
 
 // Group Board — chat bubbles
-export function IconBoard({ size, active, ...p }) {
+export function IconBoard({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
       <path d="M21 12c0 4.418-4.03 8-9 8-1.6 0-3.1-.37-4.4-1L3 21l1.9-4A7.4 7.4 0 0 1 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8Z" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.1 : 0} />
@@ -100,7 +137,7 @@ export function IconBoard({ size, active, ...p }) {
 }
 
 // Gallery — image
-export function IconGallery({ size, active, ...p }) {
+export function IconGallery({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
       <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -111,7 +148,7 @@ export function IconGallery({ size, active, ...p }) {
 }
 
 // Tech Support — lifebuoy
-export function IconSupport({ size, active, ...p }) {
+export function IconSupport({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
       <circle cx="12" cy="12" r="9" />
@@ -122,7 +159,7 @@ export function IconSupport({ size, active, ...p }) {
 }
 
 // Admin — sliders / settings panel
-export function IconAdmin({ size, active, ...p }) {
+export function IconAdmin({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
       <path d="M4 7h16M4 12h16M4 17h16" />
@@ -134,7 +171,7 @@ export function IconAdmin({ size, active, ...p }) {
 }
 
 // Super Admin — shield with star
-export function IconSuperAdmin({ size, active, ...p }) {
+export function IconSuperAdmin({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
       <path d="M12 2l7 4v5c0 5.25-3 8.25-7 10-4-1.75-7-4.75-7-10V6l7-4Z" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.1 : 0} />
@@ -144,7 +181,7 @@ export function IconSuperAdmin({ size, active, ...p }) {
 }
 
 // Cockpit — monitor/dashboard
-export function IconCockpit({ size, active, ...p }) {
+export function IconCockpit({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
       <rect x="2" y="3" width="20" height="14" rx="2" />
@@ -158,7 +195,7 @@ export function IconCockpit({ size, active, ...p }) {
 }
 
 // Settings — gear
-export function IconSettings({ size, active, ...p }) {
+export function IconSettings({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
       <circle cx="12" cy="12" r="3" />
@@ -168,7 +205,7 @@ export function IconSettings({ size, active, ...p }) {
 }
 
 // Logout — door arrow
-export function IconLogout({ size, active, ...p }) {
+export function IconLogout({ size = 20, active, ...p }) {
   return (
     <I size={size} strokeWidth={active ? 2.2 : 1.8} {...p}>
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

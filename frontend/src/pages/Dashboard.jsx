@@ -81,7 +81,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col gap-5 pb-12 overflow-x-hidden stagger-children">
+    <div className="flex flex-col gap-6 pb-12 overflow-x-hidden stagger-children">
       
       {/* Pending Action Alert */}
       {user && user.role && user.role.includes("Admin") && data?.stats?.pendingPostsCount > 0 && (
@@ -102,7 +102,7 @@ export function Dashboard() {
       )}
 
       {/* Quick Stats */}
-      <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide snap-x">
+      <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-hide snap-x">
          <StatCard icon={Users} value={data?.stats?.ygMembersCount || '-'} label="Members" color="var(--school-primary)" bgColor="var(--school-tint)" navigateTo="/app/members" />
          <StatCard icon={Heart} value={data?.stats?.activeCampaignsCount || '-'} label="Campaigns" color="#EF4444" bgColor="#FEF2F2" darkBg="#7F1D1D20" navigateTo="/app/fundraising" />
          <StatCard icon={Calendar} value={data?.stats?.upcomingEventsCount || '-'} label="Events" color="#3B82F6" bgColor="#EFF6FF" darkBg="#1E3A8A20" navigateTo="/app/events" />
@@ -183,7 +183,7 @@ export function Dashboard() {
       <h2 className="text-[16px] font-bold text-ink-title mt-1 tracking-tight">Recent Highlights</h2>
 
       {/* Feed */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5">
         {(!data?.recentPosts || data.recentPosts.length === 0) ? (
           <Card className="text-center py-12">
              <div className="flex justify-center mb-3"><div className="p-4 bg-surface-muted rounded-2xl"><Edit3 size={28} className="text-ink-muted"/></div></div>
@@ -242,15 +242,15 @@ function StatCard({ icon: Icon, value, label, color, bgColor, darkBg, navigateTo
   const navigate = useNavigate();
   return (
     <div 
-      className="min-w-[130px] flex-1 gradient-border-card stat-card-shimmer social-card hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] p-4 flex flex-col items-center justify-center gap-1.5 snap-start cursor-pointer group"
+      className="min-w-[140px] flex-1 gradient-border-card stat-card-shimmer social-card hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] p-5 flex flex-col items-center justify-center gap-2.5 snap-start cursor-pointer group"
       onClick={() => navigateTo && navigate(navigateTo)}
       role="button"
       tabIndex={0}
     >
-       <div className="p-2.5 rounded-2xl mb-0.5 shadow-sm transition-all duration-300 group-hover:shadow-md group-hover:scale-110" style={{ backgroundColor: bgColor, color }}>
-         <Icon size={22} strokeWidth={2.5}/>
+       <div className="p-3.5 rounded-full mb-0.5 shadow-sm transition-all duration-300 group-hover:shadow-md group-hover:scale-110" style={{ backgroundColor: bgColor, color }}>
+         <Icon size={24} strokeWidth={2.2}/>
        </div>
-       <span className="text-xl font-bold text-ink-title leading-none tracking-tight">{value}</span>
+       <span className="text-2xl font-extrabold text-ink-title leading-none tracking-tight">{value}</span>
        <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">{label}</span>
     </div>
   );
