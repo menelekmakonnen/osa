@@ -1,42 +1,273 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { api } from '../api/client';
+import { api, authState } from '../api/client';
 import { Button, Card, Input, Select, Badge } from '../components/ui';
-import { Mail, Lock, User, School, Hash, Key, X, Eye, EyeOff, Wand2, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Mail, Lock, User, School, Hash, Key, X, Eye, EyeOff, Loader2, CheckCircle2, XCircle, KeyRound, Timer, ArrowLeft } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';
 
+// ══════════════════════════════════════════════════════════
+//  Login — Three Modes: Password / OTP (Email Code) / PIN
+// ══════════════════════════════════════════════════════════
+
 export function Login() {
+  // Modes: 'password' | 'otp-email' | 'otp-verify' | 'pin'
+  const [mode, setMode] = useState(() => {
+    return localStorage.getItem('osa_known_device') === 'true' ? 'password' : 'otp-email';
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isMagicLink, setIsMagicLink] = useState(true);
-  const [magicLinkSent, setMagicLinkSent] = useState(false);
-  const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  // Refs for password-manager compatibility (forwardRef now supported)
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+
+  // OTP state
+  const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
+  const [otpTimer, setOtpTimer] = useState(300);
+  const [otpTimerActive, setOtpTimerActive] = useState(false);
+  const otpRefs = useRef([]);
+
+  // PIN state
+  const [pinValues, setPinValues] = useState(['', '', '', '']);
+  const pinRefs = useRef([]);
+
+  const navigate = useNavigate();
+  const isRecognized = localStorage.getItem('osa_known_device') === 'true';
+
+  // ─── Ref-based value reader ────────────────────
+  // Always reads from the DOM ref first, then falls back to React state.
+  // This handles password managers that inject values without triggering onChange.
+  const getEmail = () => emailRef.current?.value?.trim() || email.trim();
+  const getPassword = () => passwordRef.current?.value || password;
+
+  // Sync ref values back to React state (call after reading)
+  const syncEmailState = (val) => { if (val && val !== email) setEmail(val); };
+
+  // ─── OTP Timer ──────────────────────────────────
+  useEffect(() => {
+    if (!otpTimerActive || otpTimer <= 0) return;
+    const interval = setInterval(() => {
+      setOtpTimer(prev => {
+        if (prev <= 1) {
+          setOtpTimerActive(false);
+          setError('Code expired. Please request a new one.');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [otpTimerActive, otpTimer]);
+
+  const formatTimer = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${String(sec).padStart(2, '0')}`;
+  };
+
+  // ─── Password Login ─────────────────────────────
+  const handlePasswordLogin = async (e) => {
     e.preventDefault();
+    const emailVal = getEmail();
+    const passVal = getPassword();
+    syncEmailState(emailVal);
+    if (!emailVal || !passVal) { setError('Please enter your email and password.'); return; }
     setError('');
     setLoading(true);
-
     try {
-      if (isMagicLink) {
-         await api.requestMagicLink(email);
-         setMagicLinkSent(true);
-      } else {
-         await api.login(email, password);
-         localStorage.setItem('osa_known_device', 'true');
-         navigate('/app/dashboard');
-      }
+      await api.login(emailVal, passVal);
+      localStorage.setItem('osa_known_device', 'true');
+      navigate('/app/dashboard');
     } catch (err) {
-      setError(err.message || 'Failed to login');
+      setError(err.message || 'Invalid credentials.');
     } finally {
       setLoading(false);
     }
   };
 
-  const isRecognized = localStorage.getItem('osa_known_device') === 'true';
+  // ─── OTP: Send Code ─────────────────────────────
+  const handleSendOTP = async (e) => {
+    if (e) e.preventDefault();
+    const emailVal = getEmail();
+    syncEmailState(emailVal);
+    if (!emailVal) { setError('Please enter your email or username.'); return; }
+    setError('');
+    setLoading(true);
+    try {
+      await api.sendOTP(emailVal);
+      setMode('otp-verify');
+      setOtpValues(['', '', '', '', '', '']);
+      setOtpTimer(300);
+      setOtpTimerActive(true);
+      setTimeout(() => otpRefs.current[0]?.focus(), 300);
+    } catch (err) {
+      setError(err.message || 'Failed to send code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── OTP: Verify Code ───────────────────────────
+  const handleVerifyOTP = useCallback(async (codeOverride) => {
+    const code = codeOverride || otpValues.join('');
+    if (code.length !== 6) { setError('Please enter the full 6-digit code.'); return; }
+    setError('');
+    setLoading(true);
+    try {
+      await api.verifyOTP(email, code);
+      localStorage.setItem('osa_known_device', 'true');
+      navigate('/app/dashboard');
+    } catch (err) {
+      setError(err.message || 'Invalid code.');
+      setOtpValues(['', '', '', '', '', '']);
+      setTimeout(() => otpRefs.current[0]?.focus(), 300);
+    } finally {
+      setLoading(false);
+    }
+  }, [email, otpValues, navigate]);
+
+  // ─── OTP Box Handlers ──────────────────────────
+  const handleOtpChange = (idx, val) => {
+    const digit = val.replace(/\D/g, '');
+    const newVals = [...otpValues];
+    newVals[idx] = digit;
+    setOtpValues(newVals);
+    if (digit && idx < 5) otpRefs.current[idx + 1]?.focus();
+    const fullCode = newVals.join('');
+    if (fullCode.length === 6) setTimeout(() => handleVerifyOTP(fullCode), 200);
+  };
+
+  const handleOtpKeyDown = (idx, e) => {
+    if (e.key === 'Backspace' && !otpValues[idx] && idx > 0) {
+      const newVals = [...otpValues];
+      newVals[idx - 1] = '';
+      setOtpValues(newVals);
+      otpRefs.current[idx - 1]?.focus();
+    }
+    if (e.key === 'Enter' && otpValues.join('').length === 6) handleVerifyOTP();
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+    if (!text) return;
+    const newVals = [...otpValues];
+    text.split('').forEach((char, i) => { if (i < 6) newVals[i] = char; });
+    setOtpValues(newVals);
+    if (text.length === 6) {
+      otpRefs.current[5]?.focus();
+      setTimeout(() => handleVerifyOTP(text), 300);
+    }
+  };
+
+  // ─── PIN Login ──────────────────────────────────
+  const handlePinLogin = useCallback(async (codeOverride) => {
+    const pin = codeOverride || pinValues.join('');
+    if (pin.length !== 4) return;
+    const emailVal = getEmail();
+    syncEmailState(emailVal);
+    if (!emailVal) { setError('Please enter your email.'); return; }
+    setError('');
+    setLoading(true);
+    try {
+      await api.pinLogin(emailVal, pin);
+      localStorage.setItem('osa_known_device', 'true');
+      navigate('/app/dashboard');
+    } catch (err) {
+      setError(err.message || 'Invalid PIN.');
+      setPinValues(['', '', '', '']);
+      setTimeout(() => pinRefs.current[0]?.focus(), 300);
+    } finally {
+      setLoading(false);
+    }
+  }, [email, pinValues, navigate]);
+
+  const handlePinChange = (idx, val) => {
+    const digit = val.replace(/\D/g, '');
+    const newVals = [...pinValues];
+    newVals[idx] = digit;
+    setPinValues(newVals);
+    if (digit && idx < 3) pinRefs.current[idx + 1]?.focus();
+    const fullPin = newVals.join('');
+    if (fullPin.length === 4) setTimeout(() => handlePinLogin(fullPin), 200);
+  };
+
+  const handlePinKeyDown = (idx, e) => {
+    if (e.key === 'Backspace' && !pinValues[idx] && idx > 0) {
+      const newVals = [...pinValues];
+      newVals[idx - 1] = '';
+      setPinValues(newVals);
+      pinRefs.current[idx - 1]?.focus();
+    }
+    if (e.key === 'Enter' && pinValues.join('').length === 4) handlePinLogin();
+  };
+
+  const handlePinPaste = (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 4);
+    if (!text) return;
+    const newVals = [...pinValues];
+    text.split('').forEach((char, i) => { if (i < 4) newVals[i] = char; });
+    setPinValues(newVals);
+    if (text.length === 4) {
+      pinRefs.current[3]?.focus();
+      setTimeout(() => handlePinLogin(text), 300);
+    }
+  };
+
+  // ─── Demo Mode ─────────────────────────────────
+  const handleDemoLogin = () => {
+    import('../api/demoData').then(({ DEMO_USER, DEMO_TOKEN }) => {
+      // Clear stale theme from any previous session
+      sessionStorage.removeItem('osa_theme');
+      localStorage.setItem('osa_demo_mode', 'true');
+      authState.setSession(DEMO_TOKEN, DEMO_USER);
+      document.title = 'AMOSA — Aggrey Memorial (Demo)';
+      navigate('/app/dashboard');
+    });
+  };
+
+  // ─── Mode Switching ─────────────────────────────
+  const switchMode = (newMode) => {
+    setError('');
+    setMode(newMode);
+    if (newMode === 'otp-email') setOtpValues(['', '', '', '', '', '']);
+    if (newMode === 'pin') setPinValues(['', '', '', '']);
+  };
+
+  // ─── Mode Toggle Links ─────────────────────────
+  const ModeLinks = ({ current }) => (
+    <div className="flex items-center justify-center gap-2 flex-wrap mt-1 text-[12px]" style={{ color: 'var(--ink-body, #475569)' }}>
+      {current !== 'password' && (
+        <button type="button" onClick={() => switchMode('password')} className="hover:text-ink-title transition-colors flex items-center gap-1 font-medium" style={{ color: 'inherit' }}>
+          <Lock size={12}/> Password
+        </button>
+      )}
+      {current !== 'otp-email' && current !== 'otp-verify' && (
+        <>
+          {current !== 'password' ? null : <span style={{ color: '#94a3b8' }}>·</span>}
+          <button type="button" onClick={() => switchMode('otp-email')} className="hover:text-ink-title transition-colors flex items-center gap-1 font-medium" style={{ color: 'inherit' }}>
+            <Mail size={12}/> Email Code
+          </button>
+        </>
+      )}
+      {current !== 'pin' && (
+        <>
+          <span style={{ color: '#94a3b8' }}>·</span>
+          <button type="button" onClick={() => switchMode('pin')} className="hover:text-ink-title transition-colors flex items-center gap-1 font-medium" style={{ color: 'inherit' }}>
+            <KeyRound size={12}/> PIN
+          </button>
+        </>
+      )}
+    </div>
+  );
+
+  // ─── Shared text color for contrast on glass ───
+  const mutedColor = '#64748b';
+  const faintColor = '#94a3b8';
 
   return (
     <div className="w-full">
@@ -44,95 +275,235 @@ export function Login() {
         <h1 className="text-2xl font-bold text-ink-title mb-1 tracking-tight">
           {isRecognized ? "Welcome back" : "Welcome"}
         </h1>
-        <p className="text-ink-muted text-[14px]">Sign in to your alumni community</p>
+        <p className="text-[14px]" style={{ color: mutedColor }}>Sign in to your alumni community</p>
       </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-xl mb-4 text-[13px] text-center font-medium">
+        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-3 rounded-xl mb-4 text-[13px] text-center font-medium animate-fade-in">
           {error}
         </div>
       )}
 
-      {magicLinkSent ? (
-        <div className="text-center animate-fade-in">
-           <div className="bg-school-tint p-6 rounded-xl mb-6 border shadow-sm" style={{ borderColor: 'var(--school-200)' }}>
-               <Wand2 className="mx-auto mb-3" style={{ color: 'var(--school-primary)' }} size={38} />
-               <p className="text-lg font-bold text-ink-title mb-1">Magic Link Sent!</p>
-               <p className="text-[14px] text-ink-muted">Check your inbox for a secure login link.</p>
-           </div>
-           <Button variant="outline" className="w-full" onClick={() => { setMagicLinkSent(false); setIsMagicLink(false); }}>
-              Back to Login
-           </Button>
-        </div>
-      ) : (
-        <form onSubmit={handleLogin} className="flex flex-col gap-4 animate-fade-in">
+      {/* ═══ PASSWORD MODE ═══ */}
+      {mode === 'password' && (
+        <form onSubmit={handlePasswordLogin} className="flex flex-col gap-4 animate-fade-in">
           <div className="relative">
             <User className="absolute left-3 top-9 text-ink-muted" size={18} />
             <Input 
+              ref={emailRef}
               label="Email or Username"
               placeholder="Your email or username"
               type="text"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              name="email"
+              autoComplete="email"
+              defaultValue={email}
+              onBlur={(e) => setEmail(e.target.value)}
               className="[&>input]:pl-10"
               required
             />
           </div>
-          
-          {!isMagicLink && (
-            <div className="relative">
-              <Lock className="absolute left-3 top-9 text-ink-muted" size={18} />
-              <Input 
-                label="Password"
-                placeholder="Enter your password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="[&>input]:pl-10 pr-10"
-                required
-              />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-9 p-1 text-ink-muted hover:text-ink-title transition-colors focus:outline-none"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          )}
+          <div className="relative">
+            <Lock className="absolute left-3 top-9 text-ink-muted" size={18} />
+            <Input 
+              ref={passwordRef}
+              label="Password"
+              placeholder="Enter your password"
+              type={showPassword ? "text" : "password"}
+              name="password"
+              autoComplete="current-password"
+              defaultValue={password}
+              onBlur={(e) => setPassword(e.target.value)}
+              className="[&>input]:pl-10 pr-10"
+              required
+            />
+            <button 
+              type="button" 
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-9 p-1 text-ink-muted hover:text-ink-title transition-colors focus:outline-none"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
 
-          {!isMagicLink && (
-            <div className="flex justify-between items-center px-1">
-              <button 
-                 type="button" 
-                 onClick={() => setIsMagicLink(true)} 
-                 className="text-[13px] text-ink-muted hover:text-ink-title hover:font-medium transition-all flex items-center gap-1.5"
-              >
-                 <Wand2 size={14}/> Passwordless Login
-              </button>
-              <Link to="/forgot-password" className="text-[13px] text-ink-muted hover:underline hover:text-ink-title transition-colors">
-                Forgot Password?
-              </Link>
-            </div>
-          )}
+          <div className="flex justify-end items-center px-1">
+            <Link to="/forgot-password" className="text-[13px] hover:underline hover:text-ink-title transition-colors" style={{ color: mutedColor }}>
+              Forgot Password?
+            </Link>
+          </div>
 
-          <Button type="submit" disabled={loading} className="w-full mt-2">
-            {loading ? 'Please wait...' : (isMagicLink ? 'Send Magic Link' : 'Sign In')}
+          <Button type="submit" disabled={loading} className="w-full mt-1">
+            {loading ? 'Signing in...' : 'Sign In'}
           </Button>
 
-          {isMagicLink && (
-            <div className="text-center mt-2">
-              <button type="button" onClick={() => setIsMagicLink(false)} className="text-[13px] text-ink-muted hover:text-ink-title transition-colors">
-                Actually, I want to use my password
-              </button>
-            </div>
-          )}
+          <ModeLinks current="password" />
 
-          <div className="text-center mt-4 pt-4 border-t border-border-light text-[13px] text-ink-muted">
+          <div className="text-center mt-3 pt-4 border-t border-border-light text-[13px]" style={{ color: mutedColor }}>
             Don't have an account? <Link to="/register" className="hover:underline font-semibold ml-1" style={{ color: 'var(--school-primary)' }}>Register here</Link>
           </div>
         </form>
       )}
+
+      {/* ═══ OTP: EMAIL INPUT ═══ */}
+      {mode === 'otp-email' && (
+        <form onSubmit={handleSendOTP} className="flex flex-col gap-4 animate-fade-in">
+          <p className="text-[13px] text-center -mt-2 mb-1" style={{ color: mutedColor }}>Enter your email to receive a secure 6-digit login code.</p>
+          <div className="relative">
+            <Mail className="absolute left-3 top-9 text-ink-muted" size={18} />
+            <Input 
+              ref={emailRef}
+              label="Email or Username"
+              placeholder="Your email or username"
+              type="text"
+              name="email"
+              autoComplete="email"
+              defaultValue={email}
+              onBlur={(e) => setEmail(e.target.value)}
+              className="[&>input]:pl-10"
+              required
+              autoFocus
+            />
+          </div>
+
+          <Button type="submit" disabled={loading} className="w-full mt-1">
+            {loading ? 'Sending...' : 'Send Login Code'}
+          </Button>
+
+          <div className="flex items-center justify-center gap-1.5 text-[11px]" style={{ color: faintColor }}>
+            <Lock size={11} /> Passwordless · No passwords stored · Verified by email
+          </div>
+
+          <ModeLinks current="otp-email" />
+
+          <div className="text-center mt-3 pt-4 border-t border-border-light text-[13px]" style={{ color: mutedColor }}>
+            Don't have an account? <Link to="/register" className="hover:underline font-semibold ml-1" style={{ color: 'var(--school-primary)' }}>Register here</Link>
+          </div>
+        </form>
+      )}
+
+      {/* ═══ OTP: VERIFY CODE ═══ */}
+      {mode === 'otp-verify' && (
+        <div className="flex flex-col gap-4 animate-fade-in">
+          <p className="text-[13px] text-center -mt-2" style={{ color: mutedColor }}>
+            We sent a 6-digit code to <strong className="text-ink-title">{email}</strong>
+          </p>
+
+          {/* OTP Boxes */}
+          <div className="flex items-center justify-center gap-2 my-2">
+            {otpValues.map((v, i) => (
+              <React.Fragment key={i}>
+                {i === 3 && <span className="text-ink-muted font-medium text-lg mx-0.5">—</span>}
+                <input
+                  ref={el => otpRefs.current[i] = el}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={v}
+                  onChange={(e) => handleOtpChange(i, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                  onPaste={i === 0 ? handleOtpPaste : undefined}
+                  className={`w-11 h-13 text-center text-xl font-bold rounded-xl border-2 transition-all duration-200 outline-none bg-surface-muted text-ink-title focus:ring-2 focus:ring-offset-1 ${v ? 'border-school dark:border-school' : 'border-border-light'}`}
+                  style={{ 
+                    '--tw-ring-color': 'var(--school-primary)',
+                    borderColor: v ? 'var(--school-primary)' : undefined
+                  }}
+                />
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* Timer */}
+          <div className="flex items-center justify-center gap-1.5 text-[12px] font-medium" style={{ color: otpTimer <= 60 ? '#ef4444' : mutedColor }}>
+            <Timer size={13} />
+            Code expires in <strong>{formatTimer(otpTimer)}</strong>
+          </div>
+
+          <Button 
+            onClick={() => handleVerifyOTP()} 
+            disabled={loading || otpValues.join('').length !== 6} 
+            className="w-full mt-1"
+          >
+            {loading ? 'Verifying...' : 'Verify & Sign In'}
+          </Button>
+
+          <div className="flex items-center justify-center gap-3 text-[12px]">
+            <button type="button" onClick={handleSendOTP} className="hover:text-ink-title transition-colors font-medium" style={{ color: mutedColor }}>Resend Code</button>
+            <span style={{ color: faintColor }}>·</span>
+            <button type="button" onClick={() => { switchMode('otp-email'); setOtpTimerActive(false); }} className="hover:text-ink-title transition-colors flex items-center gap-1 font-medium" style={{ color: mutedColor }}>
+              <ArrowLeft size={11}/> Change Email
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ PIN MODE ═══ */}
+      {mode === 'pin' && (
+        <div className="flex flex-col gap-4 animate-fade-in">
+          <p className="text-[13px] text-center -mt-2 mb-1" style={{ color: mutedColor }}>Log in with your 4-digit PIN.</p>
+          <div className="relative">
+            <Mail className="absolute left-3 top-9 text-ink-muted" size={18} />
+            <Input 
+              ref={emailRef}
+              label="Email or Username"
+              placeholder="Your email or username"
+              type="text"
+              name="email"
+              autoComplete="email"
+              defaultValue={email}
+              onBlur={(e) => setEmail(e.target.value)}
+              className="[&>input]:pl-10"
+              required
+            />
+          </div>
+
+          {/* PIN Boxes */}
+          <div className="flex items-center justify-center gap-3 my-2">
+            {pinValues.map((v, i) => (
+              <input
+                key={i}
+                ref={el => pinRefs.current[i] = el}
+                type="password"
+                inputMode="numeric"
+                maxLength={1}
+                value={v}
+                onChange={(e) => handlePinChange(i, e.target.value)}
+                onKeyDown={(e) => handlePinKeyDown(i, e)}
+                onPaste={i === 0 ? handlePinPaste : undefined}
+                className={`w-14 h-14 text-center text-2xl font-bold rounded-xl border-2 transition-all duration-200 outline-none bg-surface-muted text-ink-title focus:ring-2 focus:ring-offset-1 ${v ? 'border-school dark:border-school' : 'border-border-light'}`}
+                style={{ 
+                  '--tw-ring-color': 'var(--school-primary)',
+                  borderColor: v ? 'var(--school-primary)' : undefined
+                }}
+              />
+            ))}
+          </div>
+
+          <Button 
+            onClick={() => handlePinLogin()} 
+            disabled={loading || pinValues.join('').length !== 4} 
+            className="w-full mt-1"
+          >
+            {loading ? 'Verifying...' : 'Sign In with PIN'}
+          </Button>
+
+          <ModeLinks current="pin" />
+
+          <div className="text-center mt-3 pt-4 border-t border-border-light text-[13px]" style={{ color: mutedColor }}>
+            Don't have an account? <Link to="/register" className="hover:underline font-semibold ml-1" style={{ color: 'var(--school-primary)' }}>Register here</Link>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ DEMO BUTTON ═══ */}
+      <div className="text-center mt-4">
+        <button
+          type="button"
+          onClick={handleDemoLogin}
+          className="text-[12px] font-medium px-4 py-2 rounded-full border border-border-light hover:bg-surface-hover transition-all duration-200"
+          style={{ color: mutedColor }}
+        >
+          🎭 Try Demo — No account needed
+        </button>
+      </div>
     </div>
   );
 }
@@ -196,7 +567,7 @@ export function Register() {
          
          try {
              let res = await api.checkUsername(baseUsername);
-             if (res.data?.available) {
+             if (res?.available) {
                  setFormData(prev => ({ ...prev, username: baseUsername }));
                  setUsernameStatus('available');
                  setCheckingUsername(false);
@@ -206,7 +577,7 @@ export function Register() {
              // If taken, try appending numbers
              for (let i = 1; i <= 5; i++) {
                  res = await api.checkUsername(baseUsername + i);
-                 if (res.data?.available) {
+                 if (res?.available) {
                      setFormData(prev => ({ ...prev, username: baseUsername + i }));
                      setUsernameStatus('available');
                      break;
@@ -236,7 +607,7 @@ export function Register() {
          setUsernameStatus('checking');
          try {
             const res = await api.checkUsername(formData.username);
-            setUsernameStatus(res.data?.available ? 'available' : 'taken');
+            setUsernameStatus(res?.available ? 'available' : 'taken');
          } catch(e) {
             console.log("Check username mapping failed", e);
          }
@@ -257,7 +628,7 @@ export function Register() {
        try {
           if (!isCustomDomain) {
              const schoolList = await api.getSchools();
-             setSchools(schoolList.data || []);
+             setSchools(Array.isArray(schoolList) ? schoolList : []);
           }
           // Only fetch Year Groups if we know the target school (either via custom domain or user selection)
           if (formData.school_id && formData.school_id !== 'new_school') {
@@ -832,59 +1203,4 @@ export function ForgotPassword() {
   );
 }
 
-export function MagicLogin() {
-  const [status, setStatus] = useState('Verifying your magic link...');
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
 
-  useEffect(() => {
-     const verifyToken = async () => {
-         const urlParams = new URLSearchParams(window.location.search);
-         const token = urlParams.get('token');
-         if (!token) {
-             setError('No magic token provided in the URL.');
-             setStatus('');
-             return;
-         }
-
-         try {
-             await api.completeMagicLinkLogin(token);
-             localStorage.setItem('osa_known_device', 'true');
-             setStatus('Login successful! Redirecting...');
-             setTimeout(() => navigate('/app/dashboard'), 1500);
-         } catch(e) {
-             setError(e.message || 'Invalid or expired magic link.');
-             setStatus('');
-         }
-     };
-
-     verifyToken();
-  }, [navigate]);
-
-  return (
-    <Card className="p-8 w-full max-w-md mx-auto text-center animate-fade-in mt-12">
-       <Wand2 className="mx-auto mb-6 text-sage" size={48} />
-       <h1 className="text-2xl font-heading text-forest mb-4">Magic Login</h1>
-       
-       {status && (
-         <div className="flex flex-col items-center gap-3 text-muted mb-4">
-           <Loader2 className="animate-spin text-forest mx-auto" size={24} />
-           <p>{status}</p>
-         </div>
-       )}
-       
-       {error && (
-         <div className="bg-red-50 text-red-600 p-4 rounded-md mb-6 shadow-sm">
-           <XCircle className="mx-auto mb-2 opacity-80" size={32} />
-           <p className="font-semibold">{error}</p>
-         </div>
-       )}
-
-       {error && (
-         <Button onClick={() => navigate('/login')} className="w-full" variant="outline">
-            Return to Login
-         </Button>
-       )}
-    </Card>
-  );
-}

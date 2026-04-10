@@ -145,7 +145,7 @@ export function Modal({ isOpen, onClose, title, children, wide = false, noPaddin
 /* ══════════════════════════════════════════════════════════════════════
    Input Fields
    ══════════════════════════════════════════════════════════════════════ */
-export function Input({ label, error, className = '', inputClassName = '', id, ...props }) {
+export const Input = React.forwardRef(function Input({ label, error, className = '', inputClassName = '', id, ...props }, ref) {
     const generatedId = useId();
     const inputId = id || generatedId;
     return (
@@ -155,13 +155,13 @@ export function Input({ label, error, className = '', inputClassName = '', id, .
                 {label}
               </label>
             )}
-            <input id={inputId} className={`social-input ${inputClassName}`} {...props} />
+            <input ref={ref} id={inputId} className={`social-input ${inputClassName}`} {...props} />
             {error && <span className="block text-red-500 text-[12px] mt-1.5 ml-0.5 font-medium">{error}</span>}
         </div>
     );
-}
+});
 
-export function Textarea({ label, error, className = '', id, ...props }) {
+export const Textarea = React.forwardRef(function Textarea({ label, error, className = '', id, ...props }, ref) {
     const generatedId = useId();
     const inputId = id || generatedId;
     return (
@@ -171,11 +171,11 @@ export function Textarea({ label, error, className = '', id, ...props }) {
                 {label}
               </label>
             )}
-            <textarea id={inputId} className="social-textarea flex-1 min-h-[100px]" {...props} />
+            <textarea ref={ref} id={inputId} className="social-textarea flex-1 min-h-[100px]" {...props} />
             {error && <span className="block text-red-500 text-[12px] mt-1.5 ml-0.5 font-medium">{error}</span>}
         </div>
     );
-}
+});
 
 export function Select({ label, options, error, className = '', id, ...props }) {
     const generatedId = useId();

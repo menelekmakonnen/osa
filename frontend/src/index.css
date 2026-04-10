@@ -83,28 +83,28 @@
     --duration-slow: 400ms;
   }
 
-  /* ── Dark Mode ── */
+  /* ── Dark Mode (Linear/Notion-inspired zinc palette) ── */
   .dark {
-    --surface-default: #1E293B;
-    --surface-muted: #0F172A;
-    --surface-hover: #334155;
-    --surface-glass: rgba(30, 41, 59, 0.80);
-    --surface-elevated: #1E293B;
+    --surface-default: #18181B;   /* zinc-900 */
+    --surface-muted:   #09090B;   /* zinc-950 */
+    --surface-hover:   #27272A;   /* zinc-800 */
+    --surface-glass:   rgba(24, 24, 27, 0.88);
+    --surface-elevated: #1F1F23;  /* slightly raised */
 
-    --ink-title: #F1F5F9;
-    --ink-body: #CBD5E1;
-    --ink-muted: #64748B;
+    --ink-title:  #FAFAFA;   /* zinc-50 */
+    --ink-body:   #A1A1AA;   /* zinc-400 */
+    --ink-muted:  #52525B;   /* zinc-600 */
 
-    --border-light: rgba(148, 163, 184, 0.12);
+    --border-light: rgba(255, 255, 255, 0.07);
     --border-focus: var(--school-focus, #60A5FA);
 
-    --shadow-xs: 0 1px 2px rgba(0,0,0,0.2);
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
-    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.2);
-    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -4px rgba(0,0,0,0.2);
-    --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.4), 0 8px 10px -6px rgba(0,0,0,0.2);
-    --shadow-social-card: 0 4px 12px -2px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(255,255,255,0.03);
-    --shadow-social-dropdown: 0 16px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(255,255,255,0.05);
+    --shadow-xs: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -2px rgba(0,0,0,0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5), 0 4px 6px -4px rgba(0,0,0,0.3);
+    --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(0,0,0,0.3);
+    --shadow-social-card: 0 1px 3px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.04);
+    --shadow-social-dropdown: 0 16px 40px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.06);
   }
 
   /* ── Global Reset & Base ── */
@@ -377,6 +377,23 @@
   50% { transform: translateY(-6px); }
 }
 
+@keyframes icon-bounce {
+  0% { transform: scale(1); }
+  30% { transform: scale(0.82); }
+  60% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shimmer-highlight {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+@keyframes gradient-x {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
 .animate-fade-in {
   animation: fadeIn var(--duration-normal) var(--ease-out-expo) both;
 }
@@ -397,6 +414,10 @@
   animation: float 3s ease-in-out infinite;
 }
 
+.animate-icon-bounce {
+  animation: icon-bounce 400ms var(--ease-spring) both;
+}
+
 /* Stagger children */
 .stagger-children > * {
   animation: slideUp var(--duration-slow) var(--ease-out-expo) both;
@@ -409,6 +430,79 @@
 .stagger-children > *:nth-child(6) { animation-delay: 300ms; }
 .stagger-children > *:nth-child(7) { animation-delay: 360ms; }
 .stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+
+/* Nav Icon Interaction System */
+.nav-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  transition: all 300ms var(--ease-spring);
+  flex-shrink: 0;
+}
+
+.nav-icon-wrap.active {
+  background: var(--school-primary);
+  color: var(--school-on-primary, white);
+  box-shadow: 0 2px 12px rgba(var(--school-primary-rgb, 59, 130, 246), 0.35);
+}
+
+.nav-link:hover .nav-icon-wrap:not(.active) {
+  background: var(--school-tint);
+  color: var(--school-primary);
+  transform: scale(1.12);
+}
+
+.nav-link:active .nav-icon-wrap {
+  animation: icon-bounce 350ms var(--ease-spring) both;
+}
+
+/* Stat Card Shimmer */
+.stat-card-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.stat-card-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  pointer-events: none;
+}
+.stat-card-shimmer:hover::after {
+  animation: shimmer-highlight 800ms ease forwards;
+}
+
+/* Gradient Border Card */
+.gradient-border-card {
+  position: relative;
+  background: var(--surface-default);
+  border-radius: var(--radius-xl);
+}
+.gradient-border-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(135deg, var(--school-primary), var(--school-secondary, var(--school-primary)));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 400ms ease;
+  pointer-events: none;
+}
+.gradient-border-card:hover::before {
+  opacity: 1;
+}
+
 
 /* ══════════════════════════════════════════════════════════════════════
    SKELETON LOADING

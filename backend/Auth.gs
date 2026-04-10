@@ -722,142 +722,358 @@ function handleCompletePasswordReset(data) {
 }
 
 // ==========================================
-// Magic Links
+// OTP Login (Passwordless — Email Code)
 // ==========================================
+//
+// Security:
+//   • 6-digit OTP, cryptographically generated
+//   • Expires in 5 minutes (CacheService)
+//   • Max 3 verification attempts per OTP
+//   • Max 5 send requests per email per hour (rate limit)
+//   • Timing-safe: same response whether email exists or not
 
-function handleRequestMagicLink(data) {
+function handleSendOTP(data) {
   const { email } = data;
-  if (!email) return { success: false, error: "Missing login identifier" };
+  if (!email) return { success: false, error: "Please enter your email or username." };
   const identifier = String(email).toLowerCase();
 
-  const masterSS = getMasterDB();
-  let foundSheet = null, foundRowIndex = -1, headers = null, foundRowObj = null;
-
-  const mSheet = masterSS.getSheetByName("staff");
-  let mHeaders = getHeaders(mSheet);
-  let mRows = mSheet.getDataRange().getValues();
-  for (let i = 1; i < mRows.length; i++) {
-    let rObj = rowToObject(mRows[i], mHeaders);
-    if (String(rObj.email).toLowerCase() === identifier || String(rObj.username).toLowerCase() === identifier) {
-      foundSheet = mSheet; headers = mHeaders; foundRowIndex = i + 1; foundRowObj = rObj; break;
-    }
+  // Rate limit: max 5 OTP sends per identifier per hour
+  const cache = CacheService.getScriptCache();
+  const sendCountKey = 'otp_send_' + identifier;
+  const sendCount = Number(cache.get(sendCountKey)) || 0;
+  if (sendCount >= 5) {
+    return { success: false, error: "Too many login attempts. Please wait an hour before trying again." };
   }
 
-  if (!foundSheet) {
-    const sSheet = masterSS.getSheetByName("schools");
-    const sHeaders = getHeaders(sSheet);
-    const sRows = sSheet.getDataRange().getValues();
-    for (let j = 1; j < sRows.length; j++) {
-      let sRow = rowToObject(sRows[j], sHeaders);
-      if (!sRow.spreadsheet_id) continue;
-      try {
-        const schoolSS = SpreadsheetApp.openById(sRow.spreadsheet_id);
-        const schoolMSheet = schoolSS.getSheetByName("members");
-        if (!schoolMSheet) continue;
-        let smHeaders = getHeaders(schoolMSheet);
-        let smRows = schoolMSheet.getDataRange().getValues();
-        for (let k = 1; k < smRows.length; k++) {
-          let uRow = rowToObject(smRows[k], smHeaders);
-          if (String(uRow.email).toLowerCase() === identifier || String(uRow.username).toLowerCase() === identifier) {
-            foundSheet = schoolMSheet; headers = smHeaders; foundRowIndex = k + 1; foundRowObj = uRow; break;
-          }
-        }
-        if (foundSheet) break;
-      } catch(e) {}
-    }
+  // Find user across all databases
+  const found = findUserAcrossDBs_(identifier);
+  if (!found) {
+    // Don't reveal whether the email exists — same delay + response
+    Utilities.sleep(1500);
+    return { success: true, data: { message: "If this email is registered, a login code has been sent." } };
   }
 
-  if (!foundSheet) return { success: false, error: "User not found." };
+  // Generate 6-digit numeric OTP
+  const otp = generateSecureOTP_();
 
-  const magicToken = Utilities.getUuid() + "-" + Utilities.getUuid();
-  const expiry = new Date();
-  expiry.setMinutes(expiry.getMinutes() + 15);
+  // Store OTP in cache (5-minute TTL)
+  const otpData = JSON.stringify({
+    otp: otp,
+    identifier: identifier,
+    sheetId: found.sheetId,
+    rowIndex: found.rowIndex,
+    name: found.rowObj.name,
+    email: found.rowObj.email,
+    attempts: 0,
+    created: new Date().toISOString()
+  });
+  cache.put('otp_' + identifier, otpData, 300); // 5 minutes
 
-  let magicTokenIdx = headers.indexOf("magic_token");
-  let magicExpiryIdx = headers.indexOf("magic_token_expiry");
-  if (magicTokenIdx === -1) {
-    magicTokenIdx = headers.length; magicExpiryIdx = headers.length + 1;
-    foundSheet.getRange(1, magicTokenIdx + 1).setValue("magic_token");
-    foundSheet.getRange(1, magicExpiryIdx + 1).setValue("magic_token_expiry");
-  }
+  // Increment send counter
+  cache.put(sendCountKey, String(sendCount + 1), 3600); // 1 hour window
 
-  foundSheet.getRange(foundRowIndex, magicTokenIdx + 1).setValue(magicToken);
-  foundSheet.getRange(foundRowIndex, magicExpiryIdx + 1).setValue(expiry.toISOString());
-
-  // FIXED: Use production URL instead of localhost
-  const verifyUrl = PRODUCTION_URL + "/magic-login?token=" + magicToken;
-  const emailHtml = '<div style="font-family: sans-serif; color: #333; max-width: 500px; margin: 0 auto;">' +
-    '<h2 style="color: #0f172a;">Magic Login Link</h2>' +
-    '<p>Hello <strong>' + foundRowObj.name + '</strong>,</p>' +
-    '<p>Click the button below to instantly and securely log into your account. This magic link will expire in 15 minutes.</p>' +
-    '<div style="text-align: center; margin: 32px 0;">' +
-      '<a href="' + verifyUrl + '" style="background-color: #22c55e; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">Login Automatically</a>' +
-    '</div>' +
-    '<p style="font-size: 12px; color: #666;">If you didn\'t request this, you can safely ignore this email.</p></div>';
-
+  // Send the OTP via email
   try {
-    MailApp.sendEmail({ to: foundRowObj.email, subject: "Your Secure Magic Login Link for OSA", htmlBody: emailHtml, name: "OSA Platform" });
-    return { success: true, message: "A magic login link has been sent to your email address." };
-  } catch (e) {
-    return { success: false, error: "Failed to dispatch magic link email." };
+    const emailHtml = buildOTPEmail_(otp, found.rowObj.name);
+    MailApp.sendEmail({
+      to: found.rowObj.email,
+      subject: 'OSA Platform — Your Login Code',
+      htmlBody: emailHtml,
+      name: 'OSA Platform'
+    });
+  } catch (mailErr) {
+    console.error('OTP email failed:', mailErr);
+    return { success: false, error: "Failed to send login code. Please try again." };
   }
+
+  logAction('OTP_SENT', found.rowObj.id || 'unknown', 'Login code sent to: ' + found.rowObj.email);
+
+  return { success: true, data: { message: "If this email is registered, a login code has been sent." } };
 }
 
-function handleCompleteMagicLinkLogin(data) {
-  const { token } = data;
-  if (!token) return { success: false, error: "Missing magic token" };
+function handleVerifyOTP(data) {
+  const { email, otp } = data;
+  if (!email || !otp) return { success: false, error: "Email and code are required." };
+  const identifier = String(email).toLowerCase();
+  const submittedOTP = String(otp).trim();
 
+  const cache = CacheService.getScriptCache();
+  const otpDataStr = cache.get('otp_' + identifier);
+
+  if (!otpDataStr) {
+    return { success: false, error: "Login code has expired. Please request a new one." };
+  }
+
+  const otpData = JSON.parse(otpDataStr);
+
+  // Check brute force attempts
+  if (otpData.attempts >= 3) {
+    cache.remove('otp_' + identifier);
+    logAction('OTP_BRUTE_FORCE', 'system', 'Max attempts exceeded for: ' + identifier);
+    return { success: false, error: "Too many incorrect attempts. Please request a new code." };
+  }
+
+  // Verify OTP
+  if (otpData.otp !== submittedOTP) {
+    otpData.attempts++;
+    cache.put('otp_' + identifier, JSON.stringify(otpData), 300);
+    const remaining = 3 - otpData.attempts;
+    return {
+      success: false,
+      error: 'Incorrect code. ' + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining.'
+    };
+  }
+
+  // ✅ OTP is correct — consume it
+  cache.remove('otp_' + identifier);
+
+  // Re-find the user to build session (we need the sheet reference)
+  const found = findUserAcrossDBs_(identifier);
+  if (!found) {
+    return { success: false, error: "Account not found." };
+  }
+
+  logAction('OTP_LOGIN', found.rowObj.id || 'unknown', 'OTP login for: ' + found.rowObj.email);
+  return buildLoginSuccess(found.sheet, found.rowIndex, found.headers, found.rowObj);
+}
+
+
+// ==========================================
+// PIN Login (4-Digit Quick Access)
+// ==========================================
+//
+// Security:
+//   • Stored in PropertiesService as "osa_pin_<email>" = "salt:hash"
+//   • SHA-256 hashed with unique random salt
+//   • 3 failed attempts = 15-minute lockout
+//   • Requires valid session to set/change
+
+var PIN_MAX_ATTEMPTS = 3;
+var PIN_LOCKOUT_SECONDS = 900; // 15 minutes
+
+function handlePinLogin(data) {
+  const { email, pin } = data;
+  if (!email || !pin) return { success: false, error: "Email and PIN are required." };
+  if (!/^\d{4}$/.test(String(pin))) return { success: false, error: "PIN must be exactly 4 digits." };
+  const identifier = String(email).toLowerCase();
+
+  const cache = CacheService.getScriptCache();
+  const lockKey = 'pin_lock_' + identifier;
+  if (cache.get(lockKey)) {
+    return { success: false, error: "Account temporarily locked. Wait 15 minutes or use another login method." };
+  }
+
+  const attemptKey = 'pin_fail_' + identifier;
+  let failCount = Number(cache.get(attemptKey)) || 0;
+
+  const found = findUserAcrossDBs_(identifier);
+  if (!found) {
+    Utilities.sleep(1000);
+    return { success: false, error: "Invalid email or PIN." };
+  }
+
+  const storedHash = PropertiesService.getScriptProperties().getProperty('osa_pin_' + found.rowObj.email.toLowerCase());
+  if (!storedHash) {
+    return { success: false, error: "No PIN set. Use password or email code to log in, then set a PIN from your profile." };
+  }
+
+  if (!verifyPinHash_(String(pin), storedHash)) {
+    failCount++;
+    if (failCount >= PIN_MAX_ATTEMPTS) {
+      cache.put(lockKey, 'locked', PIN_LOCKOUT_SECONDS);
+      cache.remove(attemptKey);
+      logAction('PIN_LOCKOUT', found.rowObj.id || 'unknown', 'PIN locked after ' + PIN_MAX_ATTEMPTS + ' fails: ' + identifier);
+      return { success: false, error: "Too many failed attempts. Account locked for 15 minutes." };
+    }
+    cache.put(attemptKey, String(failCount), 3600);
+    const remaining = PIN_MAX_ATTEMPTS - failCount;
+    Utilities.sleep(500 * failCount);
+    return { success: false, error: 'Invalid PIN. ' + remaining + ' attempt' + (remaining === 1 ? '' : 's') + ' remaining.' };
+  }
+
+  // ✅ PIN correct
+  cache.remove(attemptKey);
+  logAction('PIN_LOGIN', found.rowObj.id || 'unknown', 'PIN-based login');
+  return buildLoginSuccess(found.sheet, found.rowIndex, found.headers, found.rowObj);
+}
+
+function handleSetPin(user, data) {
+  const { pin } = data;
+  if (!pin || !/^\d{4}$/.test(String(pin))) {
+    return { success: false, error: "PIN must be exactly 4 digits." };
+  }
+
+  const hashedPin = hashPin_(String(pin));
+  PropertiesService.getScriptProperties().setProperty('osa_pin_' + user.email.toLowerCase(), hashedPin);
+  logAction('PIN_SET', user.id || 'unknown', 'PIN set for: ' + user.email);
+  return { success: true, data: { message: "Login PIN set successfully." } };
+}
+
+function handleDeletePin(user, data) {
+  PropertiesService.getScriptProperties().deleteProperty('osa_pin_' + user.email.toLowerCase());
+  logAction('PIN_DELETED', user.id || 'unknown', 'PIN removed for: ' + user.email);
+  return { success: true, data: { message: "Login PIN removed." } };
+}
+
+function handleCheckHasPin(data) {
+  const { email } = data;
+  if (!email) return { success: false, error: "Email is required." };
+  const identifier = String(email).toLowerCase();
+
+  // Find the user to resolve their actual email
+  const found = findUserAcrossDBs_(identifier);
+  if (!found) {
+    // Don't reveal if user exists
+    return { success: true, data: { hasPin: false } };
+  }
+
+  const storedHash = PropertiesService.getScriptProperties().getProperty('osa_pin_' + found.rowObj.email.toLowerCase());
+  return { success: true, data: { hasPin: !!storedHash } };
+}
+
+
+// ==========================================
+// Auth Helpers — OTP & PIN
+// ==========================================
+
+/**
+ * Generate a cryptographically random 6-digit OTP.
+ */
+function generateSecureOTP_() {
+  const bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    Utilities.getUuid() + new Date().getTime() + Math.random()
+  );
+  const num = Math.abs(bytes[0] * 16777216 + bytes[1] * 65536 + bytes[2] * 256 + bytes[3]);
+  let otp = String(num % 1000000);
+  while (otp.length < 6) otp = '0' + otp;
+  return otp;
+}
+
+/**
+ * Hash a PIN with a unique random salt.
+ * Returns "salt:hash"
+ */
+function hashPin_(pin) {
+  const salt = Utilities.getUuid().replace(/-/g, '');
+  const raw = salt + pin;
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
+  const hash = digest.map(function(b) {
+    return ('0' + ((b + 256) % 256).toString(16)).slice(-2);
+  }).join('');
+  return salt + ':' + hash;
+}
+
+/**
+ * Verify a PIN against a stored "salt:hash" value.
+ */
+function verifyPinHash_(pin, storedHash) {
+  const parts = storedHash.split(':');
+  if (parts.length !== 2) return false;
+  const salt = parts[0];
+  const expected = parts[1];
+  const raw = salt + pin;
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
+  const recomputed = digest.map(function(b) {
+    return ('0' + ((b + 256) % 256).toString(16)).slice(-2);
+  }).join('');
+  return recomputed === expected;
+}
+
+/**
+ * Find a user across staff and all school member sheets.
+ * Returns { sheet, headers, rowIndex, rowObj, sheetId } or null.
+ * Matches by email or username.
+ */
+function findUserAcrossDBs_(identifier) {
+  const normalId = String(identifier).toLowerCase();
   const masterSS = getMasterDB();
-  let foundSheet = null, foundRowIndex = -1, headers = null, foundRowObj = null;
 
+  // 1. Check staff
   const mSheet = masterSS.getSheetByName("staff");
-  let mHeaders = getHeaders(mSheet);
-  let mRows = mSheet.getDataRange().getValues();
-  let tmpIdx = mHeaders.indexOf("magic_token");
-  if (tmpIdx !== -1) {
-    for (let i = 1; i < mRows.length; i++) {
-      let rObj = rowToObject(mRows[i], mHeaders);
-      if (rObj.magic_token === token) {
-        foundSheet = mSheet; headers = mHeaders; foundRowIndex = i + 1; foundRowObj = rObj; break;
-      }
+  const mHeaders = getHeaders(mSheet);
+  const mRows = mSheet.getDataRange().getValues();
+  for (let i = 1; i < mRows.length; i++) {
+    const rowObj = rowToObject(mRows[i], mHeaders);
+    if (String(rowObj.email).toLowerCase() === normalId || String(rowObj.username).toLowerCase() === normalId) {
+      return { sheet: mSheet, headers: mHeaders, rowIndex: i + 1, rowObj: rowObj, sheetId: MASTER_DB_ID };
     }
   }
 
-  if (!foundSheet) {
-    const sSheet = masterSS.getSheetByName("schools");
-    const sHeaders = getHeaders(sSheet);
-    const sRows = sSheet.getDataRange().getValues();
-    for (let j = 1; j < sRows.length; j++) {
-      let sRow = rowToObject(sRows[j], sHeaders);
-      if (!sRow.spreadsheet_id) continue;
-      try {
-        const schoolSS = SpreadsheetApp.openById(sRow.spreadsheet_id);
-        const schoolMSheet = schoolSS.getSheetByName("members");
-        if (!schoolMSheet) continue;
-        let smHeaders = getHeaders(schoolMSheet);
-        if (smHeaders.indexOf("magic_token") === -1) continue;
-        let smRows = schoolMSheet.getDataRange().getValues();
-        for (let k = 1; k < smRows.length; k++) {
-          let uRow = rowToObject(smRows[k], smHeaders);
-          if (uRow.magic_token === token) {
-            foundSheet = schoolMSheet; headers = smHeaders; foundRowIndex = k + 1; foundRowObj = uRow; break;
-          }
+  // 2. Check school member sheets
+  const sSheet = masterSS.getSheetByName("schools");
+  const sHeaders = getHeaders(sSheet);
+  const sRows = sSheet.getDataRange().getValues();
+  for (let j = 1; j < sRows.length; j++) {
+    const sRow = rowToObject(sRows[j], sHeaders);
+    if (!sRow.spreadsheet_id) continue;
+    try {
+      const schoolSS = SpreadsheetApp.openById(sRow.spreadsheet_id);
+      const schoolMSheet = schoolSS.getSheetByName("members");
+      if (!schoolMSheet) continue;
+      const smHeaders = getHeaders(schoolMSheet);
+      const smRows = schoolMSheet.getDataRange().getValues();
+      for (let k = 1; k < smRows.length; k++) {
+        const uRow = rowToObject(smRows[k], smHeaders);
+        if (String(uRow.email).toLowerCase() === normalId || String(uRow.username).toLowerCase() === normalId) {
+          return { sheet: schoolMSheet, headers: smHeaders, rowIndex: k + 1, rowObj: uRow, sheetId: sRow.spreadsheet_id };
         }
-        if (foundSheet) break;
-      } catch(e) {}
-    }
+      }
+    } catch(e) {}
   }
 
-  if (!foundSheet) return { success: false, error: "Invalid or expired magic link" };
+  return null;
+}
 
-  let rObj = rowToObject(foundSheet.getRange(foundRowIndex, 1, 1, headers.length).getValues()[0], headers);
-  if (new Date() > new Date(rObj.magic_token_expiry)) {
-    return { success: false, error: "Magic link has expired" };
-  }
+/**
+ * Build a beautiful HTML email body for OTP delivery.
+ * Styled to match OSA's purple/gold brand.
+ */
+function buildOTPEmail_(otp, name) {
+  const digits = otp.split('');
+  const digitBoxes = digits.map(function(d) {
+    return '<td style="width:44px;height:52px;text-align:center;font-family:\'SF Mono\',Consolas,monospace;' +
+      'font-size:28px;font-weight:700;color:#9966CC;background:#f8f5ff;border:2px solid #e0d4f5;' +
+      'border-radius:10px;letter-spacing:0;">' + d + '</td>';
+  }).join('<td style="width:6px;"></td>');
 
-  // Consume token
-  foundSheet.getRange(foundRowIndex, headers.indexOf("magic_token") + 1).setValue("");
-  return buildLoginSuccess(foundSheet, foundRowIndex, headers, foundRowObj);
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>' +
+    '<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">' +
+    '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:40px 20px;"><tr><td align="center">' +
+    '<table width="460" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">' +
+
+    // Header
+    '<tr><td style="padding:32px 32px 0;text-align:center;">' +
+    '<div style="font-size:28px;font-weight:800;letter-spacing:-0.5px;"><span style="color:#9966CC;">O</span><span style="color:#DAA520;">S</span><span style="color:#9966CC;">A</span></div>' +
+    '<div style="font-size:12px;color:#94a3b8;margin-top:4px;letter-spacing:3px;text-transform:uppercase;">SECURE LOGIN</div>' +
+    '</td></tr>' +
+
+    // Greeting
+    '<tr><td style="padding:28px 32px 0;color:#1e293b;font-size:16px;">' +
+    'Hi <strong>' + (name || 'there') + '</strong>,</td></tr>' +
+
+    // Message
+    '<tr><td style="padding:12px 32px;color:#64748b;font-size:14px;line-height:1.6;">' +
+    'Enter this code to log in to your OSA community. It expires in <strong style="color:#1e293b;">5 minutes</strong>.</td></tr>' +
+
+    // OTP Code
+    '<tr><td style="padding:20px 32px;" align="center">' +
+    '<table cellpadding="0" cellspacing="0"><tr>' + digitBoxes + '</tr></table>' +
+    '</td></tr>' +
+
+    // Security note
+    '<tr><td style="padding:16px 32px;text-align:center;">' +
+    '<div style="display:inline-block;padding:8px 16px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;font-size:12px;color:#dc2626;">' +
+    '⚠️ Never share this code with anyone. Our team will never ask for it.' +
+    '</div></td></tr>' +
+
+    // Footer
+    '<tr><td style="padding:24px 32px;border-top:1px solid #e2e8f0;text-align:center;color:#94a3b8;font-size:11px;">' +
+    'If you didn\'t request this code, you can safely ignore this email.<br>' +
+    '<span style="color:#cbd5e1;">OSA Platform — Old Students Association Network • ICUNI Labs</span>' +
+    '</td></tr>' +
+
+    '</table></td></tr></table></body></html>';
 }
 
 // ==========================================

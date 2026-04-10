@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Mail, Heart, Calendar, Users, Settings, ShieldAlert, LogOut, Menu, X, Sun, Moon, MessageSquare, Image as ImageIcon, HelpCircle, Monitor, MoreHorizontal, ChevronRight } from 'lucide-react';
+import { ShieldAlert, Menu, X, Sun, Moon, MoreHorizontal, ChevronRight } from 'lucide-react';
+import { IconDashboard, IconNewsletter, IconFundraising, IconEvents, IconDirectory, IconBoard, IconGallery, IconSupport, IconAdmin, IconSuperAdmin, IconLogout, IconCockpit, IconSettings } from './NavIcons';
+import { Avatar } from './Avatar';
 import { authState } from '../api/client';
 import { useTenant } from '../context/TenantContext';
 import { Logo } from './Logo';
 import { VerificationWall } from '../pages/VerificationWall';
+import { getDemoRole, setDemoRole, exitDemoMode, DEMO_ROLES } from '../api/demoData';
 
 // ══════════════════════════════════════════════════════════════════════
 //  Theme Toggle
@@ -195,41 +198,48 @@ export function AuthLayout() {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-//  Nav Item - Sidebar
+//  Nav Item — "Quiet Luxury" Sidebar
+//  Monochrome by default, school-primary accent on active.
 // ══════════════════════════════════════════════════════════════════════
 
-function NavItem({ to, icon, label, isAdminSection = false, onClick, collapsed = false }) {
-  const Icon = icon;
+function NavItem({ to, icon: Icon, label, isAdminSection = false, onClick, collapsed = false }) {
   const location = useLocation();
   const isActive = location.pathname === to || location.pathname.startsWith(to + '/');
-  
-  let activeClass = isActive 
-    ? 'bg-school-tint text-ink-title font-semibold' 
-    : 'text-ink-body hover:bg-surface-hover';
-    
-  let iconColor = isActive ? 'var(--school-primary)' : undefined;
-
-  if (isAdminSection && isActive && label === 'Super Admin') {
-    activeClass = 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 font-bold';
-    iconColor = undefined;
-  }
 
   return (
     <Link 
       to={to} 
       onClick={onClick}
       title={collapsed ? label : undefined}
-      className={`flex items-center gap-3 py-2.5 rounded-social transition-all duration-300 ease-spring hover:-translate-y-0.5 active:scale-95 group ${activeClass} ${collapsed ? 'justify-center mx-2 px-0' : 'px-3 mx-2'}`}
+      className={`relative flex items-center gap-3 py-2 rounded-xl transition-all duration-150 group
+        ${isActive 
+          ? 'bg-[var(--school-tint)] dark:bg-white/[0.06]' 
+          : 'hover:bg-[var(--surface-hover)]'}
+        ${collapsed ? 'justify-center mx-1 px-2' : 'px-3 mx-1'}
+      `}
+      style={isActive ? { color: 'var(--school-primary)' } : undefined}
     >
+      {/* Active accent bar */}
+      {isActive && !collapsed && (
+        <div 
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full"
+          style={{ backgroundColor: 'var(--school-primary)' }}
+        />
+      )}
       <Icon 
-        size={22} 
-        strokeWidth={isActive ? 2.5 : 2} 
-        className="shrink-0 transition-all duration-200 group-hover:scale-105" 
-        style={iconColor ? { color: iconColor } : undefined}
+        size={20} 
+        active={isActive}
+        className={isActive 
+          ? '' 
+          : 'text-[var(--ink-muted)] group-hover:text-[var(--ink-title)]'
+        }
       />
-      {!collapsed && <span className="text-[14px] truncate">{label}</span>}
-      {!collapsed && isActive && (
-        <div className="ml-auto w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--school-primary)' }} />
+      {!collapsed && (
+        <span className={`text-[14.5px] truncate leading-5 transition-colors duration-150
+          ${isActive 
+            ? 'font-semibold' 
+            : 'font-medium text-[var(--ink-body)] group-hover:text-[var(--ink-title)]'}
+        `}>{label}</span>
       )}
     </Link>
   );
@@ -239,8 +249,7 @@ function NavItem({ to, icon, label, isAdminSection = false, onClick, collapsed =
 //  Bottom Tab Item (Mobile)
 // ══════════════════════════════════════════════════════════════════════
 
-function BottomTabItem({ to, icon, label, onClick }) {
-  const Icon = icon;
+function BottomTabItem({ to, icon: Icon, label, onClick }) {
   const location = useLocation();
   const isActive = location.pathname === to || location.pathname.startsWith(to + '/');
   
@@ -248,10 +257,10 @@ function BottomTabItem({ to, icon, label, onClick }) {
     <Link 
       to={to} 
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-0.5 py-1 flex-1 min-w-0 transition-transform duration-300 ease-spring hover:-translate-y-1 active:scale-90 ${isActive ? 'text-ink-title' : 'text-ink-muted'}`}
+      className={`flex flex-col items-center justify-center gap-0.5 py-1 flex-1 min-w-0 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-1 active:scale-90 ${isActive ? 'text-ink-title' : 'text-ink-muted dark:text-slate-400'}`}
     >
-      <div className="relative p-1.5 rounded-full transition-colors group-hover:bg-surface-hover">
-        <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} style={isActive ? { color: 'var(--school-primary)' } : undefined} />
+      <div className="relative p-1.5 rounded-full transition-colors">
+        <Icon size={22} active={isActive} style={isActive ? { color: 'var(--school-primary)' } : undefined} />
         {isActive && (
           <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full" style={{ backgroundColor: 'var(--school-primary)' }} />
         )}
@@ -302,7 +311,45 @@ export function AppLayout() {
      }
   } catch(e) {}
 
-  if (!authState.isAuthenticated() || !user) {
+  // Demo mode detection (before any conditional returns for hooks compliance)
+  const isDemo = localStorage.getItem('osa_demo_mode') === 'true';
+
+  // Demo mode: update page title & favicon to match Aggrey Memorial branding
+  useEffect(() => {
+    if (!isDemo) return;
+    document.title = 'AMOSA — Aggrey Memorial (Demo)';
+
+    // Update favicon with school colors (slight delay for theme engine to apply)
+    const timer = setTimeout(() => {
+      const primary = getComputedStyle(document.documentElement).getPropertyValue('--school-primary').trim() || '#B067A1';
+      const secondary = getComputedStyle(document.documentElement).getPropertyValue('--school-secondary').trim() || '#F5C518';
+      const svgStr = `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 C100 190, 185 150, 185 100 L185 30 Z" fill="${primary}" fill-opacity="0.9" />
+        <path d="M100 10 L15 30 L15 100 C15 150, 100 190, 100 190 L100 10 Z" fill="${secondary}" />
+        <path d="M100 10 L185 30 L185 100 C185 150, 100 190, 100 190 L100 10 Z" fill="${primary}" />
+        <circle cx="100" cy="70" r="16" fill="white"/>
+        <path d="M70 115 h60 M70 145 h60" stroke="white" stroke-width="10" stroke-linecap="round"/>
+      </svg>`;
+      try {
+        const dataUri = "data:image/svg+xml;base64," + btoa(svgStr);
+        let link = document.querySelector("link[rel~='icon']");
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.head.appendChild(link);
+        }
+        link.href = dataUri;
+      } catch (e) { /* ignore */ }
+
+      // Also update meta theme-color
+      let metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (metaTheme) metaTheme.content = primary;
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [isDemo]);
+
+  // Auth redirect — demo users bypass this
+  if (!isDemo && (!authState.isAuthenticated() || !user)) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -322,7 +369,7 @@ export function AppLayout() {
   const hideCockpit = activeScope?.type === 'yeargroup' || activeScope?.type === 'club' || activeScope?.type === 'house' || activeScope?.type === 'school';
   const hideSuperAdmin = activeScope?.type === 'yeargroup' || activeScope?.type === 'club' || activeScope?.type === 'house';
 
-  if (needsEmailVerify || needsIdVerify) {
+  if (!isDemo && (needsEmailVerify || needsIdVerify)) {
     return <VerificationWall user={user} isSuperAdmin={isSuperAdmin} />;
   }
 
@@ -332,9 +379,46 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-surface-muted flex flex-col md:flex-row relative overflow-x-hidden">
 
+      {/* Demo Mode Banner — fixed, offsets handled via sidebar/header/main top */}
+      {isDemo && (
+        <div className="fixed top-0 left-0 right-0 z-[70]">
+          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white font-semibold text-[12px] text-center py-2 flex items-center justify-center gap-3 flex-wrap px-4">
+              <span className="flex items-center gap-1.5 uppercase tracking-widest text-[11px]">
+                🎭 Demo — {user.school_name || 'Aggrey Memorial'}
+              </span>
+              <span className="text-white/40">|</span>
+              <label className="flex items-center gap-1.5 text-[11px]">
+                <span className="opacity-70">Viewing as:</span>
+                <select
+                  defaultValue={getDemoRole()}
+                  onChange={(e) => {
+                    const newRole = e.target.value;
+                    setDemoRole(newRole);
+                    // Force a full hard navigation (not just reload) to ensure all state resets
+                    window.location.href = '/app/dashboard';
+                  }}
+                  className="bg-white/20 border border-white/30 rounded px-2 py-0.5 text-white text-[11px] font-bold cursor-pointer hover:bg-white/30 transition-colors outline-none"
+                >
+                  <option value="super_admin" className="text-gray-900">Super Admin</option>
+                  <option value="admin" className="text-gray-900">Admin</option>
+                  <option value="executive" className="text-gray-900">Executive</option>
+                  <option value="member" className="text-gray-900">Member</option>
+                </select>
+              </label>
+              <span className="text-white/60 text-[10px] hidden sm:inline">({user.role})</span>
+              <button
+                onClick={() => exitDemoMode()}
+                className="ml-1 bg-white/20 hover:bg-white/30 px-3 py-0.5 rounded text-[11px] font-bold transition-colors border border-white/30"
+              >
+                Exit
+              </button>
+          </div>
+        </div>
+      )}
+
       {/* Impersonation Banner */}
       {isImpersonating && (
-        <div className="fixed top-0 left-0 right-0 z-[60] animate-slide-down">
+        <div className={`fixed left-0 right-0 z-[60] animate-slide-down ${isDemo ? 'top-[38px]' : 'top-0'}`}>
           <div className="bg-amber-500 text-slate-900 font-semibold text-[12px] uppercase tracking-widest text-center py-1.5 flex items-center justify-center gap-2">
               <ShieldAlert size={14} />
               God Mode: [{impersonationName}]
@@ -344,7 +428,7 @@ export function AppLayout() {
       )}
       
       {/* ═══ MOBILE TOP HEADER ═══ */}
-      <div className={`md:hidden sticky z-40 bg-surface-glass backdrop-blur-2xl border-b border-border-light px-4 py-3 flex items-center justify-between shadow-sm transition-all ${isImpersonating ? 'top-[34px]' : 'top-0'}`}>
+      <div className={`md:hidden sticky z-40 bg-surface-glass backdrop-blur-2xl border-b border-border-light px-4 py-3 flex items-center justify-between shadow-sm transition-all ${isDemo ? (isImpersonating ? 'top-[72px]' : 'top-[38px]') : (isImpersonating ? 'top-[34px]' : 'top-0')}`}>
         <Link to="/" onClick={() => window.location.href='/'} className="flex items-center gap-2.5 group hover:scale-105 active:scale-95 transition-transform duration-300 ease-spring">
            {user.school_logo ? (
              <img src={user.school_logo} className="w-8 h-8 rounded-lg shrink-0 object-contain shadow-sm bg-white" alt="School Logo" />
@@ -356,13 +440,7 @@ export function AppLayout() {
         <div className="flex items-center gap-2">
            <ThemeToggle size={18} />
            <Link to="/app/profile">
-              {user.profile_pic ? (
-                 <img src={user.profile_pic} className="w-8 h-8 rounded-full shadow-sm object-cover bg-white ring-2 ring-border-light" alt="Avatar"/>
-              ) : (
-                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm" style={{ background: `linear-gradient(135deg, var(--school-primary), var(--school-secondary))` }}>
-                    {user.name.charAt(0)}
-                 </div>
-              )}
+              <Avatar src={user.profile_pic} name={user.name} size="sm" />
            </Link>
            {!useBottomTabs && (
              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="icon-btn w-8 h-8 !p-0">
@@ -406,23 +484,23 @@ export function AppLayout() {
                     </select>
                 </div>
 
-                <NavItem to="/app/dashboard" icon={Home} label="Dashboard" onClick={() => setMobileMenuOpen(false)} />
-                <NavItem to="/app/newsletter" icon={Mail} label="Newsletter" onClick={() => setMobileMenuOpen(false)} />
-                <NavItem to="/app/fundraising" icon={Heart} label="Fundraising" onClick={() => setMobileMenuOpen(false)} />
-                <NavItem to="/app/events" icon={Calendar} label="Events" onClick={() => setMobileMenuOpen(false)} />
-                <NavItem to="/app/members" icon={Users} label="Directory" onClick={() => setMobileMenuOpen(false)} />
-                <NavItem to="/app/board" icon={MessageSquare} label="Group Board" onClick={() => setMobileMenuOpen(false)} />
-                <NavItem to="/app/gallery" icon={ImageIcon} label="Gallery" onClick={() => setMobileMenuOpen(false)} />
-                <NavItem to="/app/support" icon={HelpCircle} label="Tech Support" onClick={() => setMobileMenuOpen(false)} />
+                <NavItem to="/app/dashboard" icon={IconDashboard} label="Dashboard" onClick={() => setMobileMenuOpen(false)} />
+                <NavItem to="/app/newsletter" icon={IconNewsletter} label="Newsletter" onClick={() => setMobileMenuOpen(false)} />
+                <NavItem to="/app/fundraising" icon={IconFundraising} label="Fundraising" onClick={() => setMobileMenuOpen(false)} />
+                <NavItem to="/app/events" icon={IconEvents} label="Events" onClick={() => setMobileMenuOpen(false)} />
+                <NavItem to="/app/members" icon={IconDirectory} label="Directory" onClick={() => setMobileMenuOpen(false)} />
+                <NavItem to="/app/board" icon={IconBoard} label="Group Board" onClick={() => setMobileMenuOpen(false)} />
+                <NavItem to="/app/gallery" icon={IconGallery} label="Gallery" onClick={() => setMobileMenuOpen(false)} />
+                <NavItem to="/app/support" icon={IconSupport} label="Tech Support" onClick={() => setMobileMenuOpen(false)} />
                 
                 {isYGAdmin && (
                   <div className="mt-2 pt-2 border-t border-border-light px-2">
                      {!hideCockpit && isICUNIStaff && (
-                        <NavItem to="/app/cockpit" icon={Monitor} label="Cockpit" isAdminSection onClick={() => setMobileMenuOpen(false)} />
+                        <NavItem to="/app/cockpit" icon={IconCockpit} label="Cockpit" isAdminSection onClick={() => setMobileMenuOpen(false)} />
                      )}
-                     <NavItem to="/app/admin" icon={Settings} label="Admin Panel" isAdminSection onClick={() => setMobileMenuOpen(false)} />
+                     <NavItem to="/app/admin" icon={IconAdmin} label="Admin Panel" isAdminSection onClick={() => setMobileMenuOpen(false)} />
                      {!hideSuperAdmin && isSuperAdmin && (
-                        <NavItem to="/app/superadmin" icon={ShieldAlert} label="Super Admin" isAdminSection onClick={() => setMobileMenuOpen(false)} />
+                        <NavItem to="/app/superadmin" icon={IconSuperAdmin} label="Super Admin" isAdminSection onClick={() => setMobileMenuOpen(false)} />
                      )}
                   </div>
                 )}
@@ -432,7 +510,7 @@ export function AppLayout() {
                      onClick={handleLogout}
                      className="flex items-center w-full gap-3 px-3 py-2.5 rounded-xl text-ink-body font-semibold hover:bg-surface-hover transition-colors"
                    >
-                     <LogOut size={20} strokeWidth={2} className="text-ink-muted" />
+                     <IconLogout size={20} className="text-ink-muted" />
                      <span className="text-[14px]">Log Out</span>
                    </button>
                 </div>
@@ -444,11 +522,11 @@ export function AppLayout() {
       {useBottomTabs && (
         <div className="md:hidden bottom-tab-bar">
           <div className="flex items-stretch">
-            <BottomTabItem to="/app/dashboard" icon={Home} label="Home" />
-            <BottomTabItem to="/app/newsletter" icon={Mail} label="News" />
-            <BottomTabItem to="/app/fundraising" icon={Heart} label="Fund" />
-            <BottomTabItem to="/app/events" icon={Calendar} label="Events" />
-            <BottomTabItem to="/app/members" icon={Users} label="People" />
+            <BottomTabItem to="/app/dashboard" icon={IconDashboard} label="Home" />
+            <BottomTabItem to="/app/newsletter" icon={IconNewsletter} label="News" />
+            <BottomTabItem to="/app/fundraising" icon={IconFundraising} label="Fund" />
+            <BottomTabItem to="/app/events" icon={IconEvents} label="Events" />
+            <BottomTabItem to="/app/members" icon={IconDirectory} label="People" />
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)} 
               className="flex flex-col items-center justify-center gap-0.5 py-1 flex-1 min-w-0 text-ink-muted transition-transform duration-300 ease-spring hover:-translate-y-1 active:scale-90"
@@ -489,22 +567,22 @@ export function AppLayout() {
               </select>
             </div>
 
-            <NavItem to="/app/board" icon={MessageSquare} label="Group Board" onClick={() => setMobileMenuOpen(false)} />
-            <NavItem to="/app/gallery" icon={ImageIcon} label="Gallery" onClick={() => setMobileMenuOpen(false)} />
-            <NavItem to="/app/support" icon={HelpCircle} label="Tech Support" onClick={() => setMobileMenuOpen(false)} />
-            <NavItem to="/app/settings" icon={Settings} label="Settings" onClick={() => setMobileMenuOpen(false)} />
+            <NavItem to="/app/board" icon={IconBoard} label="Group Board" onClick={() => setMobileMenuOpen(false)} />
+            <NavItem to="/app/gallery" icon={IconGallery} label="Gallery" onClick={() => setMobileMenuOpen(false)} />
+            <NavItem to="/app/support" icon={IconSupport} label="Tech Support" onClick={() => setMobileMenuOpen(false)} />
+            <NavItem to="/app/settings" icon={IconSettings} label="Settings" onClick={() => setMobileMenuOpen(false)} />
             
             {isYGAdmin && (
               <div className="mt-2 pt-2 border-t border-border-light">
-                {isICUNIStaff && !hideCockpit && <NavItem to="/app/cockpit" icon={Monitor} label="Cockpit" isAdminSection onClick={() => setMobileMenuOpen(false)} />}
-                <NavItem to="/app/admin" icon={Settings} label="Admin Panel" isAdminSection onClick={() => setMobileMenuOpen(false)} />
-                {isSuperAdmin && !hideSuperAdmin && <NavItem to="/app/superadmin" icon={ShieldAlert} label="Super Admin" isAdminSection onClick={() => setMobileMenuOpen(false)} />}
+                {isICUNIStaff && !hideCockpit && <NavItem to="/app/cockpit" icon={IconCockpit} label="Cockpit" isAdminSection onClick={() => setMobileMenuOpen(false)} />}
+                <NavItem to="/app/admin" icon={IconAdmin} label="Admin Panel" isAdminSection onClick={() => setMobileMenuOpen(false)} />
+                {isSuperAdmin && !hideSuperAdmin && <NavItem to="/app/superadmin" icon={IconSuperAdmin} label="Super Admin" isAdminSection onClick={() => setMobileMenuOpen(false)} />}
               </div>
             )}
 
             <div className="mt-2 pt-2 border-t border-border-light">
               <button onClick={handleLogout} className="flex items-center w-full gap-3 px-3 py-2.5 rounded-xl text-ink-body font-semibold hover:bg-surface-hover transition-colors">
-                <LogOut size={20} strokeWidth={2} className="text-ink-muted" />
+                <IconLogout size={20} className="text-ink-muted" />
                 <span className="text-[14px]">Log Out</span>
               </button>
             </div>
@@ -513,49 +591,40 @@ export function AppLayout() {
       )}
 
       {/* ═══ DESKTOP SIDEBAR ═══ */}
-      <aside className={`hidden md:flex flex-col fixed top-0 left-0 bottom-0 bg-surface-default/80 backdrop-blur-xl z-40 border-r border-border-light transition-all duration-400 ease-spring overflow-visible ${isImpersonating ? 'pt-[34px]' : ''} ${isSidebarCollapsed ? 'w-[72px]' : 'w-[264px]'}`}>
+      <aside className={`hidden md:flex flex-col fixed left-0 bottom-0 bg-[var(--surface-default)] z-40 border-r border-[var(--border-light)] transition-all duration-300 overflow-visible ${isSidebarCollapsed ? 'w-[72px]' : 'w-[264px]'}`} style={{ top: isDemo ? (isImpersonating ? '72px' : '38px') : (isImpersonating ? '34px' : '0') }}>
         
         {/* Collapse toggle handle */}
         <button 
            onClick={toggleSidebar}
-           className={`absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-surface-glass backdrop-blur-xl border border-border-light rounded-r-social shadow-sm flex items-center justify-center text-ink-muted hover:text-ink-title z-50 group cursor-pointer transition-all duration-300 ease-spring hover:shadow-md hover:scale-110 active:scale-95`}
+           className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 bg-[var(--surface-elevated)] border border-[var(--border-light)] rounded-r-xl shadow-sm flex items-center justify-center text-[var(--ink-muted)] hover:text-[var(--ink-title)] z-50 cursor-pointer transition-all duration-200 hover:shadow-md"
         >
-           <ChevronRight size={14} className={`transition-transform duration-300 ${isSidebarCollapsed ? '' : 'rotate-180'}`} />
+           <ChevronRight size={14} className={`transition-transform duration-200 ${isSidebarCollapsed ? '' : 'rotate-180'}`} />
         </button>
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden w-full flex flex-col custom-scrollbar">
           {/* Brand Header */}
-          <div className={`p-4 flex items-center sticky top-0 bg-surface-default/95 backdrop-blur-md z-20 pb-3 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+          <div className={`p-4 flex items-center sticky top-0 bg-[var(--surface-default)] z-20 pb-3 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
                <Link to="/" onClick={() => window.location.href='/'} className={`flex items-center group ${isSidebarCollapsed ? '' : 'gap-3'}`}>
                  {user.school_logo ? (
                    <img src={user.school_logo} className="w-9 h-9 rounded-lg shrink-0 object-contain shadow-sm bg-white transition-transform group-hover:scale-105" alt="School Logo" />
                  ) : (
-                   <Logo className="w-6 h-6 transition-transform group-hover:scale-110" wrapperClass="w-9 h-9 shrink-0" noText />
+                   <Logo className="w-6 h-6 transition-transform group-hover:scale-105" wrapperClass="w-9 h-9 shrink-0" noText />
                  )}
                  {!isSidebarCollapsed && (
-                   <h1 className="text-[17px] font-bold text-ink-title leading-tight truncate tracking-tight">{shortName}</h1>
+                   <h1 className="text-[17px] font-bold text-[var(--ink-title)] leading-tight truncate tracking-tight">{shortName}</h1>
                  )}
                </Link>
                {!isSidebarCollapsed && <ThemeToggle size={18} />}
           </div>
 
           {/* User Mini Profile */}
-          <div className="px-3 mt-2 mb-3">
-             <Link to="/app/profile" title={isSidebarCollapsed ? "Profile" : undefined} className={`flex items-center rounded-xl bg-surface-muted hover:bg-surface-hover border border-border-light transition-all group ${isSidebarCollapsed ? 'justify-center p-2 mx-auto w-10' : 'gap-3 p-3'}`}>
-                {user.profile_pic ? (
-                   <img src={user.profile_pic} referrerPolicy="no-referrer" className="w-9 h-9 rounded-full shadow-sm shrink-0 object-cover bg-white ring-2 ring-border-light" alt="Avatar"/>
-                ) : (
-                   <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold shadow-sm shrink-0 text-sm" style={{ background: `linear-gradient(135deg, var(--school-primary), var(--school-secondary))` }}>
-                      {user.name.charAt(0)}
-                   </div>
-                )}
+          <div className="px-2 mb-2">
+             <Link to="/app/profile" title={isSidebarCollapsed ? "Profile" : undefined} className={`flex items-center rounded-xl hover:bg-[var(--surface-hover)] transition-colors group ${isSidebarCollapsed ? 'justify-center p-2 mx-auto w-10' : 'gap-3 p-2.5'}`}>
+                <Avatar src={user.profile_pic} name={user.name} size="md" />
                 {!isSidebarCollapsed && (
                   <div className="flex flex-col overflow-hidden">
-                     <span className="text-[14px] font-semibold text-ink-title group-hover:text-school transition-colors truncate">{user.name}</span>
-                     <div className="flex items-center gap-1.5 mt-0.5">
-                        <div className="w-2 h-2 rounded-full shrink-0 ring-1 ring-black/5" style={{ backgroundColor: user.cheque_colour || '#94A3B8' }} />
-                        <span className="text-[11px] text-ink-muted font-medium truncate">{user.year_group_nickname || 'Member'}</span>
-                     </div>
+                     <span className="text-[14.5px] font-semibold text-[var(--ink-title)] truncate leading-5">{user.name}</span>
+                     <span className="text-[12px] text-[var(--ink-muted)] font-medium truncate">{user.year_group_nickname || 'Member'}</span>
                   </div>
                 )}
              </Link>
@@ -591,46 +660,44 @@ export function AppLayout() {
 
         {/* Main Nav */}
         <nav className="flex-1 py-1 flex flex-col gap-0.5 mt-1">
-          <NavItem collapsed={isSidebarCollapsed} to="/app/dashboard" icon={Home} label="Dashboard" />
-          <NavItem collapsed={isSidebarCollapsed} to="/app/newsletter" icon={Mail} label="Newsletter" />
-          <NavItem collapsed={isSidebarCollapsed} to="/app/fundraising" icon={Heart} label="Fundraising" />
-          <NavItem collapsed={isSidebarCollapsed} to="/app/events" icon={Calendar} label="Events" />
-          <NavItem collapsed={isSidebarCollapsed} to="/app/members" icon={Users} label="Directory" />
-          <NavItem collapsed={isSidebarCollapsed} to="/app/board" icon={MessageSquare} label="Group Board" />
-          <NavItem collapsed={isSidebarCollapsed} to="/app/gallery" icon={ImageIcon} label="Gallery" />
-          <NavItem collapsed={isSidebarCollapsed} to="/app/support" icon={HelpCircle} label="Tech Support" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/dashboard" icon={IconDashboard} label="Dashboard" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/newsletter" icon={IconNewsletter} label="Newsletter" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/fundraising" icon={IconFundraising} label="Fundraising" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/events" icon={IconEvents} label="Events" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/members" icon={IconDirectory} label="Directory" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/board" icon={IconBoard} label="Group Board" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/gallery" icon={IconGallery} label="Gallery" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/support" icon={IconSupport} label="Tech Support" />
           
           {isYGAdmin && (
             <div className={`mt-3 pt-3 border-t border-border-light ${isSidebarCollapsed ? 'mx-2' : 'mx-3'}`}>
-              {!isSidebarCollapsed && <div className="px-2 mb-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted">Administration</div>}
+              {!isSidebarCollapsed && <div className="px-2 mb-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted dark:text-slate-500">Administration</div>}
               {isICUNIStaff && !hideCockpit && (
-                <NavItem collapsed={isSidebarCollapsed} to="/app/cockpit" icon={Monitor} label="Cockpit" isAdminSection />
+                <NavItem collapsed={isSidebarCollapsed} to="/app/cockpit" icon={IconCockpit} label="Cockpit" isAdminSection />
               )}
-              <NavItem collapsed={isSidebarCollapsed} to="/app/admin" icon={Settings} label="Admin Panel" isAdminSection />
+              <NavItem collapsed={isSidebarCollapsed} to="/app/admin" icon={IconAdmin} label="Admin Panel" isAdminSection />
               {isSuperAdmin && !hideSuperAdmin && (
-                 <NavItem collapsed={isSidebarCollapsed} to="/app/superadmin" icon={ShieldAlert} label="Super Admin" isAdminSection />
+                 <NavItem collapsed={isSidebarCollapsed} to="/app/superadmin" icon={IconSuperAdmin} label="Super Admin" isAdminSection />
               )}
             </div>
           )}
         </nav>
 
         {/* Sidebar Footer */}
-        <div className={`p-3 mt-auto border-t border-border-light ${isSidebarCollapsed ? 'px-2' : ''}`}>
+        <div className={`p-2 mt-auto border-t border-[var(--border-light)] ${isSidebarCollapsed ? 'px-1' : ''}`}>
           <button 
             onClick={handleLogout}
             title={isSidebarCollapsed ? "Log Out" : undefined}
-            className={`flex items-center font-medium text-ink-body hover:bg-surface-hover hover:text-ink-title rounded-xl transition-all ${isSidebarCollapsed ? 'justify-center w-full p-2' : 'gap-3 w-full p-2.5'}`}
+            className={`flex items-center font-medium text-[var(--ink-body)] hover:bg-[var(--surface-hover)] rounded-xl transition-colors w-full ${isSidebarCollapsed ? 'justify-center p-2' : 'gap-3 p-2'}`}
           >
-            <div className="w-8 h-8 rounded-lg bg-surface-muted border border-border-light flex items-center justify-center text-ink-muted shrink-0">
-               <LogOut size={16} strokeWidth={2.5}/>
-            </div>
-            {!isSidebarCollapsed && <span className="text-[13px]">Log Out</span>}
+            <IconLogout size={18} className="text-[var(--ink-muted)]" />
+            {!isSidebarCollapsed && <span className="text-[14px]">Log Out</span>}
           </button>
           
           {!isSidebarCollapsed && (
-             <div className="mt-3 text-[11px] font-medium text-ink-muted px-2 flex justify-between items-center">
+             <div className="mt-2 mb-1 text-[11px] font-medium text-[var(--ink-muted)] px-2 flex justify-between items-center">
                 <span>OSA Platform © 2026</span>
-                <Link to="/app/settings" className="text-school hover:opacity-80 font-semibold transition-opacity">Settings</Link>
+                <Link to="/app/settings" className="hover:text-[var(--ink-title)] font-semibold transition-colors" style={{ color: 'var(--school-primary)' }}>Settings</Link>
              </div>
           )}
         </div>
@@ -638,7 +705,7 @@ export function AppLayout() {
       </aside>
 
       {/* ═══ MAIN CONTENT ═══ */}
-      <main className={`flex-1 flex justify-center w-full transition-all duration-300 ease-expo-out ${isSidebarCollapsed ? 'md:ml-[72px]' : 'md:ml-[264px]'}`}>
+      <main className={`flex-1 flex justify-center w-full transition-all duration-300 ease-expo-out ${isSidebarCollapsed ? 'md:ml-[72px]' : 'md:ml-[264px]'}`} style={isDemo ? { paddingTop: isImpersonating ? '72px' : '38px' } : (isImpersonating ? { paddingTop: '34px' } : undefined)}>
          <div className={`w-full max-w-[680px] lg:max-w-[740px] xl:max-w-[800px] py-4 md:py-6 px-4 relative ${useBottomTabs ? 'pb-24' : 'pb-20'} md:pb-6`}>
             {isImpersonating && (
                <div className="mb-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-3 flex items-center justify-between shadow-sm animate-slide-down">

@@ -7,7 +7,7 @@ import { Toaster } from 'react-hot-toast';
 import { authState } from './api/client';
 
 // Pages
-import { Login, Register, ForgotPassword, MagicLogin } from './pages/Auth';
+import { Login, Register, ForgotPassword } from './pages/Auth';
 import { ResetPassword } from './pages/ResetPassword';
 import { Dashboard } from './pages/Dashboard';
 import { Newsletter } from './pages/Newsletter';
@@ -25,12 +25,34 @@ import { Cockpit } from './pages/Cockpit';
 import { Settings } from './pages/Settings';
 
 const ProtectedRoute = ({ children }) => {
+  const isDemo = localStorage.getItem('osa_demo_mode') === 'true';
   const isAuth = authState.isAuthenticated() && authState.isTokenValid();
-  if (!isAuth) {
+  if (!isAuth && !isDemo) {
     return <Navigate to="/login" replace />;
   }
   return children;
 };
+
+// Auto-enter demo mode from /demo URL
+function DemoEntry() {
+  React.useEffect(() => {
+    import('./api/demoData').then(({ DEMO_USER, DEMO_TOKEN }) => {
+      sessionStorage.removeItem('osa_theme');
+      localStorage.setItem('osa_demo_mode', 'true');
+      authState.setSession(DEMO_TOKEN, DEMO_USER);
+      document.title = 'AMOSA — Aggrey Memorial (Demo)';
+      window.location.replace('/app/dashboard');
+    });
+  }, []);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0f172a', color: '#e2e8f0', fontFamily: 'Inter, sans-serif' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎭</div>
+        <p style={{ fontSize: '1rem', fontWeight: 600 }}>Entering Demo Mode…</p>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   return (
@@ -49,8 +71,10 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/magic-login" element={<MagicLogin />} />
         </Route>
+
+        {/* Direct Demo Entry — auto-enters demo mode */}
+        <Route path="/demo" element={<DemoEntry />} />
 
         {/* Public Verify Route (standalone — no auth layout) */}
         <Route path="/verify" element={<VerifyEmail />} />

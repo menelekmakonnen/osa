@@ -10,7 +10,7 @@
  *   DataAccess.gs → DB access, caching, tenant resolution
  *   Schema.gs     → Sheet initialization & migrations
  *   RoleEngine.gs → 5-tier governance, permission checks
- *   Auth.gs       → Login, register, sessions, passwords, magic links
+ *   Auth.gs       → Login, register, sessions, passwords, OTP, PIN
  *   Dashboard.gs  → Dashboard, profile, settings
  *   Directory.gs  → Member directory, privacy engine
  *   Newsletter.gs → Posts, newsletter dispatch
@@ -34,8 +34,8 @@ function doGet(e) {
   if (params.action === "verifyEmail") {
     return jsonResponse(handleVerifyEmail({ token: params.token }));
   }
-  if (params.action === "completeMagicLogin") {
-    return jsonResponse(handleCompleteMagicLinkLogin({ token: params.token }));
+  if (params.action === "verifyOTP") {
+    return jsonResponse(handleVerifyOTP({ email: params.email, otp: params.otp }));
   }
   return jsonResponse({ success: true, message: "OSA Platform API v2.0" });
 }
@@ -75,8 +75,10 @@ const PUBLIC_ACTIONS = {
   onboardSchool:        handleOnboardSchool,
   resetPassword:        handleResetPassword,
   completePasswordReset: handleCompletePasswordReset,
-  requestMagicLink:     handleRequestMagicLink,
-  completeMagicLogin:   handleCompleteMagicLinkLogin,
+  sendOTP:              handleSendOTP,
+  verifyOTP:            handleVerifyOTP,
+  pinLogin:             handlePinLogin,
+  checkHasPin:          handleCheckHasPin,
   verifyEmail:          handleVerifyEmail,
   resendVerification:   handleResendVerification,
   checkUsername:        handleCheckUsername,
@@ -99,6 +101,8 @@ const PROTECTED_ACTIONS = {
   getProfile:           getProfile,
   updateProfile:        updateProfile,
   changePassword:       function(user, data) { return changePassword(user, data, CURRENT_SCHOOL_ID); },
+  setPin:               handleSetPin,
+  deletePin:            handleDeletePin,
   getGroupSettings:     getGroupSettings,
   saveGroupSettings:    saveGroupSettings,
 

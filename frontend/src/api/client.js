@@ -194,6 +194,12 @@ export const authState = {
 // ==========================================
 
 export async function apiRequest(action, data = {}) {
+  // Demo mode: intercept all requests and return fake data
+  if (window.localStorage.getItem('osa_demo_mode') === 'true') {
+    const { demoApiRequest } = await import('./demoData');
+    return demoApiRequest(action, data);
+  }
+
   // Check token validity client-side before making request
   if (sessionToken && !authState.isTokenValid()) {
     window.dispatchEvent(new Event("osa-auth-expired"));
@@ -344,14 +350,28 @@ export const api = {
   completePasswordReset: (token, new_password) => apiRequest("completePasswordReset", { token, new_password }),
   changePassword: (passwordData) => apiRequest("changePassword", passwordData),
   checkUsername: (username) => apiRequest("checkUsername", { username }),
-  requestMagicLink: (email) => apiRequest("requestMagicLink", { email }),
-  completeMagicLinkLogin: async (token) => {
-    const data = await apiRequest("completeMagicLinkLogin", { token });
+
+  // OTP Login (Passwordless — Email Code)
+  sendOTP: (email) => apiRequest("sendOTP", { email }),
+  verifyOTP: async (email, otp) => {
+    const data = await apiRequest("verifyOTP", { email, otp });
     if (data && data.token && data.user) {
       authState.setSession(data.token, data.user);
     }
     return data;
   },
+
+  // PIN Login (4-Digit Quick Access)
+  pinLogin: async (email, pin) => {
+    const data = await apiRequest("pinLogin", { email, pin });
+    if (data && data.token && data.user) {
+      authState.setSession(data.token, data.user);
+    }
+    return data;
+  },
+  checkHasPin: (email) => apiRequest("checkHasPin", { email }),
+  setPin: (pin) => apiRequest("setPin", { pin }),
+  deletePin: () => apiRequest("deletePin", {}),
 
   // Verification
   resendVerificationEmail: (email, target_school_id) => apiRequest("resendVerification", { email, target_school_id }),

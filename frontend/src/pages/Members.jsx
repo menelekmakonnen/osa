@@ -6,6 +6,7 @@ import { ErrorCard } from '../components/ErrorCard';
 import { toast } from 'react-hot-toast';
 import { Search, MapPin, Briefcase, Mail, Phone, Linkedin, Lock, Instagram, Twitter, Facebook, Share2, MessageCircle, Edit, AlertTriangle } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';
+import { Avatar } from '../components/Avatar';
 
 export function Members() {
   const { activeScope } = useTenant();
@@ -86,9 +87,7 @@ function MemberCard({ member, onClick }) {
   return (
     <Card hoverable className="flex items-center justify-between !p-3" onClick={onClick}>
       <div className="flex items-center gap-3 overflow-hidden">
-         <div className="w-11 h-11 rounded-full shrink-0 flex items-center justify-center text-white font-bold shadow-sm text-[15px] ring-1 ring-black/5" style={{ background: `linear-gradient(135deg, ${member.cheque_colour || 'var(--school-primary)'}, ${member.cheque_colour || 'var(--school-secondary)'})` }}>
-            {member.profile_pic ? <img src={member.profile_pic} className="w-full h-full rounded-full object-cover" alt="" /> : member.name.charAt(0)}
-         </div>
+         <Avatar src={member.profile_pic} name={member.name} size="lg" />
          <div className="flex flex-col truncate pr-2">
             <h3 className="text-[14px] font-semibold m-0 text-ink-title truncate leading-snug">{member.name}</h3>
             {member.profession ? (
@@ -116,9 +115,7 @@ function MemberProfile({ member, currentUser, navigate }) {
       </div>
       
       <div className="px-5 flex justify-between items-end -mt-10 relative z-10">
-        <div className="w-20 h-20 rounded-full border-4 border-surface-default flex items-center justify-center text-white text-[28px] font-bold shadow-md overflow-hidden shrink-0" style={{ background: member.profile_pic ? 'transparent' : `linear-gradient(135deg, ${member.cheque_colour || '#475569'}, var(--school-secondary))` }}>
-           {member.profile_pic ? <img src={member.profile_pic} referrerPolicy="no-referrer" className="w-full h-full object-cover" alt="" /> : member.name.charAt(0)}
-        </div>
+        <Avatar src={member.profile_pic} name={member.name} size="2xl" />
         {member.role !== "Member" && <Badge colorHex="#22c55e" textHex="#ffffff" className="mb-2 px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider">{member.role}</Badge>}
       </div>
 

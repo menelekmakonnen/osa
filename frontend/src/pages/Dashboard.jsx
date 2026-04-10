@@ -5,6 +5,7 @@ import { Card, Badge, ChequeChip, Button, SkeletonCard, Skeleton } from '../comp
 import { ErrorCard } from '../components/ErrorCard';
 import { Users, Heart, Calendar, Bell, Edit3, Image, Video, MoreHorizontal, MessageCircle, Share2, ThumbsUp, Facebook, Twitter, Mail, Phone, MessageSquare, Send, ArrowRight } from 'lucide-react';
 import { useTenant } from '../context/TenantContext';
+import { Avatar } from '../components/Avatar';
 
 export function Dashboard() {
   const user = authState.getUser();
@@ -102,21 +103,15 @@ export function Dashboard() {
 
       {/* Quick Stats */}
       <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide snap-x">
-         <StatCard icon={Users} value={data?.stats?.ygMembersCount || '-'} label="Members" color="var(--school-primary)" bgColor="var(--school-tint)" />
-         <StatCard icon={Heart} value={data?.stats?.activeCampaignsCount || '-'} label="Campaigns" color="#EF4444" bgColor="#FEF2F2" darkBg="#7F1D1D20" />
-         <StatCard icon={Calendar} value={data?.stats?.upcomingEventsCount || '-'} label="Events" color="#3B82F6" bgColor="#EFF6FF" darkBg="#1E3A8A20" />
+         <StatCard icon={Users} value={data?.stats?.ygMembersCount || '-'} label="Members" color="var(--school-primary)" bgColor="var(--school-tint)" navigateTo="/app/members" />
+         <StatCard icon={Heart} value={data?.stats?.activeCampaignsCount || '-'} label="Campaigns" color="#EF4444" bgColor="#FEF2F2" darkBg="#7F1D1D20" navigateTo="/app/fundraising" />
+         <StatCard icon={Calendar} value={data?.stats?.upcomingEventsCount || '-'} label="Events" color="#3B82F6" bgColor="#EFF6FF" darkBg="#1E3A8A20" navigateTo="/app/events" />
       </div>
 
       {/* Composer */}
       <Card className="!p-3 cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 ease-spring" onClick={() => navigate('/app/board')}>
          <div className="flex gap-3 px-1 pt-1 pb-3">
-            {user.profile_pic ? (
-              <img src={user.profile_pic} className="w-10 h-10 rounded-full object-cover shrink-0 ring-2 ring-border-light" alt="" />
-            ) : (
-              <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-lg shadow-sm" style={{ background: `linear-gradient(135deg, var(--school-primary), var(--school-secondary))` }}>
-                  {user.name.charAt(0)}
-              </div>
-            )}
+            <Avatar src={user.profile_pic} name={user.name} size="md" />
             <button className="flex-1 bg-surface-muted hover:bg-surface-hover transition-colors rounded-xl px-4 text-left text-ink-muted text-[14px] font-medium min-h-[42px] flex items-center">
                What's on your mind, {user.name.split(' ')[0]}?
             </button>
@@ -201,9 +196,7 @@ export function Dashboard() {
               {/* Post Header */}
               <div className="p-4 flex justify-between items-start">
                  <div className="flex gap-3">
-                    <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-lg" style={{ background: `linear-gradient(135deg, var(--school-primary), var(--school-secondary))` }}>
-                       {post.author_name.charAt(0)}
-                    </div>
+                    <Avatar src={post.author_pic} name={post.author_name} size="md" />
                     <div className="flex flex-col">
                        <span className="font-semibold text-[14px] text-ink-title leading-tight hover:underline cursor-pointer">{post.author_name}</span>
                        <div className="flex items-center gap-1.5 text-[12px] text-ink-muted font-medium mt-0.5">
@@ -245,10 +238,16 @@ export function Dashboard() {
 
 // ── Stat Card ──
 
-function StatCard({ icon: Icon, value, label, color, bgColor, darkBg }) {
+function StatCard({ icon: Icon, value, label, color, bgColor, darkBg, navigateTo }) {
+  const navigate = useNavigate();
   return (
-    <div className="min-w-[130px] flex-1 social-card hover:scale-[1.03] active:scale-95 transition-all duration-300 ease-spring p-4 flex flex-col items-center justify-center gap-1.5 snap-start cursor-pointer">
-       <div className="p-2.5 rounded-2xl mb-0.5 shadow-sm" style={{ backgroundColor: bgColor, color }}>
+    <div 
+      className="min-w-[130px] flex-1 gradient-border-card stat-card-shimmer social-card hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] p-4 flex flex-col items-center justify-center gap-1.5 snap-start cursor-pointer group"
+      onClick={() => navigateTo && navigate(navigateTo)}
+      role="button"
+      tabIndex={0}
+    >
+       <div className="p-2.5 rounded-2xl mb-0.5 shadow-sm transition-all duration-300 group-hover:shadow-md group-hover:scale-110" style={{ backgroundColor: bgColor, color }}>
          <Icon size={22} strokeWidth={2.5}/>
        </div>
        <span className="text-xl font-bold text-ink-title leading-none tracking-tight">{value}</span>
