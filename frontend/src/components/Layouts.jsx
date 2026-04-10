@@ -8,6 +8,7 @@ import { useTenant } from '../context/TenantContext';
 import { Logo } from './Logo';
 import { VerificationWall } from '../pages/VerificationWall';
 import { getDemoRole, setDemoRole, exitDemoMode, DEMO_ROLES } from '../api/demoData';
+import { useScrollShadow } from '../hooks/useScrollShadow';
 
 // ══════════════════════════════════════════════════════════════════════
 //  Theme Toggle
@@ -307,6 +308,9 @@ export function AppLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(() => {
     return localStorage.getItem('osa_sidebar_collapsed') === 'true';
   });
+
+  // Activate scroll-responsive shadows on all cards
+  useScrollShadow();
 
   const toggleSidebar = () => {
     const newVal = !isSidebarCollapsed;

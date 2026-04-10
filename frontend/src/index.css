@@ -624,3 +624,142 @@
 .dark .modal-backdrop {
   background: rgba(0, 0, 0, 0.6);
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   ENHANCED MICRO-ANIMATIONS
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Modal spring pop-in */
+@keyframes spring-pop {
+  0% { opacity: 0; transform: translateY(40px) scale(0.92); }
+  60% { transform: translateY(-4px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-spring-pop {
+  animation: spring-pop 500ms var(--ease-spring) both;
+}
+
+/* Button press bounce */
+@keyframes press-bounce {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.92); }
+  70% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+/* Avatar pulse glow on hover */
+@keyframes avatar-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--school-primary-rgb, 59, 130, 246), 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(var(--school-primary-rgb, 59, 130, 246), 0); }
+}
+
+/* Card lift on hover */
+@keyframes card-lift {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-3px); }
+}
+
+/* Logo breathe */
+@keyframes logo-breathe {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.05); filter: brightness(1.1); }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   INTERACTIVE COMPONENT ANIMATIONS
+   Every logo, button, card gets unique hover/active/click states
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Buttons — press feedback */
+.btn-primary:active,
+.btn-secondary:active,
+.btn-ghost:active {
+  animation: press-bounce 300ms var(--ease-spring) both;
+}
+
+/* Icon buttons — rotate/scale on hover */
+.icon-btn {
+  transition: all var(--duration-fast) var(--ease-spring);
+}
+.icon-btn:hover {
+  background: var(--surface-hover);
+  transform: scale(1.1) rotate(3deg);
+}
+.icon-btn:active {
+  transform: scale(0.88) rotate(-2deg);
+  transition-duration: 80ms;
+}
+
+/* Social Cards — subtle lift + shadow on hover */
+.social-card {
+  transition: box-shadow var(--duration-normal) var(--ease-out-expo),
+              transform var(--duration-normal) var(--ease-spring),
+              background-color var(--duration-fast) var(--ease-out-expo);
+}
+
+.social-card:hover {
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--border-light);
+  transform: translateY(-2px);
+}
+
+.social-card:active {
+  transform: translateY(0) scale(0.995);
+  transition-duration: 80ms;
+}
+
+/* Logo wrapper — breathe hover */
+.logo-wrapper:hover,
+[class*="logo"]:hover img,
+[class*="logo"]:hover svg {
+  animation: logo-breathe 1.5s ease-in-out infinite;
+}
+
+/* Nav items — smooth press */
+.nav-link:active,
+a[class*="nav"]:active {
+  transform: scale(0.97);
+  transition-duration: 80ms;
+}
+
+/* Toggle Switch — bounce on toggle */
+[role="switch"]:active {
+  transform: scaleX(0.95);
+  transition-duration: 80ms;
+}
+
+/* Badge pills — subtle bounce on hover */
+[class*="badge"]:hover,
+[class*="Badge"]:hover {
+  transform: scale(1.05);
+  transition: transform 200ms var(--ease-spring);
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   SCROLL-RESPONSIVE SHADOWS
+   Cards dynamically adjust shadow intensity based on viewport position.
+   Driven by a CSS custom property --scroll-shadow (0-1) set by JS.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.scroll-shadow-card {
+  --scroll-shadow: 0.5;
+  transition: box-shadow 0.6s ease-out, transform 0.3s var(--ease-spring);
+  box-shadow:
+    0 calc(2px + 8px * var(--scroll-shadow)) calc(6px + 20px * var(--scroll-shadow)) rgba(0, 0, 0, calc(0.02 + 0.06 * var(--scroll-shadow))),
+    inset 0 0 0 1px var(--border-light);
+}
+
+.dark .scroll-shadow-card {
+  box-shadow:
+    0 calc(2px + 8px * var(--scroll-shadow)) calc(6px + 20px * var(--scroll-shadow)) rgba(0, 0, 0, calc(0.1 + 0.2 * var(--scroll-shadow))),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+/* Alternative: apply scroll-responsive shadows to all social-cards automatically */
+.social-card {
+  --scroll-shadow: 0.4;
+}
+
