@@ -503,11 +503,11 @@ export function AppLayout() {
                 </div>
 
                 <NavItem to="/app/dashboard" icon={IconDashboard} label="Dashboard" onClick={() => setMobileMenuOpen(false)} />
+                <NavItem to="/app/board" icon={IconBoard} label="Feed" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/newsletter" icon={IconNewsletter} label="Newsletter" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/fundraising" icon={IconFundraising} label="Fundraising" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/events" icon={IconEvents} label="Events" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/members" icon={IconDirectory} label="Directory" onClick={() => setMobileMenuOpen(false)} />
-                <NavItem to="/app/board" icon={IconBoard} label="Group Board" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/gallery" icon={IconGallery} label="Gallery" onClick={() => setMobileMenuOpen(false)} />
                 <NavItem to="/app/support" icon={IconSupport} label="Tech Support" onClick={() => setMobileMenuOpen(false)} />
                 
@@ -585,7 +585,7 @@ export function AppLayout() {
               </select>
             </div>
 
-            <NavItem to="/app/board" icon={IconBoard} label="Group Board" onClick={() => setMobileMenuOpen(false)} />
+            <NavItem to="/app/board" icon={IconBoard} label="Feed" onClick={() => setMobileMenuOpen(false)} />
             <NavItem to="/app/gallery" icon={IconGallery} label="Gallery" onClick={() => setMobileMenuOpen(false)} />
             <NavItem to="/app/support" icon={IconSupport} label="Tech Support" onClick={() => setMobileMenuOpen(false)} />
             <NavItem to="/app/settings" icon={IconSettings} label="Settings" onClick={() => setMobileMenuOpen(false)} />
@@ -679,11 +679,11 @@ export function AppLayout() {
         {/* Main Nav */}
         <nav className="flex-1 py-1 flex flex-col gap-1 mt-1">
           <NavItem collapsed={isSidebarCollapsed} to="/app/dashboard" icon={IconDashboard} label="Dashboard" />
+          <NavItem collapsed={isSidebarCollapsed} to="/app/board" icon={IconBoard} label="Feed" />
           <NavItem collapsed={isSidebarCollapsed} to="/app/newsletter" icon={IconNewsletter} label="Newsletter" />
           <NavItem collapsed={isSidebarCollapsed} to="/app/fundraising" icon={IconFundraising} label="Fundraising" />
           <NavItem collapsed={isSidebarCollapsed} to="/app/events" icon={IconEvents} label="Events" />
           <NavItem collapsed={isSidebarCollapsed} to="/app/members" icon={IconDirectory} label="Directory" />
-          <NavItem collapsed={isSidebarCollapsed} to="/app/board" icon={IconBoard} label="Group Board" />
           <NavItem collapsed={isSidebarCollapsed} to="/app/gallery" icon={IconGallery} label="Gallery" />
           <NavItem collapsed={isSidebarCollapsed} to="/app/support" icon={IconSupport} label="Tech Support" />
           
@@ -714,7 +714,7 @@ export function AppLayout() {
           
           {!isSidebarCollapsed && (
              <div className="mt-2 mb-1 text-[11px] font-medium text-[var(--ink-muted)] px-2 flex justify-between items-center">
-                <span>OSA Platform © 2026</span>
+                <span>OSA <span className="opacity-50">from</span> <a href="https://icuni.org" target="_blank" rel="noopener noreferrer" className="font-bold hover:text-[var(--ink-title)] transition-colors" style={{ color: 'var(--school-primary)' }}>ICUNI</a></span>
                 <Link to="/app/settings" className="hover:text-[var(--ink-title)] font-semibold transition-colors" style={{ color: 'var(--school-primary)' }}>Settings</Link>
              </div>
           )}

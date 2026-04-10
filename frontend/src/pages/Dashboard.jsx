@@ -81,28 +81,28 @@ export function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-12 overflow-x-hidden stagger-children">
+    <div className="flex flex-col gap-4 md:gap-6 pb-6 overflow-x-hidden stagger-children">
       
       {/* Pending Action Alert */}
       {user && user.role && user.role.includes("Admin") && data?.stats?.pendingPostsCount > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-900/10 rounded-2xl p-4 flex items-center justify-between border border-amber-200 dark:border-amber-800 shadow-sm">
-          <div className="flex items-center gap-3">
-             <div className="p-2.5 rounded-xl bg-white dark:bg-amber-900/20 shadow-sm">
-                <Bell className="text-amber-500" size={20} />
+        <div className="bg-amber-50 dark:bg-amber-900/10 rounded-2xl p-3 md:p-4 flex items-center justify-between border border-amber-200 dark:border-amber-800 shadow-sm">
+          <div className="flex items-center gap-2 md:gap-3">
+             <div className="p-2 md:p-2.5 rounded-xl bg-white dark:bg-amber-900/20 shadow-sm">
+                <Bell className="text-amber-500" size={18} />
              </div>
-             <span className="text-ink-title font-medium text-[14px]">
-               You have pending newsletter posts awaiting review.
+             <span className="text-ink-title font-medium text-[13px] md:text-[14px]">
+               Pending posts awaiting review.
              </span>
           </div>
-          <Button variant="secondary" size="sm" onClick={() => navigate('/app/newsletter')} className="!shadow-none">
+          <Button variant="secondary" size="sm" onClick={() => navigate('/app/newsletter')} className="!shadow-none shrink-0">
             Review
             <ArrowRight size={14} />
           </Button>
         </div>
       )}
 
-      {/* Quick Stats */}
-      <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-hide snap-x">
+      {/* Quick Stats — horizontal scroll on mobile, row on desktop */}
+      <div className="flex gap-2.5 md:gap-4 overflow-x-auto pb-1 scrollbar-hide snap-x">
          <StatCard icon={Users} value={data?.stats?.ygMembersCount || '-'} label="Members" color="var(--school-primary)" bgColor="var(--school-tint)" navigateTo="/app/members" />
          <StatCard icon={Heart} value={data?.stats?.activeCampaignsCount || '-'} label="Campaigns" color="#EF4444" bgColor="#FEF2F2" darkBg="#7F1D1D20" navigateTo="/app/fundraising" />
          <StatCard icon={Calendar} value={data?.stats?.upcomingEventsCount || '-'} label="Events" color="#3B82F6" bgColor="#EFF6FF" darkBg="#1E3A8A20" navigateTo="/app/events" />
@@ -180,10 +180,10 @@ export function Dashboard() {
       )}
 
       {/* Feed Header */}
-      <h2 className="text-[16px] font-bold text-ink-title mt-1 tracking-tight">Recent Highlights</h2>
+      <h2 className="text-[15px] md:text-[16px] font-bold text-ink-title mt-0.5 tracking-tight">Recent Highlights</h2>
 
       {/* Feed */}
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3 md:gap-5">
         {(!data?.recentPosts || data.recentPosts.length === 0) ? (
           <Card className="text-center py-12">
              <div className="flex justify-center mb-3"><div className="p-4 bg-surface-muted rounded-2xl"><Edit3 size={28} className="text-ink-muted"/></div></div>
@@ -242,16 +242,17 @@ function StatCard({ icon: Icon, value, label, color, bgColor, darkBg, navigateTo
   const navigate = useNavigate();
   return (
     <div 
-      className="min-w-[140px] flex-1 gradient-border-card stat-card-shimmer social-card hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] p-5 flex flex-col items-center justify-center gap-2.5 snap-start cursor-pointer group"
+      className="min-w-[110px] md:min-w-[140px] flex-1 gradient-border-card stat-card-shimmer social-card hover:scale-[1.03] active:scale-[0.97] transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] p-3.5 md:p-5 flex flex-col items-center justify-center gap-1.5 md:gap-2.5 snap-start cursor-pointer group"
       onClick={() => navigateTo && navigate(navigateTo)}
       role="button"
       tabIndex={0}
     >
-       <div className="p-3.5 rounded-full mb-0.5 shadow-sm transition-all duration-300 group-hover:shadow-md group-hover:scale-110" style={{ backgroundColor: bgColor, color }}>
-         <Icon size={24} strokeWidth={2.2}/>
+       <div className="p-2.5 md:p-3.5 rounded-full mb-0.5 shadow-sm transition-all duration-300 group-hover:shadow-md group-hover:scale-110" style={{ backgroundColor: bgColor, color }}>
+         <Icon size={20} className="md:hidden" strokeWidth={2.2}/>
+         <Icon size={24} className="hidden md:block" strokeWidth={2.2}/>
        </div>
-       <span className="text-2xl font-extrabold text-ink-title leading-none tracking-tight">{value}</span>
-       <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">{label}</span>
+       <span className="text-xl md:text-2xl font-extrabold text-ink-title leading-none tracking-tight">{value}</span>
+       <span className="text-[10px] md:text-[11px] font-semibold text-ink-muted uppercase tracking-wider">{label}</span>
     </div>
   );
 }
