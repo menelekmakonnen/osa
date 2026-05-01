@@ -632,7 +632,7 @@ export function Register() {
           }
           // Only fetch Year Groups if we know the target school (either via custom domain or user selection)
           if (formData.school_id && formData.school_id !== 'new_school') {
-             const ygList = await api.getYearGroupsList(); // v1 mock behaviour limits to one school
+             const ygList = await api.getYearGroupsList(formData.school_id);
              setYearGroups(ygList || []);
           } else {
              setYearGroups([]);
@@ -1110,6 +1110,12 @@ export function Register() {
                           onChange={handleChange}
                           required
                       />
+                      <div className="col-span-full">
+                          <p className="text-xs text-ink-muted flex items-center gap-1.5">
+                             <CheckCircle2 size={13} className="text-green-500 shrink-0" />
+                             Fill in the details above and hit the Register button below — your new year group will be created automatically.
+                          </p>
+                      </div>
                   </div>
                )}
            </>
@@ -1119,7 +1125,7 @@ export function Register() {
         
         {(!isStaffReg || staffAuthPassed) && (
            <Button type="submit" disabled={loading} className="w-full mt-2">
-             {loading ? 'Creating Account...' : 'Register as Member'}
+             {loading ? 'Creating Account...' : (formData.year_group_id === 'new_yg' ? 'Create Year Group & Register' : (isNewSchoolFlow ? 'Register School & Create Account' : 'Register as Member'))}
            </Button>
         )}
 
