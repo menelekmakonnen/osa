@@ -185,10 +185,14 @@ const PROTECTED_ACTIONS = {
 function handleAction(action, data, token) {
   if (!action) return { success: false, error: "No action specified" };
 
+  // The frontend sends { action, data: { ...payload }, token }.
+  // Unwrap the nested payload so handlers receive the actual fields.
+  var payload = (data && typeof data.data === 'object' && data.data !== null) ? data.data : data;
+
   // 1. Public actions (no auth required)
   if (PUBLIC_ACTIONS[action]) {
     try {
-      return PUBLIC_ACTIONS[action](data);
+      return PUBLIC_ACTIONS[action](payload);
     } catch(err) {
       return { success: false, error: err.message || err.toString() };
     }
@@ -201,17 +205,17 @@ function handleAction(action, data, token) {
   }
 
   // 3. Resolve tenant context
-  CURRENT_SCHOOL_ID = resolveSchoolId(user, data);
+  CURRENT_SCHOOL_ID = resolveSchoolId(user, payload);
 
   // 4. Check impersonation context
-  if (data && data._impersonation_school_id && isPlatformStaff(user)) {
-    CURRENT_SCHOOL_ID = data._impersonation_school_id;
+  if (payload && payload._impersonation_school_id && isPlatformStaff(user)) {
+    CURRENT_SCHOOL_ID = payload._impersonation_school_id;
   }
 
   // 5. Dispatch protected action
   if (PROTECTED_ACTIONS[action]) {
     try {
-      return PROTECTED_ACTIONS[action](user, data);
+      return PROTECTED_ACTIONS[action](user, payload);
     } catch(err) {
       // Distinguish authorization errors from other errors
       if (err.message && err.message.startsWith("Forbidden:")) {
